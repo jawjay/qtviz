@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "qtwebplot"
+version = "0.0.1"
+description = "PySide6 widgets and utilities for embedding modern Python plotting libraries (Plotly, Bokeh, HoloViews, ...) via Qt WebEngine."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Mark Jajeh" }]
+keywords = ["pyside6", "qt", "webengine", "plotly", "bokeh", "holoviews", "plotting"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Environment :: X11 Applications :: Qt",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "License :: OSI Approved :: MIT License",
+]
+
+dependencies = [
+    "PySide6 >=6.6",
+]
+
+[project.optional-dependencies]
+plotly = ["plotly >=5.20"]
+bokeh = ["bokeh >=3.4"]
+holoviews = ["holoviews >=1.18"]
+all = [
+    "plotly >=5.20",
+    "bokeh >=3.4",
+    "holoviews >=1.18",
+]
+dev = [
+    "pytest >=8.0",
+    "pytest-qt >=4.4",
+    "ruff >=0.5",
+]
+
+[project.urls]
+Homepage = "https://github.com/markjajeh/qtwebplot"
+Issues = "https://github.com/markjajeh/qtwebplot/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/qtwebplot"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/qtwebplot",
+    "README.md",
+    "pyproject.toml",
+    "LICENSE",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "gui: requires a Qt event loop (pytest-qt) and PySide6 WebEngine",
+]
