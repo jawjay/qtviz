@@ -1,0 +1,68 @@
+"""Eager built-in adapters: dict, numpy, pandas, Arrow (spec §6.3).
+
+pandas / pyarrow are detected via `sys.modules` so importing qtviz never
+imports them — they are only present if the *user* already imported them to
+build the object being wrapped.
+"""
+
+from __future__ import annotations
+
+import sys
+from typing import Any
+
+import numpy as np
+
+from ..ref import EagerGriddedRef, EagerTabularRef
+
+
+class DictAdapter:
+    priority = 10
+
+    def handles(self, obj: Any) -> bool:
+        return isinstance(obj, dict)
+
+    def wrap(self, obj: dict) -> EagerTabularRef:
+        cols = {str(k): np.asarray(v) for k, v in obj.items()}
+        return EagerTabularRef(obj, cols)
+
+
+class NumpyAdapter:
+    priority = 5
+
+    def handles(self, obj: Any) -> bool:
+        return isinstance(obj, np.ndarray)
+
+    def wrap(self, obj: np.ndarray):
+        if obj.dtype.names:  # structured array → tabular
+            return EagerTabularRef(obj, {n: obj[n] for n in obj.dtype.names})
+        return EagerGriddedRef(obj, obj)  # plain array → gridded
+
+
+class PandasAdapter:
+    priority = 8
+
+    def handles(self, obj: Any) -> bool:
+        pd = sys.modules.get("pandas")
+        return pd is not None and isinstance(obj, pd.DataFrame)
+
+    def wrap(self, obj) -> EagerTabularRef:
+        cols = {str(c): np.asarray(obj[c].to_numpy()) for c in obj.columns}
+        return EagerTabularRef(obj, cols)
+
+
+class ArrowAdapter:
+    priority = 8
+
+    def handles(self, obj: Any) -> bool:
+        pa = sys.modules.get("pyarrow")
+        return pa is not None and isinstance(obj, pa.Table)
+
+    def wrap(self, obj) -> EagerTabularRef:
+        cols = {
+            name: np.asarray(obj.column(name).to_numpy(zero_copy_only=False))
+            for name in obj.column_names
+        }
+        return EagerTabularRef(obj, cols)
+
+
+BUILTINS = (DictAdapter, NumpyAdapter, PandasAdapter, ArrowAdapter)

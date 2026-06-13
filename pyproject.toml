@@ -23,6 +23,8 @@ classifiers = [
 
 dependencies = [
     "PySide6 >=6.6",
+    "numpy >=1.24",
+    "pyqtgraph >=0.13",
 ]
 
 [project.optional-dependencies]
@@ -64,7 +66,12 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra -m 'not benchmark'"
 markers = [
     "gui: requires a Qt event loop (pytest-qt) and PySide6 WebEngine",
+    # qtviz acceptance benchmarks (spec-first; skip until the qtviz package lands)
+    "tier1: pure-core spec, no QApplication needed (fast)",
+    "tier2: requires a Qt event loop + a registered backend",
+    "conformance: parametrized contract suite every backend/adapter must pass",
+    "benchmark: performance harness; opt-in via `-m benchmark`, excluded by default",
 ]

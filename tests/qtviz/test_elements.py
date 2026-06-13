@@ -1,0 +1,63 @@
+"""Tier-1 — Element construction & validation (spec §5, §2.11, §6.1).
+
+Elements are pure data with eager, actionable validation: mutually-exclusive
+visual/column pairs, range checks, and schema-validated field names (a typo'd
+column raises at construction, not at render — §2.1/§6.1).
+"""
+
+from __future__ import annotations
+
+import pytest
+
+qv = pytest.importorskip("qtviz")
+
+pytestmark = pytest.mark.tier1
+
+
+def test_all_eight_elements_construct(make_elements):
+    elements = make_elements(qv)
+    assert set(elements) == {
+        "Scatter", "Curve", "Bars", "Histogram",
+        "ErrorBars", "Spread", "Image", "Heatmap",
+    }
+
+
+def test_scatter_required_options():
+    assert qv.Scatter.REQUIRED_OPTIONS == ("x", "y")
+
+
+def test_color_and_color_by_mutually_exclusive(table):
+    with pytest.raises(ValueError):
+        qv.Scatter(table, x="x", y="y", color="red", color_by="cat")
+
+
+def test_size_and_size_by_mutually_exclusive(table):
+    with pytest.raises(ValueError):
+        qv.Scatter(table, x="x", y="y", size=5.0, size_by="z")
+
+
+@pytest.mark.parametrize("bad", [-0.1, 1.5])
+def test_alpha_out_of_range_rejected(table, bad):
+    with pytest.raises(ValueError):
+        qv.Scatter(table, x="x", y="y", alpha=bad)
+
+
+def test_unknown_field_name_rejected_at_construction(table):
+    with pytest.raises((ValueError, KeyError)):
+        qv.Scatter(table, x="tmie", y="y")  # typo'd column
+
+
+def test_scale_defaults_to_native(table):
+    assert qv.Scatter(table, x="x", y="y").scale == "native"
+
+
+def test_elements_are_immutable(make_elements):
+    for el in make_elements(qv).values():
+        with pytest.raises(AttributeError):
+            el.id = "mutated"  # type: ignore[misc]
+
+
+def test_image_requires_gridded_data(table):
+    # Image needs an array grid; a tabular dict has no 2-D values → clear error.
+    with pytest.raises((ValueError, TypeError)):
+        qv.Image(table, bounds=(0, 0, 1, 1))
