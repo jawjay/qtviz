@@ -226,13 +226,24 @@ What's working today:
 - Multi-visualization layout helpers (`qtwebplot.layouts`):
   `PlotGrid` (eager), `PlotTabs` (lazy by default), `PlotSplitter`.
   `PlotGrid` and `PlotTabs` re-exported at top level. Mix backends freely.
-- Smoke tests for HTML injection; pytest-qt GUI tests for the bridge
-  handshake and the layout helpers.
+- Linked-event coordination: `grid.link(source, event, to, handler)` on
+  all three layout helpers, with auto-teardown when views are removed.
+- `HoloViewsBackend` (`qtwebplot.ext.holoviews`): composes `BokehBackend`
+  internally — HoloViews → Bokeh model conversion delegates rendering,
+  verbs, and typed events to the existing Bokeh backend.
+- `Theme` dataclass (`qtwebplot.Theme`) with `light()` / `dark()` /
+  `from_qt_palette(...)` / `from_qt_app(...)`. Backends opt in via the
+  `apply_theme(theme)` Protocol method; Plotly and Bokeh both implemented.
+  `PlotView(theme=...)` applies on attach; `view.set_theme(t)` re-applies live.
+- Smoke tests for HTML injection + Theme; pytest-qt GUI tests for the
+  bridge handshake, the layout helpers, and linked events.
 
 Tracked next:
 
+- CI matrix + first PyPI alpha release.
+- Documentation site (mkdocs-material).
 - `load_failed` surfacing (today, a load failure is silent except for
   `load_finished(False)`).
-- `Theme.from_qt_palette(palette)` + backend opt-in.
-- HoloViews extension (mostly a pass-through to Bokeh).
 - Plotly offline asset bundling (`plotlyjs="inline"` default vs CDN).
+- `MultiPlotView` (Strategy B from `multi-visualization.md`) if/when
+  dashboard-scale memory becomes a concern.

@@ -15,6 +15,7 @@ except PackageNotFoundError:
 from qtwebplot.backend import PlotBackend
 from qtwebplot.core import Bridge, WebBridgeView
 from qtwebplot.layouts import PlotGrid, PlotTabs
+from qtwebplot.theme import Theme
 from qtwebplot.view import PlotView
 
 __all__ = [
@@ -23,6 +24,7 @@ __all__ = [
     "PlotGrid",
     "PlotTabs",
     "PlotView",
+    "Theme",
     "WebBridgeView",
     "__version__",
 ]

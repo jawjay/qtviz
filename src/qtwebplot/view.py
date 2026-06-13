@@ -10,6 +10,7 @@ from qtwebplot.backend import PlotBackend
 from qtwebplot.core._inject import inject_head_scripts, wrap_as_script
 from qtwebplot.core._runtime import CORE_JS, load_qwebchannel_js
 from qtwebplot.core.web_bridge_view import WebBridgeView
+from qtwebplot.theme import Theme
 
 
 class PlotView(WebBridgeView):
@@ -19,15 +20,27 @@ class PlotView(WebBridgeView):
     typed events. This class exists only to remove the per-use boilerplate of
     instantiating a backend, injecting its js_runtime, and reloading on
     `set_figure`.
+
+    Parameters
+    ----------
+    backend : PlotBackend | None
+        Initial backend. May be set later via `set_backend`.
+    parent : QWidget | None
+    theme : Theme | None
+        If provided, applied to every backend on attach. Use
+        `Theme.from_qt_app()` to match the host app's palette automatically.
     """
 
     def __init__(
         self,
         backend: PlotBackend | None = None,
         parent: QWidget | None = None,
+        *,
+        theme: Theme | None = None,
     ) -> None:
         super().__init__(parent)
         self._backend: PlotBackend | None = None
+        self._theme: Theme | None = theme
         if backend is not None:
             self.set_backend(backend)
 
@@ -35,10 +48,25 @@ class PlotView(WebBridgeView):
     def backend(self) -> PlotBackend | None:
         return self._backend
 
+    @property
+    def theme(self) -> Theme | None:
+        return self._theme
+
+    def set_theme(self, theme: Theme | None) -> None:
+        """Set or clear the theme; re-applies to the current backend and
+        re-renders."""
+        self._theme = theme
+        if self._backend is not None:
+            if theme is not None:
+                self._backend.apply_theme(theme)
+            self._render()
+
     def set_backend(self, backend: PlotBackend) -> None:
         if self._backend is not None:
             self._backend.on_detach()
         self._backend = backend
+        if self._theme is not None:
+            backend.apply_theme(self._theme)
         backend.on_attach(self)
         self._render()
 

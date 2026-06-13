@@ -32,6 +32,7 @@ from qtwebplot.ext.plotly.events import (
 
 if TYPE_CHECKING:
     from qtwebplot.core import WebBridgeView
+    from qtwebplot.theme import Theme
 
 
 _PLOT_DIV_ID = "qtwp-plot"
@@ -50,6 +51,7 @@ class PlotlyBackend(PlotBackend):
         self._plotlyjs = plotlyjs
         self._view: WebBridgeView | None = None
         self._events = PlotlyEvents()
+        self._theme: Theme | None = None
 
     # ── PlotBackend protocol ─────────────────────────────────────────────
     def to_html(self) -> str:
@@ -57,6 +59,8 @@ class PlotlyBackend(PlotBackend):
         from plotly.io import to_html
 
         fig = self._figure if self._figure is not None else go.Figure()
+        if self._theme is not None:
+            fig.update_layout(template=_plotly_template_from(self._theme))
         return to_html(
             fig,
             include_plotlyjs=self._plotlyjs,
@@ -83,6 +87,14 @@ class PlotlyBackend(PlotBackend):
 
     def set_figure(self, figure: Any) -> None:
         self._figure = figure
+
+    def apply_theme(self, theme: Theme) -> None:
+        """Apply theme to the current figure via Plotly's template system.
+
+        Re-applied on every `to_html()` so subsequent `set_figure` calls
+        inherit it as long as the backend is alive.
+        """
+        self._theme = theme
 
     # ── Plotly verbs (use the generic bridge transport) ──────────────────
     @property
@@ -192,3 +204,31 @@ def _build_selection(payload: dict) -> PlotlySelectionEvent:
         range=payload.get("range"),
         raw=payload,
     )
+
+
+def _plotly_template_from(theme: "Theme") -> dict:
+    """Translate a qtwebplot Theme into a Plotly template dict."""
+    return {
+        "layout": {
+            "paper_bgcolor": theme.background,
+            "plot_bgcolor": theme.background,
+            "font": {"color": theme.foreground, "family": theme.font_family},
+            "title": {"font": {"color": theme.foreground}},
+            "colorway": list(theme.palette),
+            "xaxis": {
+                "gridcolor": theme.grid,
+                "linecolor": theme.foreground,
+                "zerolinecolor": theme.grid,
+                "tickfont": {"color": theme.foreground},
+                "title": {"font": {"color": theme.foreground}},
+            },
+            "yaxis": {
+                "gridcolor": theme.grid,
+                "linecolor": theme.foreground,
+                "zerolinecolor": theme.grid,
+                "tickfont": {"color": theme.foreground},
+                "title": {"font": {"color": theme.foreground}},
+            },
+            "legend": {"font": {"color": theme.foreground}},
+        }
+    }

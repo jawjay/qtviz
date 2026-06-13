@@ -48,6 +48,7 @@ from qtwebplot.ext.bokeh.events import (
 
 if TYPE_CHECKING:
     from qtwebplot.core import WebBridgeView
+    from qtwebplot.theme import Theme
 
 
 _INSTRUMENTED_MARKER = "_qtwebplot_instrumented"
@@ -61,6 +62,7 @@ class BokehBackend(PlotBackend):
         self._resources = resources
         self._view: WebBridgeView | None = None
         self._events = BokehEvents()
+        self._bk_theme = None  # bokeh.themes.Theme, lazy-built
 
     # ── PlotBackend protocol ─────────────────────────────────────────────
     def to_html(self) -> str:
@@ -72,7 +74,10 @@ class BokehBackend(PlotBackend):
 
         self._instrument(self._figure)
         res = INLINE if self._resources == "inline" else CDN
-        return file_html(self._figure, res, "qtwebplot")
+        kwargs: dict = {"title": "qtwebplot"}
+        if self._bk_theme is not None:
+            kwargs["theme"] = self._bk_theme
+        return file_html(self._figure, res, **kwargs)
 
     def js_runtime(self) -> str:
         return BOKEH_JS
@@ -91,6 +96,40 @@ class BokehBackend(PlotBackend):
 
     def set_figure(self, figure: Any) -> None:
         self._figure = figure
+
+    def apply_theme(self, theme: Theme) -> None:
+        """Convert the qtwebplot Theme to a `bokeh.themes.Theme` and store it.
+        Applied during `to_html()` via `file_html(theme=...)`.
+        """
+        from bokeh.themes import Theme as BkTheme
+
+        attrs = {
+            "figure": {
+                "background_fill_color": theme.background,
+                "border_fill_color": theme.background,
+                "outline_line_color": theme.grid,
+            },
+            "Axis": {
+                "axis_label_text_color": theme.foreground,
+                "major_label_text_color": theme.foreground,
+                "axis_line_color": theme.foreground,
+                "major_tick_line_color": theme.foreground,
+                "minor_tick_line_color": theme.grid,
+            },
+            "Grid": {
+                "grid_line_color": theme.grid,
+            },
+            "Title": {
+                "text_color": theme.foreground,
+                "text_font": theme.font_family,
+            },
+            "Legend": {
+                "background_fill_color": theme.background,
+                "label_text_color": theme.foreground,
+                "border_line_color": theme.grid,
+            },
+        }
+        self._bk_theme = BkTheme(json={"attrs": attrs})
 
     # ── Bokeh verbs (use the generic bridge transport) ───────────────────
     @property

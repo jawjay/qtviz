@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Iterable
+from typing import Any, Callable, Iterable
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
@@ -24,11 +24,18 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from qtwebplot._linking import _Link, resolve_view
 from qtwebplot.backend import PlotBackend
 from qtwebplot.view import PlotView
 
 
 __all__ = ["PlotGrid", "PlotSplitter", "PlotTabs"]
+
+
+# `Unlink` is the callable returned from every `.link(...)` method. Invoke
+# it to tear down a single link explicitly.
+Unlink = Callable[[], None]
+LinkHandler = Callable[[PlotBackend, Any], None]
 
 
 # ── PlotGrid ──────────────────────────────────────────────────────────────────
@@ -61,6 +68,7 @@ class PlotGrid(QWidget):
 
         self._views: list[PlotView] = []
         self._backends: list[PlotBackend] = []
+        self._links: list[_Link] = []
 
         for backend in backends:
             self.add(backend)
@@ -99,12 +107,16 @@ class PlotGrid(QWidget):
             raise IndexError(f"index {index} out of range for grid of {len(self._views)}")
         view = self._views.pop(index)
         self._backends.pop(index)
+        self._drop_links_for(view)
         self._grid.removeWidget(view)
         view.setParent(None)
         view.deleteLater()
         self._relayout()
 
     def clear(self) -> None:
+        for link in self._links:
+            link.disconnect()
+        self._links.clear()
         while self._views:
             view = self._views.pop()
             self._backends.pop()
@@ -118,7 +130,45 @@ class PlotGrid(QWidget):
             return self._views[index]
         return None
 
+    # ── linking ──────────────────────────────────────────────────────────
+    def link(
+        self,
+        *,
+        source: int | PlotView,
+        event: str,
+        to: int | PlotView | Sequence[int | PlotView],
+        handler: LinkHandler,
+    ) -> Unlink:
+        """Forward `event` messages from `source` to `handler(target_backend, payload)`
+        for each target. Returns an unlink callable.
+
+        `source` and `to` are PlotView indices or PlotView instances. `event`
+        is the message name as seen on `view.received` (e.g. `"plotly.hover"`).
+        The link is auto-torn-down if either endpoint is removed from the grid.
+        """
+        source_view = resolve_view(self._views, source)
+        targets = to if isinstance(to, (list, tuple)) else [to]
+        target_views = [resolve_view(self._views, t) for t in targets]
+        link = _Link(source_view, event, target_views, handler)
+        self._links.append(link)
+
+        def unlink() -> None:
+            link.disconnect()
+            if link in self._links:
+                self._links.remove(link)
+
+        return unlink
+
     # ── internals ────────────────────────────────────────────────────────
+    def _drop_links_for(self, view: PlotView) -> None:
+        surviving = []
+        for link in self._links:
+            if link.references(view):
+                link.disconnect()
+            else:
+                surviving.append(link)
+        self._links = surviving
+
     def _relayout(self) -> None:
         """Re-place existing views after a removal."""
         for i, view in enumerate(self._views):
@@ -167,6 +217,7 @@ class PlotTabs(QWidget):
         super().__init__(parent)
         self._lazy = lazy
         self._entries: list[_TabEntry] = []
+        self._links: list[_Link] = []
 
         self._tabs = QTabWidget(self)
         layout = QVBoxLayout(self)
@@ -227,13 +278,70 @@ class PlotTabs(QWidget):
         self._tabs.removeTab(index)
         entry = self._entries.pop(index)
         if entry.view is not None:
+            self._drop_links_for(entry.view)
             entry.view.setParent(None)
             entry.view.deleteLater()
         entry.container.deleteLater()
 
     def clear(self) -> None:
+        for link in self._links:
+            link.disconnect()
+        self._links.clear()
         while self._entries:
             self.remove(0)
+
+    # ── linking ──────────────────────────────────────────────────────────
+    def link(
+        self,
+        *,
+        source: int | PlotView | str,
+        event: str,
+        to: int | PlotView | str | Sequence[int | PlotView | str],
+        handler: LinkHandler,
+    ) -> Unlink:
+        """Forward `event` messages from `source` to `handler(target_backend, payload)`.
+
+        `source` and `to` accept tab indices, tab labels, or PlotView
+        instances. Tabs that haven't been built yet are built first (so
+        their views exist to be wired) — this means linking a lazy tab
+        eagerly materializes it.
+        """
+
+        def to_view(ref: int | PlotView | str) -> PlotView:
+            if isinstance(ref, str):
+                view = self.view_for(ref)
+                if view is None:
+                    raise KeyError(f"no tab labelled {ref!r}")
+                return view
+            if isinstance(ref, int):
+                # Build the tab so its view exists.
+                entry = self._entries[ref]
+                if entry.view is None:
+                    self._build(entry)
+                return entry.view  # type: ignore[return-value]
+            return ref
+
+        source_view = to_view(source)
+        targets = to if isinstance(to, (list, tuple)) else [to]
+        target_views = [to_view(t) for t in targets]
+        link = _Link(source_view, event, target_views, handler)
+        self._links.append(link)
+
+        def unlink() -> None:
+            link.disconnect()
+            if link in self._links:
+                self._links.remove(link)
+
+        return unlink
+
+    def _drop_links_for(self, view: PlotView) -> None:
+        surviving = []
+        for link in self._links:
+            if link.references(view):
+                link.disconnect()
+            else:
+                surviving.append(link)
+        self._links = surviving
 
     def view_for(self, label: str) -> PlotView | None:
         """Return (and build, if lazy) the view for `label`. None if no such tab."""
@@ -298,6 +406,7 @@ class PlotSplitter(QSplitter):
         super().__init__(orientation, parent)
         self._views: list[PlotView] = []
         self._backends: list[PlotBackend] = []
+        self._links: list[_Link] = []
         for backend in backends:
             self.add(backend)
 
@@ -326,15 +435,49 @@ class PlotSplitter(QSplitter):
             )
         view = self._views.pop(index)
         self._backends.pop(index)
+        self._drop_links_for(view)
         view.setParent(None)
         view.deleteLater()
 
     def clear(self) -> None:
+        for link in self._links:
+            link.disconnect()
+        self._links.clear()
         while self._views:
             view = self._views.pop()
             self._backends.pop()
             view.setParent(None)
             view.deleteLater()
+
+    def link(
+        self,
+        *,
+        source: int | PlotView,
+        event: str,
+        to: int | PlotView | Sequence[int | PlotView],
+        handler: LinkHandler,
+    ) -> Unlink:
+        source_view = resolve_view(self._views, source)
+        targets = to if isinstance(to, (list, tuple)) else [to]
+        target_views = [resolve_view(self._views, t) for t in targets]
+        link = _Link(source_view, event, target_views, handler)
+        self._links.append(link)
+
+        def unlink() -> None:
+            link.disconnect()
+            if link in self._links:
+                self._links.remove(link)
+
+        return unlink
+
+    def _drop_links_for(self, view: PlotView) -> None:
+        surviving = []
+        for link in self._links:
+            if link.references(view):
+                link.disconnect()
+            else:
+                surviving.append(link)
+        self._links = surviving
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         self.clear()

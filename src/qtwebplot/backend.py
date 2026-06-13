@@ -8,6 +8,7 @@ from PySide6.QtCore import QUrl
 
 if TYPE_CHECKING:
     from qtwebplot.core import WebBridgeView
+    from qtwebplot.theme import Theme
 
 
 @runtime_checkable
@@ -46,3 +47,10 @@ class PlotBackend(Protocol):
         raise NotImplementedError(
             f"{type(self).__name__} does not implement set_figure()"
         )
+
+    def apply_theme(self, theme: Theme) -> None:
+        """Optional: apply a backend-agnostic theme. The default is a no-op;
+        backends override to translate `theme` into native styling (Plotly
+        template, Bokeh `Theme`, ...). Applied before the next `to_html()`.
+        """
+        return None

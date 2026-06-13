@@ -18,7 +18,7 @@ pytest.importorskip("PySide6.QtWebEngineWidgets")
 from PySide6.QtCore import Qt  # noqa: E402
 
 from qtwebplot import PlotGrid, PlotTabs  # noqa: E402
-from qtwebplot.backend import PlotBackend  # noqa: E402
+from qtwebplot.backend import PlotBackend  # noqa: E402, F401 — typing import
 from qtwebplot.layouts import PlotSplitter  # noqa: E402
 
 
@@ -181,6 +181,56 @@ def test_splitter_constructs_views(qtbot):
     assert len(splitter) == 2
     for v in splitter.views:
         _wait_ready(qtbot, v)
+
+
+@pytest.mark.gui
+def test_grid_link_forwards_event_to_target(qtbot):
+    backends = [_StubBackend("a"), _StubBackend("b")]
+    grid = PlotGrid(backends, cols=2)
+    qtbot.addWidget(grid)
+    grid.show()
+
+    for v in grid.views:
+        _wait_ready(qtbot, v)
+
+    received: list[tuple[PlotBackend, object]] = []
+
+    def handler(target_backend, payload):
+        received.append((target_backend, payload))
+
+    grid.link(source=0, event="stub.tick", to=1, handler=handler)
+
+    # Drive a stub.tick from view[0]'s JS side.
+    grid.views[0].run_js("qtwebplot.send('stub.tick', {n: 42});")
+    qtbot.waitUntil(lambda: len(received) == 1, timeout=2000)
+    target_backend, payload = received[0]
+    assert target_backend is grid.backends[1]
+    assert payload == {"n": 42}
+
+
+@pytest.mark.gui
+def test_grid_link_unlinks_on_remove(qtbot):
+    backends = [_StubBackend("a"), _StubBackend("b")]
+    grid = PlotGrid(backends, cols=2)
+    qtbot.addWidget(grid)
+    grid.show()
+    for v in grid.views:
+        _wait_ready(qtbot, v)
+
+    received: list = []
+    grid.link(
+        source=0,
+        event="stub.tick",
+        to=1,
+        handler=lambda b, p: received.append(p),
+    )
+
+    # Remove the target — link should be auto-torn-down.
+    grid.remove(1)
+    grid.views[0].run_js("qtwebplot.send('stub.tick', {n: 1});")
+    # Give the JS round-trip a window; assert no delivery.
+    qtbot.wait(300)
+    assert received == []
 
 
 @pytest.mark.gui
