@@ -300,6 +300,28 @@ M5. **Status:** low urgency.
 
 ---
 
+## [D12] Brush selection mechanism (pyqtgraph)
+
+**Context.** pyqtgraph has no built-in "rubber-band drag → selected point
+indices"; we must build the brush that produces `SelectEvent`. Needed for the
+roadmap Phase 1 gate (linked brushing) at M4.
+
+**Options.**
+- **A. `ViewBox` RectMode + read rect on mouse-release.** No extra UI; on
+  release, test each element's snapshot points against the bounds → indices.
+  Con: collides with rect-zoom (ViewBox uses RectMode for zoom).
+- **B. Toggleable draggable `RectROI` / `LinearRegionItem`.** Explicit brush
+  affordance the user turns on; emits as it moves. Con: adds UI + a mode.
+- **C. Modifier-drag** (e.g. Shift+drag = select, plain drag = pan/zoom).
+  Familiar; no mode UI. Con: must intercept ViewBox mouse handling.
+
+**Recommendation.** **C** (modifier-drag select) — no persistent UI, doesn't
+fight zoom, matches common plotting tools. Compute indices per element from
+its snapshot x/y against the dragged bounds. **Blocks.** M4.
+**Status:** open — decide during M4 build.
+
+---
+
 ## Index
 
 | ID | Topic | Blocks | Status |
@@ -315,3 +337,4 @@ M5. **Status:** low urgency.
 | D9 | capabilities scalar vs context | M2 | accepted (scalar) — revisit on mis-route |
 | D10 | negotiation memoization (none) | M2 | accepted (no cache) |
 | D11 | composite export semantics | M5 | accepted — revisit at M5 |
+| D12 | brush selection mechanism (pyqtgraph) | M4 | open — decide during M4 |

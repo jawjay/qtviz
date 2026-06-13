@@ -223,6 +223,12 @@ nothing *runs* until the last step. Instead we drive a **walking skeleton**
 elements) and deepen (events, composition, switching). Each milestone is a
 shippable, tested increment.
 
+> **Status (commit 97b2e14):** M0 ✅ · M1 ✅ · M2 ✅ · M3 ✅ (all 8
+> pyqtgraph renderers, theme, handle, ViewState) · **M4 next** (interaction —
+> detailed plan in `milestone-m4-interaction.md`). Re-sequenced tail:
+> **M4 → M6 (matplotlib) → M5 (mixed-backend host)** — M5's `LayoutHost`
+> only becomes testable once a second backend exists.
+
 ### M0 — Walking skeleton · `View(Scatter) → pyqtgraph → window`
 - **Components:** minimal `Immutable`; `as_data_ref` + one eager adapter
   (dict/pandas → `TabularRef`);
