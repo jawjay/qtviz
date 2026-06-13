@@ -30,7 +30,15 @@ from qtwebplot.core.bridge import Bridge
 # collide with a legitimate backend message.
 _UNDELIVERED_NAME = "_qtwebplot.undelivered"
 
-_CONSOLE_LEVEL_NAMES = {0: "info", 1: "warning", 2: "error"}
+
+# Map the Qt console-level enum to a short string. Comparing the enum
+# members directly works across PySide6 versions; some builds raise on
+# `int(level)` for the enum value.
+_CONSOLE_LEVEL_NAMES = {
+    QWebEnginePage.JavaScriptConsoleMessageLevel.InfoMessageLevel: "info",
+    QWebEnginePage.JavaScriptConsoleMessageLevel.WarningMessageLevel: "warning",
+    QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel: "error",
+}
 
 
 class _BridgePage(QWebEnginePage):
@@ -44,7 +52,7 @@ class _BridgePage(QWebEnginePage):
     def javaScriptConsoleMessage(  # noqa: N802 — Qt naming
         self, level, message: str, line: int, source: str
     ) -> None:
-        level_str = _CONSOLE_LEVEL_NAMES.get(int(level), "info")
+        level_str = _CONSOLE_LEVEL_NAMES.get(level, "info")
         location = f"{source}:{line}" if source else f"line {line}"
         self._owner.log.emit(level_str, f"{message} ({location})")
 
