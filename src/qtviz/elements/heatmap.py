@@ -4,21 +4,22 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core.element import Element, require_tabular_columns
-from ..data import as_data_ref
+from ..core.element import Element
+from ..data import Accessor, as_data_ref
 
 
 class Heatmap(Element):
     REQUIRED_OPTIONS = ("x", "y", "z")
     RECOMMENDED_OPTIONS = ("colormap", "aggregator")
+    CHANNELS = ("x", "y", "z")
 
     def __init__(
         self,
         data,
         *,
-        x: str,
-        y: str,
-        z: str,
+        x: Accessor,
+        y: Accessor,
+        z: Accessor,
         colormap: str = "viridis",
         aggregator: Literal["mean", "sum", "count", "max", "min"] = "mean",
         backend_hint: str | None = None,
@@ -29,5 +30,5 @@ class Heatmap(Element):
         self.x, self.y, self.z = x, y, z
         self.colormap = colormap
         self.aggregator = aggregator
-        require_tabular_columns(self.data, [x, y, z], who="Heatmap")
+        self._validate_tabular()
         self._freeze()

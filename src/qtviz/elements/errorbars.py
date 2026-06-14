@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core.color import ColorSpec
-from ..core.element import Element, require_tabular_columns
-from ..data import as_data_ref
+from ..core.element import Element
+from ..data import Accessor, as_data_ref
 
 
 class ErrorBars(Element):
@@ -17,9 +17,9 @@ class ErrorBars(Element):
         self,
         data,
         *,
-        x: str,
-        y: str,
-        err: str | tuple[str, str],
+        x: Accessor,
+        y: Accessor,
+        err: Accessor | tuple[Accessor, Accessor],
         direction: Literal["y", "x", "both"] = "y",
         color: ColorSpec | None = None,
         backend_hint: str | None = None,
@@ -28,9 +28,16 @@ class ErrorBars(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         self.data = as_data_ref(data)
         self.x, self.y = x, y
-        self.err = err if isinstance(err, str) else tuple(err)
+        self.err = err
         self.direction = direction
         self.color = color
-        err_cols = [err] if isinstance(err, str) else list(err)
-        require_tabular_columns(self.data, [x, y, *err_cols], who="ErrorBars")
+        self._validate_tabular()
         self._freeze()
+
+    def channels(self) -> dict:
+        ch = {"x": self.x, "y": self.y}
+        if isinstance(self.err, tuple):  # (lo, hi) accessors
+            ch["err_lo"], ch["err_hi"] = self.err
+        else:  # single accessor → symmetric
+            ch["err_lo"] = ch["err_hi"] = self.err
+        return ch

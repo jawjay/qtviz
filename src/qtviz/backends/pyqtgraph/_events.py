@@ -41,8 +41,8 @@ def attach(element, item, ctx) -> None:
     and (for scatters) connect pick/hover."""
     vb = ctx.parent_axes.getViewBox()
     if isinstance(element, (Scatter, Curve)) and hasattr(vb, "add_selectable"):
-        x = np.asarray(element.data.series(element.x), dtype="float64")
-        y = np.asarray(element.data.series(element.y), dtype="float64")
+        x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
+        y = np.asarray(element.data.series("y"), dtype="float64")
         vb.add_selectable(element.id, x, y)
     if isinstance(element, Scatter) and item is not None and hasattr(item, "sigClicked"):
         wire_scatter(item, element.id, ctx.event_bus)

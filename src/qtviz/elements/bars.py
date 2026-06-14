@@ -5,20 +5,21 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core.color import ColorSpec
-from ..core.element import Element, require_tabular_columns
-from ..data import as_data_ref
+from ..core.element import Element
+from ..data import Accessor, as_data_ref
 
 
 class Bars(Element):
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("group", "color", "orient")
+    CHANNELS = ("x", "y")
 
     def __init__(
         self,
         data,
         *,
-        x: str,
-        y: str,
+        x: Accessor,
+        y: Accessor,
         group: str | None = None,
         orient: Literal["v", "h"] = "v",
         color: ColorSpec | None = None,
@@ -31,5 +32,5 @@ class Bars(Element):
         self.group = group
         self.orient = orient
         self.color = color
-        require_tabular_columns(self.data, [x, y, group], who="Bars")
+        self._validate_tabular()
         self._freeze()

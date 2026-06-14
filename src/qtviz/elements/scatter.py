@@ -5,20 +5,21 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core.color import ColorSpec
-from ..core.element import Element, require_tabular_columns
-from ..data import as_data_ref
+from ..core.element import Element
+from ..data import Accessor, as_data_ref
 
 
 class Scatter(Element):
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker")
+    CHANNELS = ("x", "y")
 
     def __init__(
         self,
         data,
         *,
-        x: str,
-        y: str,
+        x: Accessor,
+        y: Accessor,
         color: ColorSpec | None = None,
         color_by: str | None = None,
         size: float | None = None,
@@ -46,5 +47,5 @@ class Scatter(Element):
         self.scale = scale
         self.pyqtgraph_use_opengl = pyqtgraph_use_opengl
         self.matplotlib_rasterized = matplotlib_rasterized
-        require_tabular_columns(self.data, [x, y, color_by, size_by], who="Scatter")
+        self._validate_tabular()
         self._freeze()

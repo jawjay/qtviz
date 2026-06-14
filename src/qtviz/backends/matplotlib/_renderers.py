@@ -36,14 +36,14 @@ def _col(ref, name) -> np.ndarray:
 def render_scatter(element: Scatter, ctx):
     size = (element.size or 6) ** 2  # mpl `s` is area; our size is ~diameter
     return ctx.parent_axes.scatter(
-        _col(element.data, element.x), _col(element.data, element.y),
+        _col(element.data, "x"), _col(element.data, "y"),
         color=_color(element.color, ctx.theme).mpl(), s=size, alpha=element.alpha,
     )
 
 
 def render_curve(element: Curve, ctx):
     (line,) = ctx.parent_axes.plot(
-        _col(element.data, element.x), _col(element.data, element.y),
+        _col(element.data, "x"), _col(element.data, "y"),
         color=_color(element.color, ctx.theme).mpl(),
         lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
     )
@@ -51,16 +51,16 @@ def render_curve(element: Curve, ctx):
 
 
 def render_bars(element: Bars, ctx):
-    height = _col(element.data, element.y)
+    height = _col(element.data, "y")
     try:
-        x = _col(element.data, element.x)
+        x = _col(element.data, "x")
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")
     return ctx.parent_axes.bar(x, height, color=_color(element.color, ctx.theme).mpl())
 
 
 def render_histogram(element: Histogram, ctx):
-    vals = _col(element.data, element.column)
+    vals = _col(element.data, "column")
     bins = element.bins if isinstance(element.bins, int) else "auto"
     _n, _bins, patches = ctx.parent_axes.hist(
         vals, bins=bins, density=element.density, color=_color(element.color, ctx.theme).mpl(),
@@ -78,7 +78,7 @@ def render_image(element: Image, ctx):
 
 def render_heatmap(element: Heatmap, ctx):
     d = element.data
-    xv, yv, zv = d.series(element.x), d.series(element.y), _col(d, element.z)
+    xv, yv, zv = d.series("x"), d.series("y"), _col(d, "z")
     xs, x_inv = np.unique(xv, return_inverse=True)
     ys, y_inv = np.unique(yv, return_inverse=True)
     grid = np.full((len(ys), len(xs)), np.nan)
@@ -88,13 +88,11 @@ def render_heatmap(element: Heatmap, ctx):
 
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
-    if isinstance(element.err, str):
-        err = _col(d, element.err)
-    else:
-        err = np.vstack([_col(d, element.err[0]), _col(d, element.err[1])])
+    lo, hi = _col(d, "err_lo"), _col(d, "err_hi")
+    err = np.vstack([lo, hi])  # [below, above]
     kwargs = {"yerr": err} if element.direction in ("y", "both") else {"xerr": err}
     return ctx.parent_axes.errorbar(
-        _col(d, element.x), _col(d, element.y), fmt="o",
+        _col(d, "x"), _col(d, "y"), fmt="o",
         color=_color(element.color, ctx.theme).mpl(), **kwargs,
     )
 
@@ -102,7 +100,7 @@ def render_errorbars(element: ErrorBars, ctx):
 def render_spread(element: Spread, ctx):
     d = element.data
     return ctx.parent_axes.fill_between(
-        _col(d, element.x), _col(d, element.y_lo), _col(d, element.y_hi),
+        _col(d, "x"), _col(d, "y_lo"), _col(d, "y_hi"),
         color=_color(element.color, ctx.theme).mpl(), alpha=element.alpha,
     )
 

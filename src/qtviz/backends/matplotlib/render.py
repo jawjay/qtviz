@@ -19,6 +19,7 @@ from ...core.compose import Layout, Overlay
 from ...core.element import Element
 from ...core.event import EventBus, SelectEvent
 from ...core.threading import require_gui_thread
+from ...data import resolve_node
 from ...errors import RendererMissingError
 from . import _events
 from ._renderers import RENDERERS
@@ -106,6 +107,7 @@ class MatplotlibBackend:
 
     @require_gui_thread
     def render(self, node, *, theme, parent=None) -> MplRenderHandle:
+        node = resolve_node(node)  # accessors → role-keyed eager refs (D14)
         fig = Figure()
         canvas = FigureCanvasQTAgg(fig)
         if parent is not None:

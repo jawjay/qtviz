@@ -18,16 +18,24 @@ from typing import Any
 def _keyed(value: Any) -> Any:
     """Map a field value to something cheap and hashable for the value-key.
 
-    A DataRef (anything exposing a callable `fingerprint`) contributes its
-    fingerprint — never its contents, which may be an unhashable numpy buffer.
-    Everything else must already be hashable (scalars, tuples, nested
-    Immutables); a list is normalized to a tuple as a convenience.
+    - A DataRef (anything exposing a callable `fingerprint`) contributes its
+      fingerprint — never its contents.
+    - A list is normalized to a tuple.
+    - Anything still unhashable (a raw ndarray / DataFrame bound as an
+      ArrayLike accessor) falls back to identity, like a buffer fingerprint.
+    - Hashable values (str, Expression, a function — identity-hashable) pass
+      through, giving value-equality for str/Expression and identity-equality
+      for callables (D14).
     """
     fp = getattr(value, "fingerprint", None)
     if callable(fp):
         return fp()
     if isinstance(value, list):
-        return tuple(value)
+        return tuple(_keyed(v) for v in value)
+    try:
+        hash(value)
+    except TypeError:
+        return id(value)
     return value
 
 

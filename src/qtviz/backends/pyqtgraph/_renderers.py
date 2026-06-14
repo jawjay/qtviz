@@ -1,8 +1,9 @@
 """pyqtgraph element renderers (spec §4.1).
 
-One function per Element type: take the (eager, narrowed) Element, build the
-native primitive, attach it to the plot. Returns the primitive so the handle
-can reach it later. GUI-thread only.
+One function per Element type. By the time a renderer runs, the resolve pipeline
+(D14) has replaced the Element's data with a role-keyed eager ref, so renderers
+read channels by their fixed **role** name (`"x"`, `"y"`, …) — never the user's
+accessor, which may be a string, Expression, callable, or array.
 """
 
 from __future__ import annotations
@@ -36,8 +37,8 @@ def _col(ref, name) -> np.ndarray:
 def render_scatter(element: Scatter, ctx):
     d = element.data
     item = pg.ScatterPlotItem(
-        x=_col(d, element.x),
-        y=_col(d, element.y),
+        x=_col(d, "x"),
+        y=_col(d, "y"),
         brush=pg.mkBrush(_color(element.color, ctx.theme).qt()),
         pen=None,
         size=element.size or 6,
@@ -51,16 +52,16 @@ def render_scatter(element: Scatter, ctx):
 def render_curve(element: Curve, ctx):
     d = element.data
     pen = pg.mkPen(_color(element.color, ctx.theme).qt(), width=element.line_width)
-    item = pg.PlotCurveItem(x=_col(d, element.x), y=_col(d, element.y), pen=pen)
+    item = pg.PlotCurveItem(x=_col(d, "x"), y=_col(d, "y"), pen=pen)
     ctx.parent_axes.addItem(item)
     return item
 
 
 def render_bars(element: Bars, ctx):
     d = element.data
-    height = _col(d, element.y)
+    height = _col(d, "y")
     try:
-        x = _col(d, element.x)
+        x = _col(d, "x")
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")  # categorical → indices
     brush = _color(element.color, ctx.theme).qt()
@@ -70,7 +71,7 @@ def render_bars(element: Bars, ctx):
 
 
 def render_histogram(element: Histogram, ctx):
-    vals = _col(element.data, element.column)
+    vals = _col(element.data, "column")
     bins = element.bins if isinstance(element.bins, int) else "auto"
     counts, edges = np.histogram(vals, bins=bins, density=element.density)
     centers = (edges[:-1] + edges[1:]) / 2.0
@@ -94,8 +95,8 @@ def render_image(element: Image, ctx):
 
 def render_heatmap(element: Heatmap, ctx):
     d = element.data
-    xv, yv = d.series(element.x), d.series(element.y)
-    zv = _col(d, element.z)
+    xv, yv = d.series("x"), d.series("y")
+    zv = _col(d, "z")
     xs, x_inv = np.unique(xv, return_inverse=True)
     ys, y_inv = np.unique(yv, return_inverse=True)
     grid = np.full((len(ys), len(xs)), np.nan)
@@ -107,12 +108,9 @@ def render_heatmap(element: Heatmap, ctx):
 
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
-    if isinstance(element.err, str):
-        top = bottom = _col(d, element.err)
-    else:
-        bottom, top = _col(d, element.err[0]), _col(d, element.err[1])
     item = pg.ErrorBarItem(
-        x=_col(d, element.x), y=_col(d, element.y), top=top, bottom=bottom, beam=0.0
+        x=_col(d, "x"), y=_col(d, "y"),
+        top=_col(d, "err_hi"), bottom=_col(d, "err_lo"), beam=0.0,
     )
     ctx.parent_axes.addItem(item)
     return item
@@ -120,9 +118,9 @@ def render_errorbars(element: ErrorBars, ctx):
 
 def render_spread(element: Spread, ctx):
     d = element.data
-    x = _col(d, element.x)
-    lo = pg.PlotDataItem(x, _col(d, element.y_lo))
-    hi = pg.PlotDataItem(x, _col(d, element.y_hi))
+    x = _col(d, "x")
+    lo = pg.PlotDataItem(x, _col(d, "y_lo"))
+    hi = pg.PlotDataItem(x, _col(d, "y_hi"))
     brush = _color(element.color, ctx.theme).qt()
     brush.setAlphaF(element.alpha)
     fill = pg.FillBetweenItem(lo, hi, brush=brush)

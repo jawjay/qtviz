@@ -39,8 +39,8 @@ def wire_pick(artist, source_id: str, bus) -> None:
 
 def attach(element, artist, ctx, selectables: list) -> None:
     if isinstance(element, (Scatter, Curve)):
-        x = np.asarray(element.data.series(element.x), dtype="float64")
-        y = np.asarray(element.data.series(element.y), dtype="float64")
+        x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
+        y = np.asarray(element.data.series("y"), dtype="float64")
         selectables.append((element.id, x, y))
     if isinstance(element, Scatter) and artist is not None and hasattr(artist, "get_offsets"):
         wire_pick(artist, element.id, ctx.event_bus)

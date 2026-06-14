@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 from ..core.color import ColorSpec
-from ..core.element import Element, require_tabular_columns
-from ..data import as_data_ref
+from ..core.element import Element
+from ..data import Accessor, as_data_ref
 
 
 class Histogram(Element):
     REQUIRED_OPTIONS = ("column",)
     RECOMMENDED_OPTIONS = ("bins", "density", "color")
+    CHANNELS = ("column",)
 
     def __init__(
         self,
         data,
         *,
-        column: str,
+        column: Accessor,
         bins: int | str = "auto",
         density: bool = False,
         color: ColorSpec | None = None,
@@ -28,5 +29,5 @@ class Histogram(Element):
         self.bins = bins
         self.density = density
         self.color = color
-        require_tabular_columns(self.data, [column], who="Histogram")
+        self._validate_tabular()
         self._freeze()

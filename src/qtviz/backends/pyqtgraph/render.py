@@ -13,6 +13,7 @@ from ...core.compose import Layout, Overlay
 from ...core.element import Element
 from ...core.event import EventBus
 from ...core.threading import require_gui_thread
+from ...data import resolve_node
 from ...errors import RendererMissingError
 from . import _events
 from ._axes import link_axes
@@ -107,6 +108,7 @@ class PyQtGraphBackend:
 
     @require_gui_thread
     def render(self, node, *, theme, parent=None) -> PgRenderHandle:
+        node = resolve_node(node)  # accessors → role-keyed eager refs (D14)
         self._last_theme = theme
         widget = pg.GraphicsLayoutWidget(parent=parent)
         apply_theme(widget, theme)

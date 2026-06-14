@@ -5,20 +5,21 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core.color import ColorSpec
-from ..core.element import Element, require_tabular_columns
-from ..data import as_data_ref
+from ..core.element import Element
+from ..data import Accessor, as_data_ref
 
 
 class Curve(Element):
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "line_width", "line_style", "alpha")
+    CHANNELS = ("x", "y")
 
     def __init__(
         self,
         data,
         *,
-        x: str,
-        y: str,
+        x: Accessor,
+        y: Accessor,
         color: ColorSpec | None = None,
         line_width: float = 1.5,
         line_style: Literal["solid", "dashed", "dotted", "dashdot"] = "solid",
@@ -35,5 +36,5 @@ class Curve(Element):
         self.line_width = line_width
         self.line_style = line_style
         self.alpha = alpha
-        require_tabular_columns(self.data, [x, y], who="Curve")
+        self._validate_tabular()
         self._freeze()

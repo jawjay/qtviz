@@ -33,6 +33,11 @@ class DataRef:
 
     is_lazy: bool = False
 
+    def resolve_channels(self, channels: dict[str, Any]) -> dict[str, np.ndarray]:
+        """Resolve `{role: accessor}` to `{role: 1-D ndarray}`, computing all
+        channels together (lazy refs push projection down). Default: empty."""
+        return {}
+
     def schema(self) -> Schema:
         raise NotImplementedError
 
@@ -93,6 +98,21 @@ class EagerTabularRef(TabularRef):
     def __init__(self, source: Any, columns: dict[str, np.ndarray]) -> None:
         self._source = source
         self._cols = columns
+
+    def resolve_channels(self, channels: dict[str, Any]) -> dict[str, np.ndarray]:
+        from .accessor import resolve_accessor  # noqa: PLC0415
+
+        out = {
+            role: resolve_accessor(accessor, columns=self._cols, native=self._source)
+            for role, accessor in channels.items()
+        }
+        lengths = {len(a) for a in out.values()}
+        if len(lengths) > 1:
+            raise ValueError(
+                f"channels resolved to mismatched lengths: "
+                f"{ {r: len(a) for r, a in out.items()} }"
+            )
+        return out
 
     def schema(self) -> Schema:
         return Schema(
