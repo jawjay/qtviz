@@ -80,6 +80,25 @@ qv.Scatter({}, x=np.linspace(0, 1, n), y=values)          # literal arrays
 - a **callable** is the escape hatch for anything else;
 - a **literal array** is just the values.
 
+### Big data — datashader
+Past a few hundred thousand points a scatter overplots into a blob. Set
+`scale="datashader"` and qtviz aggregates the points into a screen-resolution
+density raster off the GUI thread — and **re-aggregates to the visible viewport at
+your widget's pixel size as you pan/zoom**, so the image sharpens instead of
+pixelating:
+
+```python
+qv.Scatter(big, x="x", y="y", scale="datashader")   # always rasterize
+qv.Scatter(big, x="x", y="y", scale="auto")          # rasterize past a threshold
+qv.set_raster_threshold(2_000_000)                   # tune the "auto" cutoff
+```
+
+It's backend-agnostic (the aggregation is a pipeline step, so every backend draws
+a datashaded scatter) and out-of-core: backed by a lazy Dask / xarray / zarr
+source, the points are aggregated partition-by-partition and the full table never
+lands in memory. See [`examples/09_datashader.py`](examples/09_datashader.py) and
+[`examples/10_out_of_core.py`](examples/10_out_of_core.py).
+
 ### Composition
 Operators build a figure tree:
 
@@ -126,8 +145,10 @@ uv run python examples/01_hello.py
 ```
 
 `01_hello` · `02_composition` · `03_backends` · `04_theming` · `05_interaction`
-· `06_data_binding` · `07_mixed_backends` · `08_gallery` · `dashboard_native`
-(3-panel linked dashboard). See [`examples/README.md`](examples/README.md).
+· `06_data_binding` · `07_mixed_backends` · `08_gallery` · `09_datashader`
+(millions of points, re-aggregated on zoom) · `10_out_of_core` (lazy Dask) ·
+`11_datashader_matplotlib` (same, on matplotlib) · `dashboard_native` (3-panel
+linked dashboard). See [`examples/README.md`](examples/README.md).
 
 ## What works today
 
