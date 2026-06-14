@@ -223,16 +223,22 @@ nothing *runs* until the last step. Instead we drive a **walking skeleton**
 elements) and deepen (events, composition, switching). Each milestone is a
 shippable, tested increment.
 
-> **Status:** M0 ✅ · M1 ✅ · M2 ✅ · M3 ✅ · M4 ✅ (native interaction —
-> events, brushing, linked axes) · M6 ✅ (matplotlib backend — the
-> abstraction proof: adding it touched only `backends/matplotlib/` + one
-> register line + pyproject; conformance green for both backends, vector
-> export real) · M5 ✅ (mixed-backend `LayoutHost` + `CompositeRenderHandle`
-> in `core/_host.py`: splitter/tabs/dock/grid panes spanning backends, merged
-> event bus, homogeneous grid stays single-backend). **The Phase 1 surface is
-> structurally complete.** Remaining: deferred discussion items (D2 selection
-> portability, D3 async materialize, D7 coalescing) and Phases 3–5
-> (HoloViews adapter, reactive/Datashader, data layer + webengine rehome).
+> **Status:** M0–M6 ✅ — the Phase 1 + Phase 2 surface (pure model, two backends,
+> interaction, mixed-backend layouts) is structurally complete. Two tracks were
+> then built *out of the original phase order*, pulled ahead of the HoloViews
+> adapter and reactive signals (see §4 "post-M6" and `milestone-*` docs):
+> - **Data core ✅** — functional accessors [D14] (`str|Expression|Callable|
+>   ArrayLike`); async resolve/materialize with keep-last + build-id stale-drop
+>   [D13, realizes D3]; `ViewState` capture/restore on rebuild & backend switch
+>   [D2]; container-agnostic lazy adapters dask/xarray/zarr [D1, D17] — out-of-core,
+>   off-thread, with a parametrized adapter-conformance suite.
+> - **Phase 4 Datashader ✅** — backend-agnostic rasterization [D18] (`scale=
+>   "native"|"auto"|"datashader"`), out-of-core aggregation, dynamic viewport
+>   re-aggregation [D21] on both backends.
+>
+> Remaining (see §7 mapping + §8): HoloViews adapter, reactive `Signal` binding,
+> data sources (Parquet/DuckDB/SQL), webengine rehome, release. Still-open items:
+> D7 (update coalescing), D22 (datashade lines / categorical color).
 
 ### M0 — Walking skeleton · `View(Scatter) → pyqtgraph → window`
 - **Components:** minimal `Immutable`; `as_data_ref` + one eager adapter
@@ -259,10 +265,12 @@ shippable, tested increment.
   array-backed elements, `with_` round-trips, validation errors, **and the
   data-adapter conformance suite (§5.3) for the eager adapters** (same
   Element → same `series`/`grid` output through dict/pandas/arrow/numpy).
-- **Note:** lazy/gridded adapters (xarray/zarr/dask) are deferred to the
-  reactive/data phases (4–5) but the contract they satisfy is frozen here —
-  if a lazy adapter later forces a change to `DataRef`, this milestone got
-  the abstraction wrong.
+- **Note (resolved):** lazy/gridded adapters (dask/xarray/zarr) were originally
+  slated for a later phase but have since been built (see the "Data core ✅"
+  status above). The `DataRef` contract frozen here held — each lazy adapter
+  slotted in as one file, with no change to Element, renderer, negotiation, or
+  View. That is the abstraction proof for the data layer, mirroring M6's for
+  backends.
 
 ### M2 — Composition & negotiation (pure)
 - **Components:** `Overlay`/`Layout` + `*`/`+` operators; `Capabilities`;
@@ -313,10 +321,28 @@ shippable, tested increment.
   `backends/matplotlib/`, the abstraction failed — that diff is the
   design's correctness check (spec §13).**
 
-> M0–M5 fit inside roadmap Phase 1 (2.5 mo); M6 is Phase 2 (1.5 mo).
-> Phases 3+ (HoloViews adapter, reactive/Datashader, data/webengine
-> rehome) keep the spec's sketch depth and get their own plan when their
-> gate opens.
+> M0–M5 were roadmap Phase 1; M6 was Phase 2. The **data core** and **Phase 4
+> Datashader** (below) followed, pulled ahead of the original sequence.
+
+### Post-M6 (resequenced) — data core, then Datashader
+
+Both shipped as their own milestones with dedicated docs; summarized here so the
+build sequence stays complete. Each was gated by a spec-first benchmark suite,
+per the standing cadence.
+
+- **Data core** (`milestone-data-core.md`) — functional binding via accessors
+  [D14]; async resolve pipeline + keep-last/build-id [D13]; `ViewState` [D2];
+  dask/xarray/zarr adapters [D1, D17]. Gate: adapter-conformance suite (same
+  Element → identical arrays across every adapter) + laziness invariant (metadata
+  ops trigger no compute).
+- **Phase 4 — Datashader** (`milestone-phase4-datashader.md`) — **4a** rasterizer
+  + `resolve_node` Scatter→Image routing, backend-agnostic [D18], out-of-core,
+  off-thread; **4b** `RasterController` + per-backend `RasterTarget` [D21] for
+  debounced viewport re-aggregation. Gate: rasterizer correctness, dask-stays-lazy,
+  scale routing, end-to-end zoom re-aggregation on both backends.
+
+Remaining work (HoloViews adapter, reactive signals, data sources, webengine
+rehome) keeps sketch depth and gets its own plan when its gate opens — see §8.
 
 ## 5. Verification strategy
 
@@ -400,21 +426,39 @@ Tier 2(offscreen) + ruff on every PR; Tier 4 on a schedule/manual.
 
 ## 7. Milestone → roadmap mapping
 
-| Milestone | Roadmap phase | Gate it serves |
-|-----------|---------------|----------------|
-| M0 | Phase 0 spike P1 / Phase 1 start | spine proven |
-| M1–M2 | Phase 1 | pure model + composition |
-| M3–M4 | Phase 1 | pyqtgraph breadth + interaction |
-| M5 | Phase 1 | **3-panel dashboard gate** |
-| M6 | Phase 2 | **second backend = design proof** |
-| (later) | Phase 3–6 | adapter, reactive, data, release |
+| Milestone | Roadmap phase | Gate it serves | Status |
+|-----------|---------------|----------------|--------|
+| M0 | Phase 0 spike P1 / Phase 1 start | spine proven | ✅ |
+| M1–M2 | Phase 1 | pure model + composition | ✅ |
+| M3–M4 | Phase 1 | pyqtgraph breadth + interaction | ✅ |
+| M5 | Phase 1 | **3-panel dashboard gate** | ✅ |
+| M6 | Phase 2 | **second backend = design proof** | ✅ |
+| Data core | pulled from Phase 5 | accessors + lazy adapters, out-of-core | ✅ |
+| Phase 4 | Phase 4 | big-data raster + viewport re-aggregation | ✅ |
+| (next) | Phase 3 / 4-tail / 5 / 6 | HoloViews · reactive · data sources · release | ⬜ |
 
 ## 8. What's next
 
-1. Review this plan + `discussion-items.md`. [D1] (the data layer) is
-   resolved and folded into spec §6; the remaining **[D#]** are accepted
-   with a revisit flag, so nothing else blocks starting.
-2. Build the **benchmarks**: the Tier‑3 conformance suite skeleton and the
-   Tier‑1 fixtures — these become the executable acceptance criteria the
-   implementation is written against.
-3. Begin M0 once the conformance suite can express its acceptance.
+The Phase 1–2 surface, the data core, and Datashader are built and green. The
+remaining work, in recommended order (each opened with its own spec-first
+benchmark suite, per cadence):
+
+1. **Finish Datashader coverage [D22]** (small) — datashade `Curve`/line via
+   `canvas.line`, and categorical color via `count_cat` + `color_by`. The 4a/4b
+   machinery already handles points; this extends the aggregation + shade step.
+2. **Reactive `Signal` binding** (roadmap Phase 4) — `Signal`/derived/effect tied
+   to QObject lifecycle; a signal-bound accessor re-renders the Element on change;
+   cross-view linked brushing without manual wiring. Builds directly on the
+   accessor + async-resolve machinery already in place.
+3. **Data sources** (roadmap Phase 5) — a `DataSource` for Parquet/DuckDB/SQL
+   behind the existing adapter contract; lazy + background queries. The lazy
+   `DataRef` contract is already proven by dask/xarray/zarr, so this is additive.
+4. **HoloViews adapter** (roadmap Phase 3) — `from_holoviews()` for the 8 elements;
+   independent of the above and gated on the Spike-P2 feasibility check.
+5. **webengine backend rehome** (roadmap Phase 5) — the legacy qtwebplot bridge
+   moves under `backends/webengine/` behind the Backend protocol.
+6. **Release `0.1`** (roadmap Phase 6) — docs/gallery, PyPI, `qtwebplot` import shim.
+
+Cross-cutting, still open: the CI matrix (never set up — §5.5), the
+`qtviz.data_adapters` entry-point for third-party adapters, and D7 (update
+coalescing). Full decision log in `discussion-items.md`.

@@ -105,5 +105,11 @@ aggregates only the visible window's partitions. The aggregation primitive
   colormaps, theme integration) is a future enhancement ✅/open.
 - **[D21]** dynamic viewport re-aggregation seam — `RasterController` +
   `RasterTarget`, wired on pyqtgraph + matplotlib ✅.
-- **[D22]** coverage — points (`Scatter`) now; lines/areas (`canvas.line`) and
-  categorical color (`count_cat` via `color_by`) are follow-ups (open).
+- **[D22]** coverage — ✅ **points + lines + value/categorical aggregation.**
+  `rasterize_element` dispatches `Scatter`→points and `Curve`→`canvas.line`;
+  `color_by` selects the reduction — numeric → `mean` (continuous shade),
+  categorical → `by(count)` (per-category blend with a `category10` key). Both
+  backends and the dynamic loop go through the same dispatcher. Remaining
+  follow-ups now tracked in `capabilities-gaps.md` §1 (legends/colorbars,
+  theme-driven colors, more reductions, line width, gridded `canvas.raster`,
+  raster reverse-lookup for brushing).

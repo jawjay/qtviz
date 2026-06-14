@@ -14,7 +14,13 @@ qv = pytest.importorskip("qtviz")
 pytest.importorskip("datashader")
 
 from qtviz.data import as_data_ref, pipeline  # noqa: E402
-from qtviz.ext.datashader import channel_frame, rasterize_points, rasterize_scatter  # noqa: E402
+from qtviz.ext.datashader import (  # noqa: E402
+    channel_frame,
+    rasterize_curve,
+    rasterize_element,
+    rasterize_points,
+    rasterize_scatter,
+)
 
 pytestmark = pytest.mark.tier1
 
@@ -104,6 +110,102 @@ def _pandas(d):
     return pd.DataFrame(d)
 
 
+# ── expanded coverage: lines, categorical, value aggregation (D22) ───────────
+@pytest.fixture
+def typed_data():
+    rng = np.random.default_rng(1)
+    n = 40_000
+    return {
+        "x": rng.normal(size=n),
+        "y": rng.normal(size=n),
+        "z": rng.uniform(0.0, 100.0, n),                          # continuous
+        "cat": np.array(["a", "b", "c", "d"])[rng.integers(0, 4, n)],  # categorical
+    }
+
+
+def test_curve_rasterizes_to_line_density():
+    n = 5000
+    t = np.linspace(0, 10, n)
+    curve = qv.Curve({"x": t, "y": np.sin(t)}, x="x", y="y", scale="datashader")
+    rgba, bounds = rasterize_curve(curve, width=120, height=80)
+    assert rgba.shape == (80, 120, 4) and rgba.dtype == np.uint8
+    assert rgba[..., 3].max() > 0  # the line painted pixels
+    assert bounds[0] < bounds[2] and bounds[1] < bounds[3]
+
+
+def _distinct_painted_colors(rgba) -> int:
+    rgb = rgba[..., :3].reshape(-1, 3)
+    painted = rgb[rgba[..., 3].reshape(-1) > 0]
+    return len({tuple(c) for c in painted})
+
+
+def test_categorical_color_by_blends_distinct_colors(typed_data):
+    sc = qv.Scatter(typed_data, x="x", y="y", color_by="cat", scale="datashader")
+    rgba, _ = rasterize_scatter(sc, width=100, height=80)
+    # a per-category blend → more than one hue among the painted pixels
+    assert _distinct_painted_colors(rgba) > 1
+
+
+def test_numeric_color_by_changes_aggregation(typed_data):
+    # color_by a numeric column aggregates as mean → a different raster than the
+    # plain count-density one over the same points.
+    base = qv.Scatter(typed_data, x="x", y="y", scale="datashader")
+    valued = qv.Scatter(typed_data, x="x", y="y", color_by="z", scale="datashader")
+    rgba_count, _ = rasterize_scatter(base, width=100, height=80)
+    rgba_mean, _ = rasterize_scatter(valued, width=100, height=80)
+    assert rgba_mean.shape == rgba_count.shape
+    assert np.any(rgba_mean != rgba_count)
+
+
+def test_categorical_via_points_color_key(typed_data):
+    # explicit color_key path through the points primitive
+    frame = _pandas(typed_data)
+    rgba, _ = rasterize_points(
+        frame, "x", "y", width=80, height=60,
+        color_by="cat", color_key={"a": "#ff0000", "b": "#00ff00", "c": "#0000ff", "d": "#ffffff"},
+    )
+    assert rgba.shape == (60, 80, 4) and _distinct_painted_colors(rgba) > 1
+
+
+def test_curve_scale_routing():
+    t = np.linspace(0, 1, 2000)
+    data = {"x": t, "y": t**2}
+    assert not pipeline._needs_rasterize(qv.Curve(data, x="x", y="y", scale="native"))
+    assert pipeline._needs_rasterize(qv.Curve(data, x="x", y="y", scale="datashader"))
+
+
+def test_resolve_transforms_curve_to_image():
+    t = np.linspace(0, 1, 2000)
+    curve = qv.Curve({"x": t, "y": t**2}, x="x", y="y", scale="datashader")
+    image = pipeline.resolve_node(curve)
+    assert isinstance(image, qv.Image)
+    assert image.id == curve.id
+    assert getattr(image, "_raster_source", None) is curve  # for re-aggregation (4b)
+
+
+def test_rasterize_element_dispatches_by_glyph(typed_data):
+    t = np.linspace(0, 5, 2000)
+    curve = qv.Curve({"x": t, "y": np.cos(t)}, x="x", y="y", scale="datashader")
+    scatter = qv.Scatter(typed_data, x="x", y="y", scale="datashader")
+    # dispatch must match the per-element rasterizers exactly
+    np.testing.assert_array_equal(
+        rasterize_element(curve, width=60, height=40)[0],
+        rasterize_curve(curve, width=60, height=40)[0],
+    )
+    np.testing.assert_array_equal(
+        rasterize_element(scatter, width=60, height=40)[0],
+        rasterize_scatter(scatter, width=60, height=40)[0],
+    )
+
+
+def test_numeric_color_by_keeps_dask_lazy(typed_data):
+    dd = pytest.importorskip("dask.dataframe")
+    pd = pytest.importorskip("pandas")
+    ddf = dd.from_pandas(pd.DataFrame(typed_data), npartitions=4)
+    frame = channel_frame(as_data_ref(ddf), {"x": "x", "y": "y", "color_by": "z"})
+    assert type(frame).__module__.startswith(("dask", "dask_expr"))  # mean agg stays out-of-core
+
+
 # ── async render through the View (Tier 2) ───────────────────────────────────
 @pytest.mark.tier2
 def test_datashaded_scatter_renders_async(data, qtbot):
@@ -114,3 +216,18 @@ def test_datashaded_scatter_renders_async(data, qtbot):
     assert view.handle is None and view.loading  # aggregated off-thread
     qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
     assert view.handle is not None
+
+
+@pytest.mark.tier2
+def test_datashaded_curve_renders_async(qtbot):
+    if "pyqtgraph" not in qv.backends.list_available():
+        pytest.skip("pyqtgraph backend not registered")
+    t = np.linspace(0, 50, 200_000)
+    data = {"x": t, "y": np.sin(t)}
+    view = qv.View(qv.Curve(data, x="x", y="y", scale="datashader"), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    view.resize(500, 400)
+    view.show()
+    qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
+    vb = view.handle.plots[0].getViewBox()
+    qtbot.waitUntil(lambda: getattr(vb, "_qtviz_rasters", None) is not None, timeout=4000)

@@ -1,5 +1,12 @@
 # qtwebplot — architecture
 
+> **Scope: the legacy `qtwebplot` WebEngine bridge** (Qt ↔ JS, with Plotly /
+> Bokeh / HoloViews on top). The project has since pivoted to native-Qt rendering
+> as **qtviz** (see `spec.md` and `development-plan.md` for the current
+> architecture). This subsystem is slated to be rehomed as the future
+> **`webengine` backend** (`roadmap.md` Phase 5); the `qtwebplot.*` names below
+> describe that legacy/rehoming layer, not the native qtviz core.
+
 ## What this is
 
 A PySide6 widget that hosts arbitrary JS visualizations inside a Qt

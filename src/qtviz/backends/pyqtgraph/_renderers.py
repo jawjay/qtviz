@@ -105,13 +105,13 @@ def _wire_dynamic_raster(element, item, ctx) -> None:
     if source is None:
         return
     from ...core.raster import RasterController  # noqa: PLC0415
-    from ...ext.datashader import rasterize_scatter  # noqa: PLC0415
+    from ...ext.datashader import rasterize_element  # noqa: PLC0415
     from ._raster import PgRasterTarget  # noqa: PLC0415
 
     vb = ctx.parent_axes.getViewBox()
     target = PgRasterTarget(item, vb)
     controller = RasterController(
-        source=source, target=target, rasterize=rasterize_scatter, parent=vb
+        source=source, target=target, rasterize=rasterize_element, parent=vb
     )
     if not hasattr(vb, "_qtviz_rasters"):
         vb._qtviz_rasters = []

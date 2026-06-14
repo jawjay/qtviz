@@ -24,6 +24,7 @@ class Curve(Element):
         line_width: float = 1.5,
         line_style: Literal["solid", "dashed", "dotted", "dashdot"] = "solid",
         alpha: float = 1.0,
+        scale: Literal["native", "auto", "datashader"] = "native",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -36,5 +37,6 @@ class Curve(Element):
         self.line_width = line_width
         self.line_style = line_style
         self.alpha = alpha
+        self.scale = scale
         self._validate_tabular()
         self._freeze()

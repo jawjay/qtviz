@@ -69,10 +69,10 @@ def _rasterize(node):
             "scale='datashader' requires datashader — install: uv sync --extra datashader"
         )
     from ..elements import Image  # noqa: PLC0415
-    from ..ext.datashader import rasterize_scatter  # noqa: PLC0415
+    from ..ext.datashader import rasterize_element  # noqa: PLC0415
 
     width, height = _RASTER_SIZE
-    rgba, bounds = rasterize_scatter(node, width=width, height=height)
+    rgba, bounds = rasterize_element(node, width=width, height=height)
     image = Image(rgba, bounds=bounds, id=node.id)  # carry the source id for events
     # Stash the (lazy) source element so a backend can re-aggregate to the
     # viewport on pan/zoom (4b, D21). Private → excluded from value identity.

@@ -12,18 +12,43 @@
 
 ## 0. Status
 
-| Phase | Spec depth in this doc                |
-|-------|---------------------------------------|
-| 0     | concrete (spikes + scaffolding)       |
-| 1     | **concrete** (Element, Backend, pyqtgraph) |
-| 2     | **concrete** (matplotlib backend)     |
-| 3     | sketch (HoloViews adapter)            |
-| 4     | sketch (reactive, Datashader)         |
-| 5     | sketch (data layer, webengine rehome) |
-| 6+    | scaffold only                         |
+Two axes: how deeply this doc specs each area, and what is **built** in
+`src/qtviz` today. The build order diverged from the original phase numbering —
+the data layer and Datashader were pulled forward, ahead of the HoloViews adapter
+and reactive signals (see the as-built note below and `roadmap.md` §0).
 
-Detail will deepen as we approach each phase. The Phase 1–2 sections
-are the gate: if these aren't right, refactoring later is expensive.
+| Area                                                    | Spec depth | Built |
+|---------------------------------------------------------|------------|-------|
+| Core model · 8 elements · composition (`*` / `+`)       | concrete   | ✅    |
+| pyqtgraph backend                                       | concrete   | ✅    |
+| matplotlib backend                                      | concrete   | ✅    |
+| Interaction — typed events, brushing, linked axes       | concrete   | ✅    |
+| Mixed-backend layouts (host + composite handle)         | concrete   | ✅    |
+| Data layer — accessors + lazy adapters (dask/xarray/zarr) | concrete | ✅    |
+| Datashader — big-data raster + viewport re-aggregation  | concrete   | ✅    |
+| HoloViews adapter                                       | sketch     | ⬜    |
+| Reactive `Signal` binding                               | sketch     | ⬜    |
+| Data sources — Parquet / DuckDB / SQL                   | sketch     | ⬜    |
+| webengine backend rehome                                | sketch     | ⬜    |
+| Release `0.1`                                           | scaffold   | ⬜    |
+
+**As-built deviations from this spec** (each ratified in `discussion-items.md`):
+
+- **Data binding is functional.** A channel binds to an **accessor**
+  (`str | Expression | Callable | ArrayLike`), not just a column name [D14].
+  `Element.channels()` yields role-keyed accessors and the resolve pipeline turns
+  them into arrays — generalizing the `x=/y=` column model in §5.
+- **The data layer was built lazy-first now, not deferred to a later phase.**
+  Container-agnostic adapters (dict/numpy/pandas/arrow eager; dask/xarray/zarr
+  out-of-core) sit behind one `DataRef` contract; the adapter picks the shape,
+  with `tabular()`/`gridded()` overrides [D1, D17].
+- **Datashader is a backend-agnostic pipeline transform**, not a pyqtgraph-only
+  `ImageItem` path: a huge Scatter is rewritten to an `Image` in `resolve_node`, so
+  *every* backend renders it; dynamic re-aggregation rides a `RasterController` +
+  a per-backend `RasterTarget` seam [D18–D21]. (Supersedes `roadmap.md` §7 #5.)
+
+Detail deepens as we approach each unbuilt area. The built sections match the
+implementation and are the gate: refactoring them later is expensive.
 
 ## 1. Layered architecture
 

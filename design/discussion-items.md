@@ -632,4 +632,4 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D19 | datashader auto-route policy | Phase 4 | ✅ `set_raster_threshold`; lazy/unknown size routes |
 | D20 | raster output: RGBA shade vs aggregate+theme cmap | Phase 4 | ✅ RGBA shade now; aggregate+theme cmap future |
 | D21 | dynamic viewport re-aggregation seam | Phase 4b | ✅ RasterController + RasterTarget (pyqtgraph + matplotlib) |
-| D22 | datashader coverage (lines, categorical color) | Phase 4 | open — points now; line/count_cat follow-ups |
+| D22 | datashader coverage (lines, categorical color) | Phase 4 | ✅ points + lines + value/categorical agg; deeper gaps → `capabilities-gaps.md` |

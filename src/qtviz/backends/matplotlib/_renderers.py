@@ -91,13 +91,13 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
     if source is None:
         return
     from ...core.raster import RasterController  # noqa: PLC0415
-    from ...ext.datashader import rasterize_scatter  # noqa: PLC0415
+    from ...ext.datashader import rasterize_element  # noqa: PLC0415
     from ._raster import MplRasterTarget  # noqa: PLC0415
 
     ax = ctx.parent_axes
     target = MplRasterTarget(artist, ax)
     controller = RasterController(
-        source=source, target=target, rasterize=rasterize_scatter, parent=ax.figure.canvas
+        source=source, target=target, rasterize=rasterize_element, parent=ax.figure.canvas
     )
     if not hasattr(ax, "_qtviz_rasters"):
         ax._qtviz_rasters = []

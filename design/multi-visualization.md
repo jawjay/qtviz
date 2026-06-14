@@ -1,7 +1,12 @@
 # Design: multi-visualization support
 
-> **Status:** under review, not yet implemented. Once approved, the chosen
-> pieces fold into `architecture.md`.
+> **Status: realized natively (M5).** This was the WebEngine-era exploration of
+> multi-plot support; its core ideas — one-plot and N-plots as a continuum,
+> mixed-backend grids/tabs/docks/splitters, backends opting into any "native
+> multi" capability — shipped in the native qtviz `Layout` system
+> (`core/compose.py` + `core/_host.py`, `CompositeRenderHandle`). Retained for the
+> design rationale; the WebEngine framing below is superseded by the Backend
+> protocol (`spec.md` §2, `development-plan.md` §3).
 
 ## 1. Goal
 

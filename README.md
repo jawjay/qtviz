@@ -88,15 +88,20 @@ your widget's pixel size as you pan/zoom**, so the image sharpens instead of
 pixelating:
 
 ```python
-qv.Scatter(big, x="x", y="y", scale="datashader")   # always rasterize
-qv.Scatter(big, x="x", y="y", scale="auto")          # rasterize past a threshold
-qv.set_raster_threshold(2_000_000)                   # tune the "auto" cutoff
+qv.Scatter(big, x="x", y="y", scale="datashader")                  # point density
+qv.Curve(series, x="t", y="v", scale="datashader")                 # line density (huge series)
+qv.Scatter(big, x="x", y="y", color_by="z",   scale="datashader")  # mean of z per pixel
+qv.Scatter(big, x="x", y="y", color_by="cat", scale="datashader")  # per-category blend
+qv.Scatter(big, x="x", y="y", scale="auto")                        # rasterize past a threshold
+qv.set_raster_threshold(2_000_000)                                 # tune the "auto" cutoff
 ```
 
 It's backend-agnostic (the aggregation is a pipeline step, so every backend draws
-a datashaded scatter) and out-of-core: backed by a lazy Dask / xarray / zarr
-source, the points are aggregated partition-by-partition and the full table never
-lands in memory. See [`examples/09_datashader.py`](examples/09_datashader.py) and
+a datashaded `Scatter` or `Curve`) and out-of-core: backed by a lazy Dask /
+xarray / zarr source, the data is aggregated partition-by-partition and the full
+table never lands in memory. `color_by` chooses the reduction — a numeric column
+shades the per-pixel mean, a categorical column blends per-category counts. See
+[`examples/09_datashader.py`](examples/09_datashader.py) and
 [`examples/10_out_of_core.py`](examples/10_out_of_core.py).
 
 ### Composition
@@ -159,7 +164,7 @@ linked dashboard). See [`examples/README.md`](examples/README.md).
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
 | **Data inputs** | dict · numpy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
-| **Big data** | **Datashader** rasterization — `Scatter(..., scale="datashader" \| "auto")` aggregates 10M+ points into a density image, out-of-core, off the GUI thread, **re-aggregating to the viewport on pan/zoom** |
+| **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"` aggregate 10M+ points/lines into a raster (density · `color_by` mean · categorical blend), out-of-core, off the GUI thread, **re-aggregating to the viewport on pan/zoom** |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
 | **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
@@ -188,7 +193,7 @@ renderers build native primitives → a `RenderHandle` owns the `QWidget` and a
 typed `EventBus`. Backends and data adapters are both registered, never imported
 by the core, so each new one is additive. Design docs live in
 [`design/`](design/) (`spec.md`, `development-plan.md`, `roadmap.md`,
-`milestone-*.md`, `discussion-items.md`).
+`milestone-*.md`, `discussion-items.md`, `capabilities-gaps.md`).
 
 ## License
 
