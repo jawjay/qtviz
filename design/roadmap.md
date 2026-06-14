@@ -26,7 +26,7 @@ data core had to come first. Net effect:
 | 2 | matplotlib backend | ✅ |
 | 3 | HoloViews adapter | ⬜ not started (independent; Spike-P2 gated) |
 | 4 | reactive + Datashader | **Datashader ✅**; reactive `Signal` ⬜ |
-| 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0 physical move ✅**; backend W1+ ⬜) |
+| 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0 move ✅ · W1 backend ✅** Scatter→Plotly + events; W2 full conformance/8 elements ⬜) |
 | 6 | release `0.1` | ⬜ |
 
 **Recommended next order** (detail in `development-plan.md` §8): finish Datashader

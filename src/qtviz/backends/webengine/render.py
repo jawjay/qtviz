@@ -1,0 +1,127 @@
+"""webengine backend — render + RenderHandle (roadmap Phase 5, W1).
+
+Wraps the legacy Qt↔JS bridge behind the qtviz `Backend` protocol: Elements
+become a Plotly figure (`_figure`), hosted in a `WebBridgeView` via the legacy
+`PlotlyBackend`; the bridge's `received` messages are translated to qtviz typed
+events (`_translate`). Render returns immediately and the bridge's command queue
+buffers anything sent before the page is `ready` (D25) — so the synchronous
+`Backend.render` contract holds over an async page load.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import uuid
+
+from ...core.backend import RendererRegistry, RenderHandle, ViewState
+from ...core.capabilities import Capabilities
+from ...core.event import EventBus, RangeEvent
+from ...core.threading import require_gui_thread
+from . import _figure, _translate
+from .ext.plotly.backend import PlotlyBackend
+from .view import PlotView
+
+_CAPS = Capabilities(
+    dimensions=frozenset({2, 3}),
+    opengl=True,                 # Plotly scattergl
+    picking="native",
+    brush="native",              # box / lasso select
+    range_events=True,
+    streaming=True,
+    max_recommended_points=1_000_000,
+    animation=True,
+    # png/svg/pdf need a rendered page (grab) or kaleido — deferred to W2 once
+    # we can verify them on a real display; declaring none keeps the contract honest.
+    exports=frozenset(),
+    threading_model="gui_only",
+)
+
+
+class WebEngineRenderHandle(RenderHandle):
+    """Owns the `WebBridgeView`, the Plotly host, and the event bridge. Tracks
+    last-known axis ranges (shadow state) so `capture_state` is synchronous even
+    though the live ranges live in JS."""
+
+    def __init__(self, widget: PlotView, event_bus, host, source_ids, surface_id, theme) -> None:
+        super().__init__(widget, event_bus, "webengine")
+        self._host = host
+        self._traces = list(source_ids)
+        self._surface_id = surface_id
+        self._theme = theme
+        self._x_range: tuple[float, float] | None = None
+        self._y_range: tuple[float, float] | None = None
+        widget.received.connect(self._on_message)
+
+    def _on_message(self, name: str, payload) -> None:
+        if name == "plotly.relayout":
+            update = payload.get("update", {}) if isinstance(payload, dict) else {}
+            x, y = _translate.parse_relayout(update)
+            if x is None and y is None:
+                return
+            if x is not None:
+                self._x_range = x
+            if y is not None:
+                self._y_range = y
+            if self._x_range is not None and self._y_range is not None:
+                self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
+            return
+        ev = _translate.translate(name, payload, traces=self._traces, surface_id=self._surface_id)
+        if ev is not None:
+            self.event_bus.emit(ev)
+
+    def capture_state(self) -> ViewState:
+        return ViewState(x_range=self._x_range, y_range=self._y_range)
+
+    def restore_state(self, state: ViewState) -> None:
+        update: dict = {}
+        if state.x_range:
+            self._x_range = state.x_range
+            update["xaxis.range"] = list(state.x_range)
+        if state.y_range:
+            self._y_range = state.y_range
+            update["yaxis.range"] = list(state.y_range)
+        if update:
+            self._host.relayout(update)  # queued until the bridge is ready
+
+    @require_gui_thread
+    def update(self, new_root) -> None:
+        fig, source_ids = _figure.build(new_root, self._theme)
+        self._traces = source_ids
+        self._host.react(fig)
+
+    def dispose(self) -> None:
+        w = self.widget
+        if w is not None:
+            with contextlib.suppress(RuntimeError, TypeError):
+                w.received.disconnect(self._on_message)
+        self._host.on_detach()
+        super().dispose()
+
+
+class WebEngineBackend:
+    name = "webengine"
+    requires_display = True  # the live render path needs a real GPU/compositor
+
+    def __init__(self) -> None:
+        self.capabilities = _CAPS
+        self.renderers = RendererRegistry()
+        for element_type in _figure.supported_types():
+            self.renderers.register(element_type, _figure._TRACE_BUILDERS[element_type])
+
+    def supports(self, element_type: type) -> bool:
+        return self.renderers.get(element_type) is not None
+
+    def can_host(self, kind: str) -> bool:
+        # No native mixed panes — the LayoutHost composes per-pane WebBridgeViews.
+        return False
+
+    @require_gui_thread
+    def render(self, node, *, theme, parent=None) -> WebEngineRenderHandle:
+        fig, source_ids = _figure.build(node, theme)
+        host = PlotlyBackend(fig)
+        view = PlotView(host, parent=parent)
+        bus = EventBus()
+        return WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme)
+
+
+backend = WebEngineBackend()

@@ -89,6 +89,13 @@ def _autoregister() -> None:
     except ImportError:
         log.info("matplotlib backend unavailable; install qtviz[matplotlib]")
 
+    try:
+        from .webengine.render import backend as _web  # noqa: PLC0415
+
+        register(_web)
+    except ImportError:
+        log.info("webengine backend unavailable; install qtviz[webengine]")
+
 
 _autoregister()
 

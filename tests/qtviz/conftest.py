@@ -138,17 +138,29 @@ def _tabular_encodings() -> list[str]:
 def backend(request):
     """One registered backend per param. Empty (suite skips) until a backend
     is registered — at which point the conformance suite covers it."""
+    import contextlib
+
     import qtviz.backends as B
 
     name = request.param
-    import contextlib
-
+    instance = None
     with contextlib.suppress(Exception):
-        return B.get(name)
-    registry = {getattr(b, "name", b): b for b in B.list_available()}
-    if name in registry:
-        return registry[name]
-    pytest.skip(f"cannot resolve backend instance for {name!r}")
+        instance = B.get(name)
+    if instance is None:
+        registry = {getattr(b, "name", b): b for b in B.list_available()}
+        instance = registry.get(name)
+    if instance is None:
+        pytest.skip(f"cannot resolve backend instance for {name!r}")
+
+    # A display-bound backend (webengine) can't complete its live render path
+    # under offscreen Qt; its full conformance run is W2 on a real display.
+    if (
+        getattr(instance, "requires_display", False)
+        and os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+        and os.environ.get("QTVIZ_WEBENGINE_GUI") != "1"
+    ):
+        pytest.skip(f"{name} needs a display; offscreen (set QTVIZ_WEBENGINE_GUI=1 to force)")
+    return instance
 
 
 @pytest.fixture(params=_tabular_encodings())

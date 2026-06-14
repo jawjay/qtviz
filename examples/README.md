@@ -27,6 +27,8 @@ uv sync --extra matplotlib --extra dev
 | 10 | [`10_out_of_core.py`](10_out_of_core.py) | A lazy **Dask** DataFrame datashaded out-of-core — never fully materialized. |
 | 11 | [`11_datashader_matplotlib.py`](11_datashader_matplotlib.py) | The same datashaded scatter on **matplotlib** — backend-agnostic, zoom re-aggregates. |
 | 12 | [`12_color_mapping.py`](12_color_mapping.py) | `color_by` / `size_by` a column → per-point color/size + an **automatic legend / colorbar**. |
+| 13 | [`13_webengine.py`](13_webengine.py) | The same `Scatter` rendered through **Plotly in a QWebEngineView** (`backend="webengine"`); typed events bridge back; toggle to a native backend. |
+| 14 | [`14_webengine_overlay.py`](14_webengine_overlay.py) | An `Overlay` → multiple Plotly traces in one figure; a PickEvent carries the originating **series id**. |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -38,6 +40,14 @@ uv sync --extra datashader --extra dask --extra matplotlib --extra dev
 More examples will be added as the library grows (reactive signals, the
 HoloViews adapter, …).
 
-The [`webengine/`](webengine) folder holds the legacy `qtwebplot` (Qt WebEngine +
-Plotly/Bokeh/HoloViews) examples — that path becomes the future `webengine`
-backend (roadmap Phase 5).
+Examples 13–14 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
+WebEngine view; roadmap Phase 5, W1). They need the webengine extra and a real
+display (a `QWebEngineView` segfaults at teardown under offscreen Qt):
+
+```bash
+uv sync --extra webengine --extra dev
+```
+
+The [`webengine/`](webengine) folder holds the **legacy** `qtwebplot` examples,
+which drive the bridge directly through the old `PlotView` (now reachable via the
+deprecation shim) rather than through a qtviz `View` / the `webengine` backend.
