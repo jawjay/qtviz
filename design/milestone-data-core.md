@@ -147,6 +147,10 @@ support is publish-and-install (mirrors the planned backend entry point).
 
 ## 8. Build order
 
+> **Status:** step 1 ✅ (accessors) · step 2 ✅ (async View orchestration, D13) ·
+> next: step 3 (adapter conformance suite) → step 4 (dask adapter).
+
+
 1. **Accessor model** ([D14]): `Accessor = str | Expression | Callable |
    ArrayLike` + the `Expression` AST (`col`, arithmetic, comparison/boolean,
    literals, a starter set of numpy-ufunc transforms, `to_dict`/`from_dict`,

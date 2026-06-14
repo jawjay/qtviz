@@ -16,7 +16,12 @@ from .ref import EagerTabularRef
 
 
 def resolve_node(node):
+    """Resolve channel accessors into role-keyed eager refs. Idempotent:
+    already-resolved Elements pass through. Safe to run off the GUI thread —
+    pure data, immutable Elements, no Qt."""
     if hasattr(node, "channels"):  # Element
+        if getattr(node, "_resolved", False):
+            return node
         channels = node.channels()
         if not channels:
             return node  # gridded / no data-bound channels (e.g. Image)
@@ -25,3 +30,13 @@ def resolve_node(node):
     if hasattr(node, "children"):  # Overlay / Layout
         return node.with_(children=tuple(resolve_node(c) for c in node.children))
     return node
+
+
+def node_is_lazy(node) -> bool:
+    """True if any Element in the tree binds an out-of-core (lazy) data ref —
+    which the View must materialize off the GUI thread."""
+    if hasattr(node, "channels"):
+        return bool(getattr(getattr(node, "data", None), "is_lazy", False))
+    if hasattr(node, "children"):
+        return any(node_is_lazy(c) for c in node.children)
+    return False

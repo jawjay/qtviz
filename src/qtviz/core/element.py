@@ -63,11 +63,14 @@ class Element(Immutable):
 
     def _replace_data(self, ref):
         """Low-level copy with `data` swapped (no re-validation) — used by the
-        resolve pipeline to install the role-keyed eager ref."""
+        resolve pipeline to install the role-keyed eager ref. Marks the copy
+        resolved so a later `resolve_node` (e.g. inside backend.render) is a
+        no-op rather than re-resolving against the role-keyed ref."""
         obj = object.__new__(type(self))
         for k, v in vars(self).items():
             object.__setattr__(obj, k, v)
         object.__setattr__(obj, "data", ref)
+        object.__setattr__(obj, "_resolved", True)
         return obj
 
     # composition operators — lazy imports avoid an element↔compose cycle

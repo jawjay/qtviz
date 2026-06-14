@@ -368,8 +368,11 @@ The actual choice is only *what occupies the View's slot during `loading`*:
 **Recommendation.** **(b) when a prior render exists** (no flicker; matches how
 good interactive tools keep old map tiles visible while new ones load), **(a) on
 first render**, with a subtle busy affordance so "stale" never looks like
-"hung." Errors → small error widget + logged. **Status:** open — confirm
-(the live tradeoff is *briefly-stale data* vs *flicker on every update*).
+"hung." Errors → small error widget + logged. **Status:** ✅ applied — the View
+keeps the last render visible during an async rebuild (placeholder only on
+first render), a monotonic `build_id` drops stale results, and resolve runs on a
+`ThreadPoolExecutor` (so a slow resolve doesn't stall others), delivered back to
+the GUI thread via a queued signal. `core/view.py`; tested in `test_async.py`.
 
 ---
 
@@ -618,7 +621,7 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D10 | negotiation memoization (none) | M2 | accepted (no cache) |
 | D11 | composite export semantics | M5 | ✅ applied — composite.export raises (export panes individually) |
 | D12 | brush selection mechanism (pyqtgraph) | M4 | ✅ resolved → custom QtvizViewBox (Shift-drag) |
-| D13 | async materialize UX (placeholder vs keep-last) | data-core | open — confirm |
+| D13 | async materialize UX (placeholder vs keep-last) | data-core | ✅ applied — keep-last + placeholder, build-id stale-drop, error widget |
 | D14 | **data binding: accessors `str\|Expression\|Callable\|ArrayLike`** | data-core | ✅ accepted (Expression first-class) |
 | D15 | materialize safety guard (huge un-windowed lazy) | data-core | open — confirm |
 | D16 | viewport→window auto-trigger deferral | data-core / P4 | open — confirm |
