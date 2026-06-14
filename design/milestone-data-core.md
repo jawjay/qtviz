@@ -148,7 +148,9 @@ support is publish-and-install (mirrors the planned backend entry point).
 ## 8. Build order
 
 > **Status:** step 1 ✅ (accessors) · step 2 ✅ (async View orchestration, D13) ·
-> next: step 3 (adapter conformance suite) → step 4 (dask adapter).
+> step 3 ✅ (adapter conformance suite — 5 cases + pushdown invariant) ·
+> next: step 4 (dask adapter — needs `uv add dask`) → step 5 (xarray/zarr).
+> D15–D17 accepted.
 
 
 1. **Accessor model** ([D14]): `Accessor = str | Expression | Callable |

@@ -524,8 +524,8 @@ what to do in the gap.
 the "no silent caps" principle — we don't quietly truncate (which would
 misrepresent the data) and we don't quietly risk OOM (we warn loudly at the
 known threshold), but we also don't *block* a user who knows what they're doing.
-**Status:** open — confirm (tradeoff: a careless huge materialize still computes,
-just with a warning, until the Phase-4 auto-route exists).
+**Status:** ✅ accepted (per user) — warn at `max_recommended_points` +
+`materialize(limit=)` for previews; auto-route to Datashader is Phase 4.
 
 ---
 
@@ -558,7 +558,8 @@ to ship the **primitives** now (with `window` proven by direct/programmatic
 tests in the conformance suite) and let Phase 4 wire the **loop** on top.
 
 **Recommendation.** Ship `window` as a primitive now; defer the auto-trigger.
-**Status:** proposed — confirm deferral.
+**Status:** ✅ accepted (per user) — `window` is a lazy-safe primitive; the
+zoom→re-window→re-aggregate loop is Phase 4.
 
 ---
 
@@ -601,7 +602,8 @@ the default when needed. These are escape hatches, not the common path.
 **Recommendation.** Adapter picks the shape (1-D → tabular, N-D → gridded;
 structured ndarray → tabular, plain → gridded), with `tabular()`/`gridded()`
 overrides for ambiguous cases. No ref-level bridging, no Element changes.
-**Status:** open — confirm.
+**Status:** ✅ accepted (per user) — shape is the adapter's call; ship the
+`qv.tabular()` / `qv.gridded()` escape hatches with the lazy/gridded adapters.
 
 ---
 
@@ -623,6 +625,6 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D12 | brush selection mechanism (pyqtgraph) | M4 | ✅ resolved → custom QtvizViewBox (Shift-drag) |
 | D13 | async materialize UX (placeholder vs keep-last) | data-core | ✅ applied — keep-last + placeholder, build-id stale-drop, error widget |
 | D14 | **data binding: accessors `str\|Expression\|Callable\|ArrayLike`** | data-core | ✅ accepted (Expression first-class) |
-| D15 | materialize safety guard (huge un-windowed lazy) | data-core | open — confirm |
-| D16 | viewport→window auto-trigger deferral | data-core / P4 | open — confirm |
-| D17 | shape chosen by adapter (no ref bridging) | data-core | open — confirm |
+| D15 | materialize safety guard (huge un-windowed lazy) | data-core | ✅ accepted — warn + `limit=`; Datashader P4 |
+| D16 | viewport→window auto-trigger deferral | data-core / P4 | ✅ accepted — `window` primitive now, loop P4 |
+| D17 | shape chosen by adapter (no ref bridging) | data-core | ✅ accepted — adapter picks shape + `tabular()`/`gridded()` |
