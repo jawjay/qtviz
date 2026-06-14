@@ -24,7 +24,11 @@ def resolve_node(node):
             return node
         channels = node.channels()
         if not channels:
-            return node  # gridded / no data-bound channels (e.g. Image)
+            # gridded element (e.g. Image): no tabular channels, but a lazy grid
+            # (dask/zarr) must still be materialized here, off the GUI thread.
+            if getattr(node.data, "is_lazy", False):
+                return node._replace_data(node.data.materialize())
+            return node
         arrays = node.data.resolve_channels(channels)
         return node._replace_data(EagerTabularRef(arrays, arrays))
     if hasattr(node, "children"):  # Overlay / Layout

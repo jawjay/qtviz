@@ -30,19 +30,26 @@ def accessor_columns(accessor: Accessor) -> set[str] | None:
     return set()  # array literal — no columns
 
 
-def resolve_accessor(accessor: Accessor, *, columns: dict, native: Any) -> np.ndarray:
-    """Resolve one accessor to a numpy array.
+def resolve_expr(accessor: Accessor, *, columns, native: Any):
+    """Apply an accessor → a column **expression**, without forcing it eager.
 
-    - `str` / `Expression` resolve against `columns` (a name → array namespace;
-      numpy for eager refs), so the operators/ufuncs compose uniformly.
+    - `str` / `Expression` resolve against `columns` (a name → column namespace),
+      so the operators/ufuncs compose uniformly. For a lazy ref the namespace is
+      the lazy frame itself, so the result stays a lazy expression (the
+      container does projection pushdown).
     - `Callable` is applied to `native` (the real container) so the user's code
       gets full container methods.
     - `ArrayLike` is taken as-is.
     """
     if isinstance(accessor, str):
-        return np.asarray(columns[accessor])
+        return columns[accessor]
     if isinstance(accessor, Expr):
-        return np.asarray(accessor.resolve(columns))
+        return accessor.resolve(columns)
     if callable(accessor):
-        return np.asarray(accessor(native))
-    return np.asarray(accessor)
+        return accessor(native)
+    return accessor
+
+
+def resolve_accessor(accessor: Accessor, *, columns, native: Any) -> np.ndarray:
+    """Eager: resolve one accessor to a numpy array (for in-memory refs)."""
+    return np.asarray(resolve_expr(accessor, columns=columns, native=native))

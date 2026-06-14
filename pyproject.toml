@@ -44,6 +44,9 @@ dev = [
 matplotlib = [
     "matplotlib>=3.11.0",
 ]
+dask = [
+    "dask[dataframe]>=2026.6.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/markjajeh/qtviz"
