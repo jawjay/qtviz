@@ -67,8 +67,21 @@ class PgRenderHandle(RenderHandle):
         if state.y_range:
             vb.setYRange(*state.y_range, padding=0)
 
+    def _dispose_rasters(self) -> None:
+        for plot in self._plots:
+            vb = plot.getViewBox()
+            for controller in getattr(vb, "_qtviz_rasters", ()):
+                controller.dispose()
+            if hasattr(vb, "_qtviz_rasters"):
+                vb._qtviz_rasters = []
+
+    def dispose(self) -> None:
+        self._dispose_rasters()
+        super().dispose()
+
     @require_gui_thread
     def update(self, new_root) -> None:
+        self._dispose_rasters()
         for plot in self._plots:
             plot.clear()
         self._plots.clear()

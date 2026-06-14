@@ -73,7 +73,11 @@ def _rasterize(node):
 
     width, height = _RASTER_SIZE
     rgba, bounds = rasterize_scatter(node, width=width, height=height)
-    return Image(rgba, bounds=bounds, id=node.id)  # carry the source id for events
+    image = Image(rgba, bounds=bounds, id=node.id)  # carry the source id for events
+    # Stash the (lazy) source element so a backend can re-aggregate to the
+    # viewport on pan/zoom (4b, D21). Private → excluded from value identity.
+    object.__setattr__(image, "_raster_source", node)
+    return image
 
 
 def resolve_node(node):

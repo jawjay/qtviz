@@ -81,6 +81,9 @@ class MplRenderHandle(RenderHandle):
         return path
 
     def dispose(self) -> None:
+        for s in self._surfaces:
+            for controller in getattr(s["ax"], "_qtviz_rasters", ()):
+                controller.dispose()
         self.event_bus.dispose()
         self._fig.clf()
         w = self.widget

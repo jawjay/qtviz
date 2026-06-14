@@ -72,13 +72,36 @@ def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.bounds
     values = np.asarray(element.data.grid().values)
     if values.ndim == 3:  # RGBA raster (e.g. datashaded scatter)
-        return ctx.parent_axes.imshow(
+        artist = ctx.parent_axes.imshow(
             values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto"
         )
+        _wire_dynamic_raster(element, artist, ctx)
+        return artist
     return ctx.parent_axes.imshow(
         np.asarray(values, dtype="float64"),
         extent=(x0, x1, y0, y1), origin="lower", aspect="auto", cmap=element.colormap,
     )
+
+
+def _wire_dynamic_raster(element, artist, ctx) -> None:
+    """If this Image came from a datashaded Scatter, re-aggregate the source to
+    the viewport on pan/zoom (4b). Controllers are parked on the Axes so the
+    RenderHandle can dispose them."""
+    source = getattr(element, "_raster_source", None)
+    if source is None:
+        return
+    from ...core.raster import RasterController  # noqa: PLC0415
+    from ...ext.datashader import rasterize_scatter  # noqa: PLC0415
+    from ._raster import MplRasterTarget  # noqa: PLC0415
+
+    ax = ctx.parent_axes
+    target = MplRasterTarget(artist, ax)
+    controller = RasterController(
+        source=source, target=target, rasterize=rasterize_scatter, parent=ax.figure.canvas
+    )
+    if not hasattr(ax, "_qtviz_rasters"):
+        ax._qtviz_rasters = []
+    ax._qtviz_rasters.append(controller)
 
 
 def render_heatmap(element: Heatmap, ctx):

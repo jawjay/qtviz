@@ -48,29 +48,51 @@ Scatter(huge_data, scale="datashader" | "auto")          # user
 
 `datashader` added as the `[datashader]` optional extra.
 
-## 3. Next stage (4b) — viewport-driven re-aggregation ([D21])
+## 3. Stage 4b — viewport-driven re-aggregation ([D21]) ✅
 
 Static rasterization shows the whole dataset at the initial extent; zooming in
 just scales the image (blurry). The payoff of datashader is **re-aggregating to
 the visible viewport at the widget's pixel size as you pan/zoom**, so the image
-sharpens. That loop is the next stage and is *backend-coupled* (it reads the
-viewport + pixel size and updates the image primitive), so it needs a thin
-per-backend seam:
+sharpens. That loop is *backend-coupled* (it reads the viewport + pixel size and
+updates the image primitive), so it splits into a backend-agnostic controller and
+a thin per-backend seam:
 
 ```python
 class RasterTarget(Protocol):           # one tiny impl per backend
-    def viewport(self) -> tuple | None         # current (x_range, y_range)
+    def viewport(self) -> Viewport | None       # current ((x0,x1),(y0,y1))
     def pixel_size(self) -> tuple[int, int]     # widget px
     def set_raster(self, rgba, bounds) -> None  # update the image in place
-    def on_viewport_change(self, cb) -> Disposable
+    def connect_viewport(self, cb) -> Disposable
 
-class RasterController:                  # backend-agnostic, owns the loop
-    # on viewport change (debounced) → rasterize_points(frame, …, x_range, y_range,
-    #   width, height) off-thread → target.set_raster(...). build-id drops stale.
+class RasterController(QObject):         # core/raster.py — backend-agnostic, owns the loop
+    # on viewport change (debounced) → rasterize(source, x_range, y_range, width,
+    #   height) on a worker pool → target.set_raster(...). A monotonic build-id
+    #   drops stale results so a fast pan never paints an out-of-date raster.
 ```
 
-The aggregation primitive (`rasterize_points`) and the async/debounce machinery
-are reused; only `RasterTarget` is new per backend. This keeps 4b small.
+**What 4b built**
+
+- **`core/raster.py`** — `RasterTarget` protocol + `RasterController`. The
+  controller debounces viewport changes (QTimer), re-aggregates off the GUI
+  thread (shared pool), and drops stale results by build-id. `rasterize` is
+  *injected*, so core carries no datashader dependency.
+- **The source travels with the raster.** `_rasterize` parks the original (lazy)
+  Scatter on the produced `Image` as a private `_raster_source`, so a backend can
+  re-aggregate it. It's private → excluded from value identity (Image hashing /
+  round-trip unchanged).
+- **Per-backend targets** — `pyqtgraph/_raster.py` (`PgRasterTarget`: ViewBox
+  range + geometry px → `ImageItem.setImage/setRect`) and `matplotlib/_raster.py`
+  (`MplRasterTarget`: axes lims + window-extent px → `AxesImage.set_data/set_extent`,
+  with a feedback guard since `set_extent` can mutate lims). Each backend's
+  `render_image` wires a controller when `_raster_source` is present and parks it
+  on the surface so the `RenderHandle` disposes it on teardown/update.
+- Tests: controller contract (renders at widget resolution, re-aggregates on
+  change, debounces a burst, drops stale, disposes cleanly) + end-to-end zoom
+  re-aggregation on **both** backends (raster extent shrinks to the zoom window).
+
+Out-of-core is preserved: a dask source stays lazy, so each viewport pass
+aggregates only the visible window's partitions. The aggregation primitive
+(`rasterize_points`) is reused unchanged; only `RasterTarget` is new per backend.
 
 ## 4. Discussion items
 
@@ -82,6 +104,6 @@ are reused; only `RasterTarget` is new per backend. This keeps 4b small.
   RGBA Image rendering) for 4a; raw-aggregate + theme colormap (interactive
   colormaps, theme integration) is a future enhancement ✅/open.
 - **[D21]** dynamic viewport re-aggregation seam — `RasterController` +
-  `RasterTarget` (open, stage 4b).
+  `RasterTarget`, wired on pyqtgraph + matplotlib ✅.
 - **[D22]** coverage — points (`Scatter`) now; lines/areas (`canvas.line`) and
   categorical color (`count_cat` via `color_by`) are follow-ups (open).

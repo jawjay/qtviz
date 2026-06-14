@@ -93,7 +93,29 @@ def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
+    _wire_dynamic_raster(element, item, ctx)
     return item
+
+
+def _wire_dynamic_raster(element, item, ctx) -> None:
+    """If this Image came from a datashaded Scatter, attach a controller that
+    re-aggregates the source to the viewport on pan/zoom (4b). Controllers are
+    parked on the ViewBox so the RenderHandle can dispose them."""
+    source = getattr(element, "_raster_source", None)
+    if source is None:
+        return
+    from ...core.raster import RasterController  # noqa: PLC0415
+    from ...ext.datashader import rasterize_scatter  # noqa: PLC0415
+    from ._raster import PgRasterTarget  # noqa: PLC0415
+
+    vb = ctx.parent_axes.getViewBox()
+    target = PgRasterTarget(item, vb)
+    controller = RasterController(
+        source=source, target=target, rasterize=rasterize_scatter, parent=vb
+    )
+    if not hasattr(vb, "_qtviz_rasters"):
+        vb._qtviz_rasters = []
+    vb._qtviz_rasters.append(controller)
 
 
 def render_heatmap(element: Heatmap, ctx):
