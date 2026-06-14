@@ -3,14 +3,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "qtwebplot"
+name = "qtviz"
 version = "0.0.1"
-description = "PySide6 widgets and utilities for embedding modern Python plotting libraries (Plotly, Bokeh, HoloViews, ...) via Qt WebEngine."
+description = "Native-Qt declarative plotting — one immutable API across pyqtgraph and matplotlib backends (webengine planned)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Mark Jajeh" }]
-keywords = ["pyside6", "qt", "webengine", "plotly", "bokeh", "holoviews", "plotting"]
+keywords = ["pyside6", "qt", "pyqtgraph", "matplotlib", "plotting", "visualization", "qtviz"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python :: 3",
@@ -46,14 +46,17 @@ matplotlib = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/markjajeh/qtwebplot"
-Issues = "https://github.com/markjajeh/qtwebplot/issues"
+Homepage = "https://github.com/markjajeh/qtviz"
+Issues = "https://github.com/markjajeh/qtviz/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/qtwebplot"]
+# src/qtwebplot is the legacy Qt WebEngine code; it stays packaged until it is
+# rehomed under qtviz.backends.webengine (roadmap Phase 5).
+packages = ["src/qtviz", "src/qtwebplot"]
 
 [tool.hatch.build.targets.sdist]
 include = [
+    "src/qtviz",
     "src/qtwebplot",
     "README.md",
     "pyproject.toml",
