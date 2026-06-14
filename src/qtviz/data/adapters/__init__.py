@@ -12,6 +12,8 @@ from __future__ import annotations
 from ..registry import register_data_adapter
 from .builtin import BUILTINS
 from .dask import DaskAdapter
+from .xarray import XarrayAdapter
+from .zarr import ZarrAdapter
 
-for _adapter_cls in (*BUILTINS, DaskAdapter):
+for _adapter_cls in (*BUILTINS, DaskAdapter, XarrayAdapter, ZarrAdapter):
     register_data_adapter(_adapter_cls())

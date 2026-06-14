@@ -15,13 +15,19 @@ import numpy as np
 from ..ref import EagerGriddedRef, EagerTabularRef
 
 
+def _reject_gridded(who: str, shape: str | None) -> None:
+    if shape == "gridded":
+        raise TypeError(f"{who} is tabular; cannot force gridded")
+
+
 class DictAdapter:
     priority = 10
 
     def handles(self, obj: Any) -> bool:
         return isinstance(obj, dict)
 
-    def wrap(self, obj: dict) -> EagerTabularRef:
+    def wrap(self, obj: dict, shape: str | None = None) -> EagerTabularRef:
+        _reject_gridded("a dict", shape)
         cols = {str(k): np.asarray(v) for k, v in obj.items()}
         return EagerTabularRef(obj, cols)
 
@@ -32,9 +38,13 @@ class NumpyAdapter:
     def handles(self, obj: Any) -> bool:
         return isinstance(obj, np.ndarray)
 
-    def wrap(self, obj: np.ndarray):
+    def wrap(self, obj: np.ndarray, shape: str | None = None):
+        if shape == "gridded":
+            return EagerGriddedRef(obj, obj)
         if obj.dtype.names:  # structured array → tabular
             return EagerTabularRef(obj, {n: obj[n] for n in obj.dtype.names})
+        if shape == "tabular":
+            raise TypeError("a plain ndarray has no column names; pass a dict or structured array")
         return EagerGriddedRef(obj, obj)  # plain array → gridded
 
 
@@ -45,7 +55,8 @@ class PandasAdapter:
         pd = sys.modules.get("pandas")
         return pd is not None and isinstance(obj, pd.DataFrame)
 
-    def wrap(self, obj) -> EagerTabularRef:
+    def wrap(self, obj, shape: str | None = None) -> EagerTabularRef:
+        _reject_gridded("a DataFrame", shape)
         cols = {str(c): np.asarray(obj[c].to_numpy()) for c in obj.columns}
         return EagerTabularRef(obj, cols)
 
@@ -57,7 +68,8 @@ class ArrowAdapter:
         pa = sys.modules.get("pyarrow")
         return pa is not None and isinstance(obj, pa.Table)
 
-    def wrap(self, obj) -> EagerTabularRef:
+    def wrap(self, obj, shape: str | None = None) -> EagerTabularRef:
+        _reject_gridded("an Arrow Table", shape)
         cols = {
             name: np.asarray(obj.column(name).to_numpy(zero_copy_only=False))
             for name in obj.column_names

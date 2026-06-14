@@ -106,6 +106,15 @@ def _tabular_cases():
         cases.append(("dask", _dask))
     except ImportError:
         pass
+    try:
+        import xarray as xr
+
+        def _xr(d):
+            return data.as_data_ref(xr.Dataset({k: ("row", v) for k, v in d.items()}))
+
+        cases.append(("xarray", _xr))
+    except ImportError:
+        pass
     return cases
 
 
@@ -167,9 +176,42 @@ def test_resolve_touches_only_referenced_columns():
     assert ref.ns.read == {"a", "b"}  # never touched "c"
 
 
-# ── gridded adapter ──────────────────────────────────────────────────────────
-def test_ndarray_is_gridded():
-    grid = data.as_data_ref(np.outer(np.arange(4.0), np.arange(5.0)))
-    assert isinstance(grid, data.GriddedRef)
-    g = grid.grid()
-    assert np.asarray(g.values).shape == (4, 5)
+# ── gridded conformance: ndarray / xarray / dask.array / zarr agree ──────────
+GREF = np.outer(np.arange(4.0), np.arange(5.0))
+
+
+def _gridded_cases():
+    cases = [("ndarray", lambda: data.as_data_ref(GREF))]
+    try:
+        import xarray as xr
+
+        cases.append(("xarray2d", lambda: data.as_data_ref(xr.DataArray(GREF, dims=("y", "x")))))
+    except ImportError:
+        pass
+    try:
+        import dask.array as da
+
+        cases.append(("dask_array", lambda: data.as_data_ref(da.from_array(GREF, chunks=(2, 5)))))
+    except ImportError:
+        pass
+    try:
+        import zarr
+
+        cases.append(("zarr", lambda: data.as_data_ref(zarr.array(GREF, chunks=(2, 5)))))
+    except ImportError:
+        pass
+    return cases
+
+
+@pytest.fixture(params=_gridded_cases(), ids=lambda c: c[0])
+def gridded_ref(request):
+    return request.param[1]()
+
+
+def test_is_gridded(gridded_ref):
+    assert isinstance(gridded_ref, data.GriddedRef)
+
+
+def test_grid_values_agree(gridded_ref):
+    ref = gridded_ref if not gridded_ref.is_lazy else gridded_ref.materialize()
+    np.testing.assert_allclose(np.asarray(ref.grid().values), GREF)

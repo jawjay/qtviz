@@ -127,7 +127,8 @@ class DaskAdapter:
         module = type(obj).__module__
         return module.startswith(("dask.dataframe", "dask.array", "dask_expr"))
 
-    def wrap(self, obj: Any):
+    def wrap(self, obj: Any, shape: str | None = None):
+        # the dask type is unambiguous: dask.array → gridded, dataframe → tabular
         if type(obj).__module__.startswith("dask.array"):
             return DaskGriddedRef(obj)
         return DaskTabularRef(obj)

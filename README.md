@@ -25,8 +25,9 @@ into any PySide6 app as a `QWidget`.
   **expressions**, callables, or raw arrays — so deriving a channel never means
   reshaping your data first.
 - **Data-intensive by design.** The data layer is container-agnostic and
-  lazy-first: dict / numpy / pandas / Arrow today; xarray / zarr / Dask resolve
-  off the GUI thread without changing the Element API (in progress).
+  lazy-first: dict / numpy / pandas / Arrow eagerly, and **Dask / xarray / zarr**
+  out-of-core — resolved off the GUI thread, with projection pushdown delegated
+  to the container — all behind the same Element API.
 
 ## Install (from source)
 
@@ -136,7 +137,7 @@ uv run python examples/01_hello.py
 | **Elements** | Scatter · Curve · Bars · Histogram · Image · Heatmap · ErrorBars · Spread |
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
-| **Data inputs** | dict · numpy · pandas · Arrow (container-agnostic) |
+| **Data inputs** | dict · numpy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
 | **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
@@ -149,7 +150,8 @@ uv run python examples/01_hello.py
 | 1 | Core data model + composition + **pyqtgraph** backend | ✅ done |
 | 2 | **matplotlib** backend | ✅ done |
 | — | Mixed-backend layouts · native interaction · functional data binding | ✅ done |
-| 4–5 | **Lazy adapters** (xarray / zarr / Dask) · **Datashader** for 10M+ points · **Reactive** `Signal` binding | in progress |
+| — | **Lazy adapters** — Dask / xarray / zarr, out-of-core & off-thread | ✅ done |
+| 4 | **Datashader** for 10M+ points · **Reactive** `Signal` binding | planned |
 | 5 | **Data sources** (Parquet / DuckDB / Dask) · **webengine** backend rehome (Plotly/Bokeh) | planned |
 | 3 | **HoloViews adapter** (`from_holoviews`) | planned |
 | 6 | Docs, gallery, **`qtviz 0.1` on PyPI** | planned |

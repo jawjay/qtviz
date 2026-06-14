@@ -147,12 +147,15 @@ support is publish-and-install (mirrors the planned backend entry point).
 
 ## 8. Build order
 
-> **Status:** step 1 ✅ (accessors) · step 2 ✅ (async View orchestration, D13) ·
-> step 3 ✅ (adapter conformance suite) · step 4 ✅ (**dask** tabular + gridded —
-> resolve_channels delegates to `dask.compute` for pushdown + shared subgraphs;
-> conformance now covers a dask case) · next: step 5 (xarray/zarr + the
-> `qv.tabular()`/`qv.gridded()` escape hatches; `tokenize` fingerprints done).
-> D15–D17 accepted (D15 backend-aware warn lands with Datashader, Phase 4).
+> **Status: data-core hardening complete.** step 1 ✅ (accessors) · step 2 ✅
+> (async View orchestration, D13) · step 3 ✅ (adapter conformance suite) ·
+> step 4 ✅ (**dask** — `resolve_channels` delegates to `dask.compute` for
+> pushdown + shared subgraphs) · step 5 ✅ (**xarray** DataArray/Dataset +
+> **zarr**, lazy off-thread, `qv.tabular()`/`qv.gridded()` shape overrides, D17).
+> Conformance covers dict/numpy/pandas/arrow/dask/xarray (tabular) and
+> ndarray/xarray/dask/zarr (gridded). D15–D17 accepted (D15 backend-aware warn +
+> Datashader auto-route land in Phase 4). Remaining: `qtviz.data_adapters`
+> entry-point discovery (small) → then Phase 4 (Datashader, reactive Signals).
 
 
 1. **Accessor model** ([D14]): `Accessor = str | Expression | Callable |

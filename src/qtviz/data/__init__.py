@@ -8,7 +8,14 @@ from .expr import Expr as Expression
 from .expr import col, lit
 from .pipeline import node_is_lazy, resolve_node
 from .ref import DataRef, EagerGriddedRef, EagerTabularRef, GridData, GriddedRef, Schema, TabularRef
-from .registry import DataAdapter, as_data_ref, list_data_adapters, register_data_adapter
+from .registry import (
+    DataAdapter,
+    as_data_ref,
+    gridded,
+    list_data_adapters,
+    register_data_adapter,
+    tabular,
+)
 
 __all__ = [
     "DataRef",
@@ -20,6 +27,8 @@ __all__ = [
     "GridData",
     "DataAdapter",
     "as_data_ref",
+    "tabular",
+    "gridded",
     "register_data_adapter",
     "list_data_adapters",
     # accessors (D14)
