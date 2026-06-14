@@ -102,17 +102,24 @@ This split is the bulk of the work; the transport is how the binary blob gets ac
 
 ## 4. Format — Arrow IPC vs. raw typed-array buffers
 
-| | **Arrow IPC** (recommended) | Raw `Float64Array` buffers + tiny JSON header |
+| | Arrow IPC | **Raw `Float64Array` buffers + tiny JSON header** (chosen) |
 |---|---|---|
 | Shape | columnar record batch; dtypes, nulls, strings, multi-column in one blob | one buffer per column; you frame dtype/offset/len yourself |
 | Fit | qtviz's data layer is **already Arrow-aware** — `to_arrow`/`pyarrow` is natural; zero-copy | minimal; no structure |
 | JS side | `apache-arrow` JS → `tableFromIPC` → typed arrays | `new Float64Array(buf)` directly |
 | Cost | **+1 JS dependency** (`apache-arrow`, ~100s of KB into the page) | no JS dep, but hand-rolled framing rots as needs grow (categorical color, strings, nulls) |
 
-**Recommendation: Arrow IPC** — it matches the data layer, survives growth
-(categorical/`color_by`, datetime, nulls), and is zero-copy. The honest cost is the
-`apache-arrow` JS bundle in the page (load via CDN or inline, like plotly.js). Keep
-raw-buffers as the fallback if that dep proves unwanted for a minimal build.
+**Recommendation (revised): raw typed-array buffers.** Implementation made the
+payload concrete — the binary transport **only ever carries numeric arrays**
+(`x`/`y`/`z`/errors); everything categorical/string (color keys, labels) stays small
+JSON. So Arrow's whole value (multi-dtype, nulls, strings, columnar framing) never
+applies here, while its cost — an **`apache-arrow` JS dependency** — directly
+conflicts with the **100% offline requirement** (§0.1 of `spec.md`): another library
+to bundle, or a CDN we've banned. Raw little-endian buffers need **no JS library**
+(`new Float64Array(buf)` is built in) and a tiny JSON manifest (`{token, dtype,
+len}`). This **revises D34** (the doc's earlier Arrow-IPC pick) for the transport
+layer; the data layer stays Arrow-aware internally. (Arrow IPC remains the path only
+if a future payload genuinely needs strings/nulls over the wire.)
 
 ## 5. Transport — getting the binary blob to the page
 
@@ -136,14 +143,20 @@ side, freed once fetched or on handle dispose).
   smaller**, and plotly.js gets typed arrays (no number-by-number `JSON.parse`). The
   spike found this only fires for numpy on a real `go.Figure` (a raw dict, even with
   numpy, stays JSON text). A benchmark guards that base64 stays on.
-- **W5.1b — prove the explicit pipeline (Option A, base64).** If W5.1a leaves a gap:
-  split the figure (data-by-reference) and ship Arrow bytes base64-encoded over the
-  existing `send()` channel, decode in JS → typed arrays → Plotly. Establishes the
-  JS-side Arrow + figure-split path; good to a few MB.
-- **W5.2 — scale (Option B, custom scheme handler).** Swap *only the data-blob
-  transport* for a binary `fetch` over a registered `qtviz` scheme, hitting the
-  < 100 ms / 100 MB target. The W5.1 split + decode pipeline is unchanged; this is
-  the transport substitution.
+- **Offline baseline — render with no network. ◻ next (headless-verifiable).** Inline
+  the JS renderer libraries from the *installed* packages (plotly.js via
+  `include_plotlyjs=True`; Bokeh via `INLINE`) so a webengine render needs **no CDN**
+  — satisfying the §0.1 offline requirement immediately. Assert headlessly that the
+  generated HTML carries **no external `http(s)://` resource**. Cost: ~3.5 MB of
+  inline JS per page, which W5.2 then removes.
+- **W5.2 — custom `qtviz://` scheme: raw binary data + offline JS, no per-page bloat.**
+  Register a `qtviz` URL scheme and serve, as **raw binary**, *both* the bundled
+  plotly.js *and* the figure's numeric buffers; the page fetches them same-origin (no
+  network). This replaces base64-in-the-document **and** the per-page inlined JS at
+  once — true binary, fully offline, scaling to the 100 MB tail. Display-gated to
+  verify end-to-end; the registry + buffer-encode + figure-split are headless-testable.
+- **W5.1b** (base64-over-the-channel split) is **dropped** — W5.1a already base64s the
+  common path, and W5.2 supersedes it for the tail.
 
 This sequences value-first and keeps each step verifiable, mirroring the W3a/W3b
 split. C (local HTTP) is the fallback if scheme registration proves impractical in
@@ -156,16 +169,20 @@ the host app.
   transport; HoloViews rides Bokeh — out of scope here.
 - **`RawFigure` is lower priority.** A user's pre-built figure already carries inline
   data; re-encoding it is possible but deferred — the win is on the data qtviz builds.
-- **Threshold-gated**, like datashader auto-routing: route through Arrow only above a
-  measured point-count/byte threshold; small figures stay on JSON (no regression, no
-  apache-arrow load).
+- **Threshold-gated**, like datashader auto-routing: route through the binary scheme
+  only above a measured point-count/byte threshold; small figures stay on the
+  (already base64) `go.Figure` path — no regression.
+- **Offline is mandatory, not optional** (§0.1 of `spec.md`): the scheme serves the
+  bundled plotly.js too, so neither the renderer nor the data ever touches the network.
 
 ## 8. Open questions (new discussion items)
 
 - **[D33] Transport** — base64 now (W5.1) → custom scheme handler for scale (W5.2).
   Recommend this phasing; decide whether the local-HTTP fallback is worth pre-building.
-- **[D34] Format** — Arrow IPC vs raw typed-array buffers. Recommend Arrow IPC
-  (matches the data layer); accept the `apache-arrow` JS dependency.
+- **[D34] Format** — **revised to raw typed-array buffers** (the transport is
+  numeric-only, and an `apache-arrow` JS dep conflicts with the §0.1 offline rule).
+- **[D37] Offline (hard requirement)** — bundle JS locally (inline now; `qtviz://`
+  scheme in W5.2); no CDN, ever. Conformance: no external URL in the rendered HTML.
 - **[D35] Figure-splitting** — `_figure.build` emits data-by-reference + a JS
   reassembly step. Confirm Plotly's typed-array ingestion API (`{dtype, bdata}`) and
   version as a spike before committing.

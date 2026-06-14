@@ -9,7 +9,7 @@ Give the series explicit ids and watch the console: clicking a point prints the
 series it belongs to.
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`)
-and network for the Plotly CDN; it will not run headless.
+and renders fully offline (JS bundled, no CDN); it will not run headless.
 
 Run:
     uv run python examples/14_webengine_overlay.py

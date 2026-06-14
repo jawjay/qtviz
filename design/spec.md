@@ -50,6 +50,25 @@ and reactive signals (see the as-built note below and `roadmap.md` §0).
 Detail deepens as we approach each unbuilt area. The built sections match the
 implementation and are the gate: refactoring them later is expensive.
 
+### 0.1 Non-functional requirement — runs 100% offline
+
+qtviz renders with **no network access at any point**. This is a hard requirement,
+not a nice-to-have: the target is desktop / embedded apps that must work air-gapped,
+on a plane, or behind a corporate firewall.
+
+- The **native** backends (pyqtgraph, matplotlib) draw in-process — trivially offline.
+- The **webengine** backend embeds a browser, so it must **bundle its JavaScript
+  locally** — plotly.js / bokeh.js come from the *installed Python package*
+  (`plotly`/`bokeh` ship their own minified JS), served inline today and via the
+  local `qtviz://` scheme in W5.2 — **never from a CDN**.
+- Plot **data is always local** (Python → the embedded page on the same machine, via
+  `setHtml`/`runJavaScript`/`QWebChannel`/the `qtviz://` scheme); the bridge JS
+  (`qwebchannel.js`) loads from Qt's bundled resource. Only the JS *renderer*
+  libraries ever risked a download — and they must not.
+
+**Conformance:** a webengine-rendered document contains **no external `http(s)://`
+resource** — asserted headlessly by scanning the generated HTML.
+
 ## 1. Layered architecture
 
 ```
@@ -1291,6 +1310,11 @@ classes are repurposed as **JS-routing strategies** inside the
 webengine backend's element renderers. The user-facing Element API
 doesn't expose this; it picks the right JS library per Element type
 internally. Rehoming detail in Phase 5; this section is a sketch.
+
+**Offline (hard requirement, §0.1).** The JS renderer libraries are bundled from the
+installed `plotly` / `bokeh` packages (inline now; served via the local `qtviz://`
+scheme in W5.2) — never a CDN. The binary + offline transport is specified in
+`webengine-arrow-transport.md`; the rehome stages in `webengine-rehome.md`.
 
 ## 5. Element specs (Phase 1 vocabulary)
 

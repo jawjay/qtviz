@@ -6,7 +6,7 @@ with a Viridis colorscale — a different element family from the scatter/line
 demos. Hover reads back the aggregated value at each cell.
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`)
-and network for the Plotly CDN; it will not run headless.
+and renders fully offline (JS bundled, no CDN); it will not run headless.
 
 Run:
     uv run python examples/17_webengine_heatmap.py

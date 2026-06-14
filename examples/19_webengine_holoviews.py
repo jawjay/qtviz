@@ -12,8 +12,8 @@ Use the **tap** and **box-select** tools in the toolbar:
 Events print to the console.
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`,
-which includes HoloViews + Bokeh) and network for the BokehJS CDN; it will not
-run headless.
+which includes HoloViews + Bokeh) and renders fully offline (JS bundled, no CDN);
+it will not run headless.
 
 Run:
     uv run python examples/19_webengine_holoviews.py

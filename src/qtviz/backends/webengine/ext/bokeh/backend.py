@@ -34,6 +34,7 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING, Any
 
 from qtviz.backends.webengine.backend import PlotBackend
@@ -57,7 +58,9 @@ _INSTRUMENTED_MARKER = "_qtwebplot_instrumented"
 class BokehBackend(PlotBackend):
     """Hosts a Bokeh figure in a `PlotView` (or any `WebBridgeView`)."""
 
-    def __init__(self, figure: Any = None, *, resources: str = "cdn") -> None:
+    def __init__(self, figure: Any = None, *, resources: str = "inline") -> None:
+        # resources="inline" embeds BokehJS from the installed package → no network
+        # (spec §0.1 offline requirement). Pass "cdn" to opt back in.
         self._figure = figure
         self._resources = resources
         self._view: WebBridgeView | None = None
@@ -88,10 +91,8 @@ class BokehBackend(PlotBackend):
 
     def on_detach(self) -> None:
         if self._view is not None:
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._view.received.disconnect(self._on_message)
-            except (RuntimeError, TypeError):
-                pass
         self._view = None
 
     def set_figure(self, figure: Any) -> None:

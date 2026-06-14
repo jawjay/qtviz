@@ -16,6 +16,7 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -45,8 +46,10 @@ class PlotlyBackend(PlotBackend):
         self,
         figure: Any = None,
         *,
-        plotlyjs: str = "cdn",
+        plotlyjs: str | bool = True,
     ) -> None:
+        # plotlyjs=True inlines plotly.js from the installed package → renders with
+        # no network (spec §0.1 offline requirement). Pass "cdn" to opt back in.
         self._figure = figure
         self._plotlyjs = plotlyjs
         self._view: WebBridgeView | None = None
@@ -75,7 +78,11 @@ class PlotlyBackend(PlotBackend):
 
     def js_runtime(self) -> str:
         # Prepend a small line that tells our JS which div to target.
-        return f"window.qtwebplot = window.qtwebplot || {{}};\nwindow.qtwebplot.plot_div_id = '{_PLOT_DIV_ID}';\n" + PLOTLY_JS
+        prefix = (
+            "window.qtwebplot = window.qtwebplot || {};\n"
+            f"window.qtwebplot.plot_div_id = '{_PLOT_DIV_ID}';\n"
+        )
+        return prefix + PLOTLY_JS
 
     def on_attach(self, view: WebBridgeView) -> None:
         self._view = view
@@ -83,10 +90,8 @@ class PlotlyBackend(PlotBackend):
 
     def on_detach(self) -> None:
         if self._view is not None:
-            try:
+            with contextlib.suppress(RuntimeError, TypeError):
                 self._view.received.disconnect(self._on_message)
-            except (RuntimeError, TypeError):
-                pass
         self._view = None
 
     def set_figure(self, figure: Any) -> None:
@@ -212,7 +217,7 @@ def _build_selection(payload: dict) -> PlotlySelectionEvent:
     )
 
 
-def _plotly_template_from(theme: "Theme") -> dict:
+def _plotly_template_from(theme: Theme) -> dict:
     """Translate a qtwebplot Theme into a Plotly template dict."""
     return {
         "layout": {

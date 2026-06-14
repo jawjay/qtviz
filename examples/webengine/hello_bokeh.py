@@ -31,14 +31,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from qtwebplot import PlotView
 from qtwebplot.ext.bokeh import (
     BokehBackend,
     BokehSelectionEvent,
     BokehTapEvent,
 )
 
+from qtwebplot import PlotView
 
 SOURCE_NAME = "main_src"
 

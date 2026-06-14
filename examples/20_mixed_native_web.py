@@ -8,7 +8,7 @@ density-contour chart — a chart type qtviz doesn't natively model — hosted o
 webengine backend via `RawFigure`. `backend="auto"` resolves each pane on its own.
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`)
-and network for the Plotly CDN; the webengine pane will not run headless.
+and renders fully offline (JS bundled, no CDN); the webengine pane will not run headless.
 
 Run:
     uv run python examples/20_mixed_native_web.py

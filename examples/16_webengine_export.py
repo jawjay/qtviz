@@ -6,7 +6,7 @@ let the Plotly page paint, then write a PNG next to this script and keep the
 window open. (svg/pdf would need kaleido and currently raise.)
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`)
-and network for the Plotly CDN; it will not run headless.
+and renders fully offline (JS bundled, no CDN); it will not run headless.
 
 Run:
     uv run python examples/16_webengine_export.py

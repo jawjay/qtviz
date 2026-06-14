@@ -7,7 +7,7 @@ fit line (`Curve`) under the noisy samples (`Scatter`) — a classic
 "model + uncertainty" view, rendered entirely through Plotly in a Qt window.
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`)
-and network for the Plotly CDN; it will not run headless.
+and renders fully offline (JS bundled, no CDN); it will not run headless.
 
 Run:
     uv run python examples/15_webengine_elements.py

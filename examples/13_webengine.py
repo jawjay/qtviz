@@ -13,7 +13,7 @@ the very same Element to a native backend and back.
 Events print to the console.
 
 Needs a real display plus the webengine extra (`pip install "qtviz[webengine]"`)
-and network access for the Plotly CDN. It will not run headless — a QWebEngineView
+and renders fully offline (JS bundled, no CDN). It will not run headless — a QWebEngineView
 segfaults at teardown under offscreen Qt.
 
 Run:

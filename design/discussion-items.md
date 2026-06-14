@@ -793,19 +793,24 @@ first ([[D29]]).
 
 ---
 
-## [D34] Webengine W5 binary format — Arrow IPC
+## [D34] Webengine W5 binary format — raw typed-array buffers (revised)
 
 **Context.** What binary encoding for the bulk data columns?
 
-**Underlying.** **Arrow IPC** (columnar; dtypes/nulls/strings/multi-column; zero-copy;
-qtviz's data layer is already Arrow-aware) vs **raw `Float64Array` buffers + a tiny
-JSON header** (minimal, no JS dep, but hand-rolled framing that rots as needs grow —
-categorical color, datetime, nulls).
+**Underlying.** **Arrow IPC** (columnar; dtypes/nulls/strings/multi-column; zero-copy)
+vs **raw `Float64Array` buffers + a tiny JSON manifest** (minimal, no JS dep). The
+doc first picked Arrow IPC for future-proofing.
 
-**Recommendation.** Arrow IPC — matches the data layer and survives growth; accept
-the `apache-arrow` JS bundle in the page (loaded via CDN/inline like plotly.js).
-Raw buffers stay the fallback if that dep is unwanted for a minimal build.
-**Status:** ✅ resolved (per user) — Arrow IPC; accept the apache-arrow JS dependency.
+**Revision (per user, alongside [[D37]]).** Implementation made the payload concrete:
+the binary transport **only ever carries numeric arrays** (`x`/`y`/`z`/errors);
+everything categorical/string stays small JSON. So Arrow's value (strings/nulls/
+multi-dtype) never applies here, while its cost — an **`apache-arrow` JS dependency**
+— **conflicts with the 100% offline requirement** ([[D37]]): another lib to bundle, or
+a CDN we've banned. Raw buffers need **no JS library** (`new Float64Array(buf)` is
+built in).
+**Status:** ✅ resolved (per user) — **raw typed-array buffers**, not Arrow IPC. The
+data layer stays Arrow-aware internally; Arrow over the wire only if a future payload
+needs strings/nulls.
 
 ---
 
@@ -845,6 +850,30 @@ QApplication? Affects packaging and the app-integration story.
 
 **Status:** open — decide at W5.2 (only the scheme-handler transport needs it; base64
 W5.1 does not).
+
+---
+
+## [D37] qtviz runs 100% offline — no CDN, ever
+
+**Context.** The webengine backend embeds a browser, and the legacy bridge loaded the
+plotting JS (plotly.js / bokeh.js) from a **CDN** (`plotlyjs="cdn"`,
+`resources="cdn"`). A user flagged: a desktop plotting library must not need the
+internet to draw a chart (air-gapped / firewalled / on a plane).
+
+**Underlying.** Review confirmed the *only* network dependency is the JS *renderer*
+libraries via CDN — **data is always local** (Python → embedded page; `setHtml` /
+`runJavaScript` / `QWebChannel` / `qtviz://`), and the bridge JS (`qwebchannel.js`)
+already loads from Qt's bundled resource. The fix is to bundle the renderer JS, which
+**ships inside the installed `plotly` / `bokeh` Python packages** (`include_plotlyjs=
+True`, Bokeh `INLINE`) — no download needed. This is promoted to a **hard
+non-functional requirement** in `spec.md` §0.1, and it settles [[D34]] (no
+apache-arrow over the wire).
+
+**Recommendation.** Offline is mandatory. Inline the JS now (headless-verifiable: the
+rendered HTML must contain no external `http(s)://`); in W5.2 the `qtviz://` scheme
+serves the bundled plotly.js *and* the raw data buffers, removing per-page JS bloat.
+**Status:** ✅ accepted (per user) — 100% offline is a hard requirement; bundle JS
+locally, never a CDN. Conformance asserted headlessly on the generated HTML.
 
 ---
 
@@ -952,6 +981,7 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D31 | `RawFigure` passthrough design (detect/host/compose) | webengine W3 | ✅ resolved — auto-detect + `kind=`; backend render-branch; standalone (Layout pane in W4) |
 | D32 | W3 event-translation split (Plotly W3a, Bokeh W3b) | webengine W3 | ✅ resolved — W3a Plotly + RawFigure render-all + per-element select; W3b Bokeh events |
 | D33 | webengine W5 transport (base64 → scheme handler) | webengine W5 | ✅ resolved — base64 (W5.1) → custom `qtviz://` scheme handler (W5.2); benchmark first |
-| D34 | webengine W5 binary format | webengine W5 | ✅ resolved — Arrow IPC; accept the apache-arrow JS dep |
+| D34 | webengine W5 binary format | webengine W5 | ✅ resolved (revised) — **raw typed-array buffers**, no apache-arrow (numeric-only payload + offline) |
 | D35 | webengine W5 figure-splitting + Plotly typed-array API | webengine W5.1 | open — spike Plotly's `{dtype,bdata}` ingestion; then design `_figure` split + JS reassembly |
 | D36 | webengine W5 custom-scheme registration timing | webengine W5.2 | open — decide when/where to register the scheme (before QApplication) |
+| D37 | **qtviz runs 100% offline — no CDN, ever** | spec §0.1 / webengine | ✅ accepted — bundle JS locally (inline now, `qtviz://` in W5.2); HTML has no external URL |

@@ -204,8 +204,8 @@ common elements native, everything else still renders.
 | **W3b** ✅ | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
 | **W4** ✅ | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
 | **W5.1a** (Phase 5) ✅ | Cheap win — `_figure.build` keeps numpy + `PlotlyBackend` coerces to `go.Figure`, so Plotly's base64 typed-array encoder engages | 1M pts: 757→180 ms, 38.5→27.0 MB; benchmark guards base64 |
-| **W5.1b** (Phase 5) | If needed — explicit data-by-reference split + base64 Arrow over the existing channel | beats W5.1a for the multi-MB tail |
-| **W5.2** (Phase 5) | Scale — swap the data blob to a binary `fetch` over a custom `qtviz` URL-scheme handler | <100 ms for a representative ~100 MB payload |
+| **W5-offline** (Phase 5) | **100% offline (§0.1)** — inline the JS renderer libs from the installed packages (plotly `include_plotlyjs=True`, Bokeh `INLINE`); **no CDN** | rendered HTML has **no external `http(s)://`** (headless-asserted) |
+| **W5.2** (Phase 5) | Scale + offline — custom `qtviz://` URL scheme serves **raw binary** data buffers **and** the bundled plotly.js (no per-page JS bloat); raw typed arrays, no apache-arrow ([[D34]] revised) | <100 ms for ~100 MB; fully offline; display-gated to verify |
 
 > **Status (W3a ✅ landed).** `qv.RawFigure(figure, kind=None)` (`elements/raw_figure.py`)
 > — a first-class, standalone passthrough element that auto-detects the library

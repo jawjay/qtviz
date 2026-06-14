@@ -42,7 +42,7 @@ class HoloViewsBackend(PlotBackend):
         hv_object: Any = None,
         *,
         renderer: str = "bokeh",
-        resources: str = "cdn",
+        resources: str = "inline",  # bundle BokehJS locally → no network (spec §0.1)
     ) -> None:
         if renderer != "bokeh":
             raise NotImplementedError(

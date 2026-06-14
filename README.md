@@ -53,6 +53,10 @@ pyqtgraph). qtviz takes a different position:
   `QWidget`s with Qt signals/slots and strict GUI-thread discipline — no browser,
   no JavaScript bridge, no server. They feel like the desktop because they are the
   desktop.
+- **Runs 100% offline.** No network at render time, ever — a hard requirement, not a
+  default you can flip. The native backends draw in-process; the webengine backend
+  bundles its JavaScript locally (from the installed `plotly`/`bokeh` packages, never
+  a CDN). Built for air-gapped and firewalled environments.
 - **Engineered for large data.** The data layer is container-agnostic and
   lazy-first — dict / NumPy / pandas / Arrow eagerly, **Dask / xarray / zarr**
   out-of-core — and integrates **Datashader** so 10M+ points become a
