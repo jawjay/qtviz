@@ -202,7 +202,7 @@ common elements native, everything else still renders.
 | **W2** ✅ | Element→Plotly renderers for the 8 types; theme translation; `capture/restore_state`; png export | backend-conformance green for webengine (forced: 36 passed); default-gated by the teardown segfault |
 | **W3a** ✅ | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure — all three *render*); Plotly typed events; **per-element `SelectEvent` routing** (D27); Plotly brush→`SelectEvent` | a raw figure of each lib renders; a Plotly raw figure + native Overlay emit per-element typed events |
 | **W3b** ✅ | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
-| **W4** | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
+| **W4** ✅ | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
 | **W5** (Phase 5) | Arrow IPC transport for large payloads | <100 ms for a representative big payload |
 
 > **Status (W3a ✅ landed).** `qv.RawFigure(figure, kind=None)` (`elements/raw_figure.py`)
@@ -230,6 +230,20 @@ common elements native, everything else still renders.
 > `parse_bokeh_ranges`; the live bokeh raw render is display-gated. Suite: 274
 > passed, 23 skipped (forced: 63 passed). Example 19 hosts a HoloViews scatter.
 > **The original W3 gate is fully met.**
+>
+> **Status (W4 ✅ landed).** Mixed native + webengine panes compose through the
+> existing M5 `LayoutHost`/`CompositeRenderHandle` with **zero new code** — the
+> infra is backend-generic and the `WebEngineRenderHandle` satisfies the contract.
+> `qv.View(qv.Layout([Scatter, RawFigure]))` (backend="auto") yields a composite
+> whose `pyqtgraph` and `webengine` panes share one merged `EventBus`, so a single
+> `View.on(...)` hears both (test + example 20). **Legacy composition retired
+> (clean break, per user):** deleted `layouts.py` (PlotGrid/PlotTabs/PlotSplitter),
+> `_linking.py`, the legacy `test_layouts_gui.py`, and the four legacy examples that
+> used them; `qv.Layout` is now the one composition path. `view.py` (PlotView)
+> stays — still the webengine host widget. **Known flake:** importing `qtviz` loads
+> WebEngine into every test process (the backend registers eagerly), and offscreen
+> Chromium occasionally segfaults mid-run (~1/5); the tests themselves pass — a
+> process-level race, the same instability that gates the webengine tests.
 
 After W3, the native HoloViews adapter (Phase 3) can be built against a real
 fallback. W4 retires the legacy composition layer.

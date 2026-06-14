@@ -17,15 +17,12 @@ except PackageNotFoundError:
 
 from qtviz.backends.webengine.backend import PlotBackend
 from qtviz.backends.webengine.core import Bridge, WebBridgeView
-from qtviz.backends.webengine.layouts import PlotGrid, PlotTabs
 from qtviz.backends.webengine.theme import Theme
 from qtviz.backends.webengine.view import PlotView
 
 __all__ = [
     "Bridge",
     "PlotBackend",
-    "PlotGrid",
-    "PlotTabs",
     "PlotView",
     "Theme",
     "WebBridgeView",

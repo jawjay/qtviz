@@ -34,6 +34,7 @@ uv sync --extra matplotlib --extra dev
 | 17 | [`17_webengine_heatmap.py`](17_webengine_heatmap.py) | A tabular `Heatmap` (x/y/z) → a Plotly heatmap with a Viridis colorscale. |
 | 18 | [`18_webengine_raw_figure.py`](18_webengine_raw_figure.py) | **`RawFigure`** — host an existing Plotly figure (a 3-D surface) qtviz doesn't natively model; events still bridge back. |
 | 19 | [`19_webengine_holoviews.py`](19_webengine_holoviews.py) | **`RawFigure` + HoloViews** — a HoloViews figure rendered via Bokeh, with tap / box-select / range arriving as qtviz typed events (W3b). |
+| 20 | [`20_mixed_native_web.py`](20_mixed_native_web.py) | **Mixed backends** — a native pyqtgraph pane beside a webengine Plotly pane in one window, sharing one event stream (W4). |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -45,15 +46,18 @@ uv sync --extra datashader --extra dask --extra matplotlib --extra dev
 More examples will be added as the library grows (reactive signals, the
 HoloViews adapter, …).
 
-Examples 13–19 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
-WebEngine view, plus `RawFigure` passthrough for Plotly/Bokeh/HoloViews; roadmap
-Phase 5, W1–W3b). They need the webengine extra and a real display (a
-`QWebEngineView` segfaults at teardown under offscreen Qt):
+Examples 13–20 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
+WebEngine view, plus `RawFigure` passthrough for Plotly/Bokeh/HoloViews, and a
+mixed native+webengine layout; roadmap Phase 5, W1–W4). They need the webengine
+extra and a real display (a `QWebEngineView` segfaults at teardown under offscreen
+Qt):
 
 ```bash
 uv sync --extra webengine --extra dev
 ```
 
-The [`webengine/`](webengine) folder holds the **legacy** `qtwebplot` examples,
-which drive the bridge directly through the old `PlotView` (now reachable via the
-deprecation shim) rather than through a qtviz `View` / the `webengine` backend.
+The [`webengine/`](webengine) folder holds the remaining **legacy** `qtwebplot`
+hello-world examples (`hello_plotly` / `hello_bokeh` / `hello_holoviews`), which
+drive the bridge directly through the old `PlotView` (reachable via the deprecation
+shim) rather than through a qtviz `View`. The legacy multi-pane / linked-plot demos
+were removed in W4 — `qv.Layout` (examples 02, 07, 20) supersedes them.

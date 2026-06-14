@@ -314,8 +314,8 @@ are the current frontier.
   per-element selection routing.
 - ✅ Bokeh / HoloViews event translation — passthrough Bokeh and HoloViews figures
   emit qtviz typed events (tap / select / range).
-- ◻ Mixed native + webengine panes in one `Layout`; Arrow IPC transport for large
-  payloads.
+- ✅ Mixed native + webengine panes in one `Layout`, sharing one event stream.
+- ◻ Arrow IPC transport for large payloads.
 
 ### Planned
 

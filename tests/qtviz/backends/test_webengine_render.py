@@ -90,6 +90,30 @@ def test_bokeh_raw_figure_emits_typed_events(web, qtbot):
     handle.dispose()
 
 
+def test_mixed_pyqtgraph_webengine_panes_share_one_stream(table, qtbot):
+    """W4 — a native pyqtgraph pane beside a webengine pane in one Layout, with a
+    merged event bus so a single View.on(...) sees events from either."""
+    go = pytest.importorskip("plotly.graph_objects")
+    from qtviz.core.backend import CompositeRenderHandle  # noqa: PLC0415
+
+    native = qv.Scatter(table, x="x", y="y")                  # auto → pyqtgraph
+    raw = qv.RawFigure(go.Figure(go.Scatter(x=[1, 2, 3], y=[1, 4, 9])))  # → webengine
+    v = qv.View(qv.Layout([native, raw], kind="splitter"))    # backend="auto"
+    qtbot.addWidget(v)
+
+    assert isinstance(v.handle, CompositeRenderHandle)
+    assert [c.backend_name for c in v.handle.children] == ["pyqtgraph", "webengine"]
+
+    selects: list = []
+    v.on(qv.SelectEvent, selects.append)
+    native_h, web_h = v.handle.children
+    native_h.event_bus.emit(qv.SelectEvent("native", [1], (0, 0, 1, 1)))
+    web_h.event_bus.emit(qv.SelectEvent("web", [2], (0, 0, 2, 2)))
+    v.handle.event_bus._drain()
+    assert {e.source_id for e in selects} == {"native", "web"}
+    v.handle.dispose()
+
+
 def test_png_export_writes_a_file(web, table, qtbot, tmp_path):
     handle = web.render(qv.Scatter(table, x="x", y="y"), theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

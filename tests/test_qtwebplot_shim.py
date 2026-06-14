@@ -26,8 +26,8 @@ def test_shim_redirects_top_level_and_submodules_to_same_objects() -> None:
     assert WebBridgeView is new_pkg.WebBridgeView
     # Submodule imports through the old path resolve to the identical module.
     assert inject_head_scripts is new_inject
-    # Legacy submodules that aren't re-exported at top level still import.
-    from qtwebplot.layouts import PlotSplitter  # noqa: F401
+    # Deep submodules (not re-exported at top level) still import through the shim.
+    from qtwebplot.ext.plotly import PlotlyBackend  # noqa: F401
 
 
 def test_shim_warns_on_first_import() -> None:
