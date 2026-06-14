@@ -768,6 +768,80 @@ Plotly raw figure + native Overlay emit per-element typed events."
 
 ---
 
+## [D33] Webengine W5 transport — base64 now, custom URL-scheme handler for scale
+
+**Context.** W5 ships large figure data to the embedded browser as **binary**
+instead of JSON ([[D29]]). How does the binary blob cross the bridge? Full analysis
+in `webengine-arrow-transport.md`.
+
+**Underlying.** Today data crosses as JSON text (embedded in the HTML, and as a JSON
+literal inside a `runJavaScript` source string) — the size/CPU/precision ceiling on
+the data-intensive path. Options: **(A)** base64 over the existing channel — zero
+new infra but a text step and a heavy `runJavaScript` string, good to a few MB;
+**(B)** a custom `qtviz://` URL-scheme handler (`QWebEngineUrlSchemeHandler`) — true
+binary `fetch`, no base64, no open port, scales to 100 MB, but the scheme must be
+registered before the QApplication and needs a buffer registry; **(C)** local HTTP —
+true binary but opens a TCP port (strictly worse than B here); **(D)** QWebChannel
+`QByteArray` — still base64.
+
+**Recommendation.** Phased: **W5.1 base64 (A)** to prove the JS-side
+Arrow→typed-array→Plotly pipeline with minimal infra; **W5.2 custom scheme handler
+(B)** to hit <100 ms / 100 MB — only the data-blob transport changes. C is the
+fallback if scheme registration proves impractical.
+**Status:** ✅ resolved (per user) — base64 (W5.1) → scheme handler (W5.2); benchmark
+first ([[D29]]).
+
+---
+
+## [D34] Webengine W5 binary format — Arrow IPC
+
+**Context.** What binary encoding for the bulk data columns?
+
+**Underlying.** **Arrow IPC** (columnar; dtypes/nulls/strings/multi-column; zero-copy;
+qtviz's data layer is already Arrow-aware) vs **raw `Float64Array` buffers + a tiny
+JSON header** (minimal, no JS dep, but hand-rolled framing that rots as needs grow —
+categorical color, datetime, nulls).
+
+**Recommendation.** Arrow IPC — matches the data layer and survives growth; accept
+the `apache-arrow` JS bundle in the page (loaded via CDN/inline like plotly.js).
+Raw buffers stay the fallback if that dep is unwanted for a minimal build.
+**Status:** ✅ resolved (per user) — Arrow IPC; accept the apache-arrow JS dependency.
+
+---
+
+## [D35] Webengine W5 figure-splitting + Plotly typed-array API
+
+**Context.** Binary transport requires splitting the figure into structure (small
+JSON) + bulk data (binary), with a JS reassembly step that feeds typed arrays to
+Plotly.
+
+**Underlying.** `_figure.build` must emit a *data-by-reference* figure
+(`{column_id, dtype, len}` instead of inline lists); a JS handler decodes the Arrow
+blob into typed arrays and injects them before `Plotly.react`/`newPlot`. Plotly.js
+accepts typed arrays / its `{dtype, bdata}` typed-array spec — **but the exact
+ingestion API + minimum Plotly version must be confirmed by a spike** before building.
+
+**Status:** open — spike Plotly's typed-array ingestion API/version; then design the
+`_figure` split + JS reassembly. Lands in W5.1.
+
+---
+
+## [D36] Webengine W5 custom-scheme registration timing
+
+**Context.** A custom `QWebEngineUrlScheme` must be **registered before the
+QApplication** is created — but qtviz shouldn't impose WebEngine setup on apps that
+never use the webengine backend.
+
+**Underlying.** Where does registration happen — at webengine-package import (too
+eager; already a flake source), at first webengine render (too late — app exists), or
+via an explicit one-time `qtviz.backends.webengine` init the app calls before its
+QApplication? Affects packaging and the app-integration story.
+
+**Status:** open — decide at W5.2 (only the scheme-handler transport needs it; base64
+W5.1 does not).
+
+---
+
 ## [D28] `from_holoviews` fallback to webengine
 
 **Context.** The native HoloViews adapter (Phase 3) translates the common hv
@@ -871,3 +945,7 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D30 | webengine packaging + physical move + import shim | Phase 0/6 | ✅ resolved — whole-package move now + `qtwebplot` shim; skip-gate GUI tests |
 | D31 | `RawFigure` passthrough design (detect/host/compose) | webengine W3 | ✅ resolved — auto-detect + `kind=`; backend render-branch; standalone (Layout pane in W4) |
 | D32 | W3 event-translation split (Plotly W3a, Bokeh W3b) | webengine W3 | ✅ resolved — W3a Plotly + RawFigure render-all + per-element select; W3b Bokeh events |
+| D33 | webengine W5 transport (base64 → scheme handler) | webengine W5 | ✅ resolved — base64 (W5.1) → custom `qtviz://` scheme handler (W5.2); benchmark first |
+| D34 | webengine W5 binary format | webengine W5 | ✅ resolved — Arrow IPC; accept the apache-arrow JS dep |
+| D35 | webengine W5 figure-splitting + Plotly typed-array API | webengine W5.1 | open — spike Plotly's `{dtype,bdata}` ingestion; then design `_figure` split + JS reassembly |
+| D36 | webengine W5 custom-scheme registration timing | webengine W5.2 | open — decide when/where to register the scheme (before QApplication) |

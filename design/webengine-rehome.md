@@ -203,7 +203,8 @@ common elements native, everything else still renders.
 | **W3a** ✅ | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure — all three *render*); Plotly typed events; **per-element `SelectEvent` routing** (D27); Plotly brush→`SelectEvent` | a raw figure of each lib renders; a Plotly raw figure + native Overlay emit per-element typed events |
 | **W3b** ✅ | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
 | **W4** ✅ | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
-| **W5** (Phase 5) | Arrow IPC transport for large payloads | <100 ms for a representative big payload |
+| **W5.1** (Phase 5) | Arrow transport — prove the pipeline: split figure (data-by-reference) + base64 Arrow over the existing channel + JS decode → typed arrays → Plotly | beats the JSON baseline at a few MB; benchmark landed |
+| **W5.2** (Phase 5) | Arrow transport — scale: swap the data blob to a binary `fetch` over a custom `qtviz` URL-scheme handler | <100 ms for a representative ~100 MB payload |
 
 > **Status (W3a ✅ landed).** `qv.RawFigure(figure, kind=None)` (`elements/raw_figure.py`)
 > — a first-class, standalone passthrough element that auto-detects the library
@@ -246,7 +247,10 @@ common elements native, everything else still renders.
 > process-level race, the same instability that gates the webengine tests.
 
 After W3, the native HoloViews adapter (Phase 3) can be built against a real
-fallback. W4 retires the legacy composition layer.
+fallback. W4 retires the legacy composition layer. **W5 (Arrow IPC transport) has
+a dedicated design pass in [`webengine-arrow-transport.md`](webengine-arrow-transport.md)**
+— format (Arrow IPC), transport (base64 → custom URL-scheme handler), the
+figure-splitting it requires, and a benchmark-first plan.
 
 ## 9. Risks
 
