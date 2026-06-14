@@ -199,4 +199,44 @@ the host app.
 3. **Target:** Arrow path < 100 ms for a ~100 MB payload.
 4. Land the benchmark as a `benchmark`-marked test so the win is provable and the
    threshold is tunable (`set_arrow_threshold(...)`, mirroring `set_raster_threshold`).
+
+## 10. Picking up W5.2 later — resume guide
+
+**W5.2 is deferred** (decided with the user). The *core goals are already met* —
+W5-offline (inline JS, no CDN) and W5.1a (base64 typed arrays, ~4.2×/1M) ship today.
+W5.2 is purely the **extreme-tail optimization**: true binary (drop base64's 1.33×)
+*and* serve plotly.js once via the scheme (drop the ~3.5 MB inline-JS-per-page).
+Resume when there's a **real display to verify on** or a **measured 100 MB+ need**.
+
+**Already locked — don't re-decide:** transport = custom `qtviz://` URL-scheme
+handler (D33); format = **raw little-endian typed-array buffers**, no apache-arrow
+(D34); **offline is mandatory** and the scheme serves the bundled plotly.js too (D37).
+
+**Concrete steps, in order:**
+1. **Spike D35 (needs a display).** Confirm the JS injection path: fetch a buffer →
+   `new Float64Array(buf)` → assign into `figure.data[i].x` → `Plotly.newPlot`. Pick
+   the figure-split shape: `_figure.build` emits structure + `{token, dtype, len}`
+   refs instead of inline arrays.
+2. **Spike D36.** Decide *where* `QWebEngineUrlScheme.registerScheme("qtviz")` is
+   called — it must run **before the QApplication**. Likely a one-time
+   `qtviz.backends.webengine.init_scheme()` the app calls (documented), not import-time.
+3. **Verifiable core (headless-testable — do with tests):**
+   - `BufferRegistry`: `{token: bytes}` with `register(bytes)->token` / `get` /
+     `release`; freed on handle dispose.
+   - raw-buffer encode: `np.ascontiguousarray(a, '<f8').tobytes()` + a JSON manifest.
+   - figure-split in `_figure`: walk the figure, swap big numeric arrays for refs,
+     collect `{token: array}`.
+4. **Qt scheme handler (display-gated).** `QWebEngineUrlSchemeHandler.requestStarted`:
+   parse token from the URL → `job.reply(b"application/octet-stream", QBuffer(bytes))`.
+   Serve **both** the data buffers *and* plotly.js (`plotly.offline.get_plotlyjs()`).
+   Install on the profile.
+5. **JS reassembly (display-gated).** On render, `fetch("qtviz://data/<token>")` each
+   ref → typed array → inject → `Plotly.newPlot`. **Load the page itself via
+   `qtviz://`** (not `setHtml`) so fetches are same-origin (avoids CORS).
+6. **Threshold-gate.** `set_arrow_threshold(...)`; only large figures use the scheme,
+   small stay on the W5.1a base64 path (no regression).
+
+**Watch-outs:** CORS/origin (serve the page via `qtviz://`); buffer lifecycle (free on
+dispose); scheme-registration timing (D36); the offscreen teardown segfault makes the
+live path unverifiable headless — verify steps 1, 4, 5 on a real display.
 ```
