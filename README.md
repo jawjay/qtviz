@@ -1,45 +1,17 @@
 # qtviz
 
-Native-Qt declarative plotting. One small, immutable API renders the same plot
-through multiple backends — **pyqtgraph** (fast, OpenGL, interactive) and
-**matplotlib** (publication-quality, vector export) today — and drops straight
-into any PySide6 app as a `QWidget`.
+**Declarative, native-Qt plotting for data-intensive desktop apps.**
 
-> **Status: in active development (pre-release).** The Phase 1 surface (data
-> model, two native backends, interaction, mixed-backend layouts, functional
-> data binding) works and is covered by ~110 tests. Not yet on PyPI; APIs may
-> still change.
->
-> qtviz began as `qtwebplot` (Qt WebEngine + JS libraries); that path is being
-> rehomed as a future `webengine` backend — see the roadmap.
+Describe a plot once as immutable data, then render it through whichever engine
+fits the moment — **pyqtgraph** (fast, OpenGL, interactive), **matplotlib**
+(publication-quality, vector export), or **webengine** (interactive Plotly in an
+embedded browser view). The same `Element` draws identically on all three, swaps
+backends at runtime, and drops into any PySide6 application as a plain `QWidget`.
 
-## Why
-
-- **Declarative + immutable.** An `Element` is pure data — it describes *what*
-  to plot, not how. The same Element renders identically across backends.
-- **Multi-backend.** One `Scatter(...)` renders through pyqtgraph or matplotlib;
-  switch at runtime, mix them in one window, or let qtviz auto-pick by data size.
-- **Native Qt.** Real `QWidget`s, signals/slots, GUI-thread discipline — no
-  browser, no JS bridge for the native backends.
-- **Functional data binding.** Channels bind to column names, serializable
-  **expressions**, callables, or raw arrays — so deriving a channel never means
-  reshaping your data first.
-- **Data-intensive by design.** The data layer is container-agnostic and
-  lazy-first: dict / numpy / pandas / Arrow eagerly, and **Dask / xarray / zarr**
-  out-of-core — resolved off the GUI thread, with projection pushdown delegated
-  to the container — all behind the same Element API.
-
-## Install (from source)
-
-`pyqtgraph` + `numpy` are core dependencies; `matplotlib` is an optional extra.
-
-```bash
-git clone https://github.com/markjajeh/qtviz
-cd qtviz
-uv sync --extra matplotlib --extra dev
-```
-
-## Quick start
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Qt](https://img.shields.io/badge/Qt-PySide6-41cd52)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-pre--release-orange)
 
 ```python
 import numpy as np
@@ -48,59 +20,174 @@ import qtviz as qv
 
 app = QApplication([])
 x = np.linspace(0, 10, 500)
-data = {"x": x, "y": np.sin(x)}
 
-view = qv.View(qv.Scatter(data, x="x", y="y"))   # backend="auto" by default
+view = qv.View(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"))
 view.show()
 app.exec()
 ```
 
-## Concepts
+That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan
+and zoom out of the box. Change one keyword — `backend="matplotlib"` or
+`backend="webengine"` — and the same line renders through a different engine.
 
-### Elements
-An `Element` is immutable, value-hashed, Qt-free data: `Scatter`, `Curve`,
-`Bars`, `Histogram`, `Image`, `Heatmap`, `ErrorBars`, `Spread`. It carries its
-data binding and styling and nothing about rendering — backends know how to draw
-each type.
+> **Status — pre-release, in active development.** The native stack (data model,
+> pyqtgraph + matplotlib backends, interaction, mixed-backend layouts, functional
+> data binding, the lazy data layer, and Datashader) is built and covered by
+> **~270 passing tests**. The `webengine` backend (Plotly, plus `RawFigure`
+> passthrough for existing Plotly/Bokeh/HoloViews figures) is new and progressing
+> through its rollout. Not yet on PyPI; APIs may still change.
 
-### Data binding — accessors
-A channel (`x`, `y`, `z`, …) binds to an **accessor**, resolved against your data:
+---
 
-```python
-qv.Scatter(df, x="time", y="temp")                       # column name
-qv.Curve(df,  x="time", y=qv.col("raw") - qv.col("base")) # Expression (derived)
-qv.Curve(df,  x="time", y=lambda d: d["raw"].cumsum())    # callable (arbitrary Python)
-qv.Scatter({}, x=np.linspace(0, 1, n), y=values)          # literal arrays
+## Why qtviz?
+
+Most Python plotting either targets the browser (Plotly, Bokeh, HoloViz) or gives
+you one rendering engine bolted into Qt (matplotlib's `FigureCanvas`, raw
+pyqtgraph). qtviz takes a different position:
+
+- **One immutable API, many backends.** An `Element` is pure, value-hashed data —
+  it says *what* to plot, never *how*. Write `Scatter(table, x="t", y="v")` once
+  and render it native, publication-grade, or web. Pick per view, swap at runtime,
+  or mix backends in a single window.
+- **Native Qt, not a web app in disguise.** The default backends are real
+  `QWidget`s with Qt signals/slots and strict GUI-thread discipline — no browser,
+  no JavaScript bridge, no server. They feel like the desktop because they are the
+  desktop.
+- **Engineered for large data.** The data layer is container-agnostic and
+  lazy-first — dict / NumPy / pandas / Arrow eagerly, **Dask / xarray / zarr**
+  out-of-core — and integrates **Datashader** so 10M+ points become a
+  screen-resolution density raster that re-aggregates to your viewport as you zoom.
+  All of it resolves off the GUI thread, so the UI never stalls.
+- **Functional data binding.** Channels bind to a column name, a serializable
+  **expression**, a callable, or a raw array — derive a channel without first
+  reshaping your data, and let expressions push down into the lazy container.
+- **No dead ends.** When you need something qtviz doesn't natively model — a 3-D
+  surface, a Sankey, a bespoke Plotly figure — wrap it in `RawFigure` and host it
+  in the same `View`. You are never blocked waiting on the library.
+- **A small surface you can hold in your head.** Five concepts — `Element`,
+  composition (`*` / `+`), `View`, `Theme`, typed events — cover the whole library.
+  Hello-world is six lines; a linked three-panel dashboard is under sixty.
+
+---
+
+## Installation
+
+`pyqtgraph` and `numpy` are the only hard dependencies; everything else is an
+opt-in extra.
+
+```bash
+git clone https://github.com/markjajeh/qtviz
+cd qtviz
+
+# core + the bits you want:
+uv sync --extra matplotlib --extra dev          # the matplotlib backend
+uv sync --extra webengine                       # webengine backend (Plotly/Bokeh/HoloViews)
+uv sync --extra datashader --extra dask         # big-data + out-of-core
 ```
 
-- a **column name** is the easy default;
-- an **`Expression`** (`qv.col(...)` + arithmetic / transforms) is serializable,
-  introspectable, and lazy — the underlying container does the work, so it pushes
-  down to dask/Parquet;
-- a **callable** is the escape hatch for anything else;
-- a **literal array** is just the values.
+| Extra | Adds |
+|-------|------|
+| `matplotlib` | the matplotlib backend (vector PNG/SVG/PDF export) |
+| `webengine` | the webengine backend — Plotly, Bokeh, HoloViews in a Qt WebEngine view |
+| `datashader` | Datashader rasterization for 10M+ point/line plots |
+| `dask`, `xarray` | out-of-core lazy data sources |
+| `dev` | pytest, pytest-qt, ruff |
 
-### Color & size encoding
-Bind `color_by` / `size_by` to a column and qtviz maps it to per-point color/size
-and adds a **legend** automatically — a categorical column becomes a color key, a
-numeric column a continuous ramp + colorbar:
+---
+
+## A tour of the API
+
+Everything below is real, runnable code. The point is how little of it there is.
+
+**Elements** — eight immutable plot types, each pure data:
 
 ```python
-qv.Scatter(df, x="x", y="y", color_by="category")   # key legend (theme palette)
-qv.Scatter(df, x="x", y="y", color_by="magnitude")  # continuous ramp + colorbar
-qv.Scatter(df, x="x", y="y", size_by="magnitude")   # per-point size
+qv.Scatter(table, x="x", y="y")
+qv.Curve(table,   x="t", y="v")
+qv.Bars(table,    x="category", y="count")
+qv.Histogram(table, column="value", bins=40)
+qv.Heatmap(table, x="x", y="y", z="z")
+qv.Image(array2d, bounds=(0, 0, 10, 10))
+qv.ErrorBars(table, x="x", y="y", err="sigma")
+qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
 ```
 
-It's the same data → color rule the Datashader path uses, so a column colors
-consistently however it's drawn, on either backend. See
-[`examples/12_color_mapping.py`](examples/12_color_mapping.py).
+**Composition** — build a figure tree with two operators:
 
-### Big data — datashader
-Past a few hundred thousand points a scatter overplots into a blob. Set
-`scale="datashader"` and qtviz aggregates the points into a screen-resolution
-density raster off the GUI thread — and **re-aggregates to the visible viewport at
-your widget's pixel size as you pan/zoom**, so the image sharpens instead of
-pixelating:
+```python
+scatter * curve                 # Overlay: same axes, layered
+scatter + histogram             # Layout: side-by-side panels
+qv.Layout([a, b, c], kind="tabs")                 # or "grid" | "splitter" | "dock"
+qv.Layout([a, b], options=qv.LayoutOptions(cols=2, link_x=True))   # shared X axis
+```
+
+**Views & backends** — a `View` is a `QWidget`; choose an engine or let qtviz pick:
+
+```python
+view = qv.View(scatter * curve, backend="auto")   # "pyqtgraph" | "matplotlib" | "webengine"
+view.set_backend("matplotlib")                     # swap at runtime — keeps zoom + subscriptions
+```
+
+**Typed events** — subscribe with `view.on(...)`; payloads are plain dataclasses:
+
+```python
+view.on(qv.SelectEvent, lambda e: print(e.indices, e.bounds))  # brush → row indices
+view.on(qv.PickEvent,   lambda e: print(e.point_index, e.x, e.y))
+view.on(qv.RangeEvent,  lambda e: print(e.x, e.y))             # pan/zoom (throttled)
+view.on(qv.HoverEvent,  on_hover)
+```
+
+**Theming** — one `Theme` styles every backend:
+
+```python
+qv.View(scatter, theme=qv.Theme.dark())
+qv.View(scatter, theme=qv.Theme.from_qt_app())     # match the host app's light/dark mode
+```
+
+---
+
+## Working with data
+
+### Accessors — bind channels however you like
+
+A channel (`x`, `y`, `z`, …) binds to an **accessor**, resolved against your data
+at render time:
+
+```python
+qv.Scatter(df, x="time", y="temp")                          # a column name
+qv.Curve(df,   x="time", y=qv.col("raw") - qv.col("base"))  # an Expression (derived, lazy)
+qv.Curve(df,   x="time", y=lambda d: d["raw"].cumsum())     # a callable (arbitrary Python)
+qv.Scatter({}, x=np.linspace(0, 1, n), y=values)            # literal arrays
+```
+
+A **column name** is the easy default. An **`Expression`** (`qv.col(...)` plus
+arithmetic and transforms) is serializable, introspectable, and lazy — the
+underlying container does the work, so it pushes down into Dask / Parquet rather
+than materializing first. A **callable** is the escape hatch for anything else. A
+**literal array** is just the values.
+
+### Color & size encoding — with automatic legends
+
+Bind `color_by` / `size_by` to a column and qtviz maps it to per-point color or
+size and adds the matching key automatically — a categorical column becomes a
+color legend, a numeric column a continuous ramp plus colorbar:
+
+```python
+qv.Scatter(df, x="x", y="y", color_by="category")    # categorical → key legend
+qv.Scatter(df, x="x", y="y", color_by="magnitude")   # numeric → ramp + colorbar
+qv.Scatter(df, x="x", y="y", size_by="magnitude")    # per-point size
+```
+
+It is the same data-to-color rule the Datashader path uses, so a column colors
+consistently however it is drawn, on any backend.
+
+### Big data — Datashader
+
+Past a few hundred thousand points a scatter overplots into a featureless blob.
+Set `scale="datashader"` and qtviz aggregates the points into a
+screen-resolution density raster off the GUI thread — and **re-aggregates to the
+visible viewport at your widget's pixel size as you pan and zoom**, so the image
+sharpens rather than pixelating:
 
 ```python
 qv.Scatter(big, x="x", y="y", scale="datashader")                  # point density
@@ -111,108 +198,181 @@ qv.Scatter(big, x="x", y="y", scale="auto")                        # rasterize p
 qv.set_raster_threshold(2_000_000)                                 # tune the "auto" cutoff
 ```
 
-It's backend-agnostic (the aggregation is a pipeline step, so every backend draws
-a datashaded `Scatter` or `Curve`) and out-of-core: backed by a lazy Dask /
-xarray / zarr source, the data is aggregated partition-by-partition and the full
-table never lands in memory. `color_by` chooses the reduction — a numeric column
-shades the per-pixel mean, a categorical column blends per-category counts. See
-[`examples/09_datashader.py`](examples/09_datashader.py) and
-[`examples/10_out_of_core.py`](examples/10_out_of_core.py).
+Rasterization is a **backend-agnostic pipeline step**, so every backend draws a
+datashaded plot, and it is **out-of-core**: backed by a lazy Dask / xarray / zarr
+source, the data is aggregated partition-by-partition and the full table never
+lands in memory.
 
-### Composition
-Operators build a figure tree:
+---
 
-```python
-a * b   # Overlay — same axes, layered
-a + b   # Layout  — side-by-side panels (grid)
-qv.Layout([a, b], kind="splitter")        # or "tabs" | "dock" | "grid"
-qv.Layout([a, b], options=qv.LayoutOptions(cols=2, link_x=True))   # shared X axis
-```
+## Backends
 
-An `Overlay` resolves to a single backend; a `Layout` may mix backends per pane.
+| Backend | Best for | Notes |
+|---------|----------|-------|
+| **pyqtgraph** | real-time, interactive, large data | default; OpenGL; no extra deps |
+| **matplotlib** | figures for print / papers | optional extra; PNG / SVG / PDF export |
+| **webengine** | rich interactive web charts, escape hatch | optional extra; Plotly traces in a Qt WebEngine view |
 
-### Backends & negotiation
-`View(root, backend=...)` takes `"pyqtgraph"`, `"matplotlib"`, a `Backend`, or
-`"auto"`. Negotiation resolves a backend per node from hints + capabilities;
-`view.set_backend(...)` swaps at runtime, preserving zoom and subscriptions.
-Backends are registered, never imported by the core, so adding one touches only
-its own directory.
+Backends are **registered, never imported by the core**, so adding one touches
+only its own directory and the rest of the library is none the wiser.
+`View(root, backend=...)` accepts a name, a `Backend`, or `"auto"`; negotiation
+resolves an engine per node from backend hints, capabilities, and data size.
 
-### Views & events
-A `View` is a `QWidget`. Subscribe to typed, throttled events:
+### webengine + `RawFigure` — your existing figures, hosted
+
+The `webengine` backend renders the same eight Elements as interactive Plotly
+charts inside an embedded `QWebEngineView`, bridging Plotly's interactions back as
+the *same* typed qtviz events the native backends emit. And when you have a figure
+qtviz doesn't natively model, `RawFigure` hosts it unchanged:
 
 ```python
-view.on(qv.SelectEvent, on_brush)   # Shift-drag rubber-band → row indices + bounds
-view.on(qv.PickEvent,   on_click)   # click a point
-view.on(qv.RangeEvent,  on_zoom)    # pan/zoom (throttled)
-view.on(qv.HoverEvent,  on_hover)
+import plotly.graph_objects as go
+
+fig = go.Figure(go.Surface(z=heights))            # a 3-D surface — beyond the 2-D vocabulary
+view = qv.View(qv.RawFigure(fig))                 # auto-routes to webengine
+view.on(qv.PickEvent, on_pick)                    # Plotly events still arrive as qtviz events
 ```
 
-For lazy data, the materialize step runs on a worker thread and the View keeps
-the last render up until the new one is ready.
+`RawFigure` auto-detects Plotly, Bokeh, or HoloViews and hosts each through the
+appropriate renderer — so the native HoloViews/Bokeh ecosystems remain one line
+away whenever you need them.
 
-### Theming
-A `Theme` carries `Color`s and a `Palette`. `Theme.light()` / `dark()` are built
-in; `Theme.from_qt_app()` matches the host app's light/dark mode.
+> The `webengine` backend needs the `webengine` extra and a real display (a
+> `QWebEngineView` is not usable under headless/offscreen Qt). The native
+> pyqtgraph and matplotlib backends have no such constraint.
+
+---
 
 ## Examples
 
-Runnable, self-contained scripts in [`examples/`](examples) — each has a
+Self-contained, runnable scripts live in [`examples/`](examples) — each exposes a
 `build()` (returns the widget) and a `main()` (shows a window):
 
 ```bash
 uv run python examples/01_hello.py
 ```
 
-`01_hello` · `02_composition` · `03_backends` · `04_theming` · `05_interaction`
-· `06_data_binding` · `07_mixed_backends` · `08_gallery` · `09_datashader`
-(millions of points, re-aggregated on zoom) · `10_out_of_core` (lazy Dask) ·
-`11_datashader_matplotlib` (same, on matplotlib) · `12_color_mapping`
-(`color_by`/`size_by` + legends) · `dashboard_native` (3-panel linked dashboard).
-See [`examples/README.md`](examples/README.md).
+**Native:** `01_hello` · `02_composition` · `03_backends` (switch live) ·
+`04_theming` · `05_interaction` · `06_data_binding` · `07_mixed_backends` ·
+`08_gallery` (all eight elements) · `09_datashader` (millions of points,
+re-aggregated on zoom) · `10_out_of_core` (lazy Dask) · `11_datashader_matplotlib`
+· `12_color_mapping` · `dashboard_native` (3-panel linked dashboard).
+
+**webengine:** `13_webengine` · `14_webengine_overlay` · `15_webengine_elements` ·
+`16_webengine_export` (PNG) · `17_webengine_heatmap` · `18_webengine_raw_figure`
+(host a Plotly 3-D surface).
+
+See [`examples/README.md`](examples/README.md) for the full index.
+
+---
 
 ## What works today
 
 | Area | Support |
 |------|---------|
-| **Backends** | pyqtgraph (native, default) · matplotlib (optional extra) |
-| **Elements** | Scatter · Curve · Bars · Histogram · Image · Heatmap · ErrorBars · Spread |
+| **Backends** | pyqtgraph (native, default) · matplotlib (extra) · webengine / Plotly (extra) |
+| **Elements** | Scatter · Curve · Bars · Histogram · Image · Heatmap · ErrorBars · Spread · `RawFigure` (passthrough) |
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
-| **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** on both backends |
-| **Data inputs** | dict · numpy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
-| **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"` aggregate 10M+ points/lines into a raster (density · `color_by` mean · categorical blend), out-of-core, off the GUI thread, **re-aggregating to the viewport on pan/zoom** |
+| **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** |
+| **Data inputs** | dict · NumPy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
+| **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
 | **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
-| **Export** | PNG (pyqtgraph) · PNG / SVG / PDF (matplotlib) |
+| **Export** | PNG (pyqtgraph) · PNG / SVG / PDF (matplotlib) · PNG (webengine) |
+
+---
 
 ## Roadmap
 
-| Phase | Item | Status |
-|-------|------|--------|
-| 1 | Core data model + composition + **pyqtgraph** backend | ✅ done |
-| 2 | **matplotlib** backend | ✅ done |
-| — | Mixed-backend layouts · native interaction · functional data binding | ✅ done |
-| — | **Lazy adapters** — Dask / xarray / zarr, out-of-core & off-thread | ✅ done |
-| 4 | **Datashader** for 10M+ points (`scale="datashader"` / `"auto"`, out-of-core, re-aggregates to the viewport on zoom) | ✅ done |
-| 4 | **Reactive** `Signal` binding | planned |
-| 5 | **Data sources** (Parquet / DuckDB / Dask) · **webengine** backend rehome (Plotly/Bokeh) | planned |
-| 3 | **HoloViews adapter** (`from_holoviews`) | planned |
-| 6 | Docs, gallery, **`qtviz 0.1` on PyPI** | planned |
-| 7+ | **qtviz Studio** — a desktop app on top of the library | exploring |
+qtviz is built in phases toward a `0.1` release. The native library and the
+big-data path are done; the webengine backend and the reactive/data-source layers
+are the current frontier.
+
+### Shipped
+
+- ✅ **Core data model + composition + pyqtgraph backend** — immutable `Element`,
+  `Overlay`/`Layout`, typed event bus, the eight-element vocabulary.
+- ✅ **matplotlib backend** — the same Elements as static, vector-exportable figures.
+- ✅ **Mixed-backend layouts** — a pyqtgraph pane beside a matplotlib pane, one
+  merged event stream.
+- ✅ **Functional data binding** — accessors (column / `Expression` / callable /
+  array) with projection pushdown.
+- ✅ **Lazy, out-of-core data layer** — Dask / xarray / zarr adapters, resolved
+  off the GUI thread.
+- ✅ **Datashader** — 10M+ point/line rasterization with viewport re-aggregation,
+  out-of-core, backend-agnostic.
+- ✅ **Color / size encoding** — `color_by` / `size_by` with automatic legends and
+  colorbars.
+
+### In progress — the webengine backend (Phase 5)
+
+- ✅ Rehomed the legacy Qt↔JS bridge under `qtviz.backends.webengine`.
+- ✅ Render all eight Elements as Plotly charts; typed events; PNG export.
+- ✅ `RawFigure` passthrough — host any existing Plotly / Bokeh / HoloViews figure;
+  per-element selection routing.
+- ◻ Bokeh/HoloViews event translation (so passthrough Bokeh figures emit typed
+  events).
+- ◻ Mixed native + webengine panes in one `Layout`; Arrow IPC transport for large
+  payloads.
+
+### Planned
+
+- ◻ **Reactive `Signal` binding** — a signal-bound channel that re-renders on
+  change; linked brushing across views without manual wiring.
+- ◻ **Data sources** — Parquet / DuckDB / SQL behind the lazy data contract, with
+  background queries and a versioned result cache.
+- ◻ **HoloViews adapter** — `from_holoviews(obj)` translating common hv elements to
+  native qtviz, falling back to `RawFigure` for the long tail.
+- ◻ **Axis transforms** — log / symlog / datetime scales across all backends.
+- ◻ **`qtviz 0.1` on PyPI** — documentation site, gallery, migration guide.
+
+### Exploring
+
+- ◻ **qtviz Studio** — a desktop application built on the library: sources, canvas,
+  inspector, and pipeline, with selectable backends per plot.
+
+The living plan — with rationale and trade-offs — is in
+[`design/roadmap.md`](design/roadmap.md) and
+[`design/discussion-items.md`](design/discussion-items.md).
+
+---
 
 ## Architecture
 
-`Element` (pure data) → negotiation picks a `Backend` → the resolve pipeline
-turns channel accessors into arrays (off-thread for lazy data) → the backend's
-renderers build native primitives → a `RenderHandle` owns the `QWidget` and a
-typed `EventBus`. Backends and data adapters are both registered, never imported
-by the core, so each new one is additive. Design docs live in
-[`design/`](design/) (`spec.md`, `development-plan.md`, `roadmap.md`,
-`milestone-*.md`, `discussion-items.md`, `capabilities-gaps.md`,
-`webengine-rehome.md`).
+```
+Element (pure data)
+    │  negotiation picks a Backend from hints + capabilities + data size
+    ▼
+resolve pipeline  ── turns channel accessors into role-keyed arrays
+    │                (off the GUI thread for lazy / datashaded data)
+    ▼
+Backend renderers ── build native primitives (pyqtgraph items, mpl artists,
+    │                Plotly traces)
+    ▼
+RenderHandle ── owns the QWidget and a typed EventBus; survives backend swaps
+```
+
+Both **backends and data adapters are registered, never imported by the core**, so
+every new engine or container type is purely additive. The design documents —
+specification, development plan, milestone notes, and the full decision log — live
+in [`design/`](design/).
+
+---
+
+## Contributing
+
+qtviz is pre-release and evolving quickly. Issues and discussion are welcome on
+[GitHub](https://github.com/markjajeh/qtviz). Run the suite with:
+
+```bash
+uv run pytest          # Qt runs offscreen by default
+uv run ruff check src
+```
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE)
