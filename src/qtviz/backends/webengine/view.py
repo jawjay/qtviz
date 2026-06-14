@@ -81,9 +81,9 @@ class PlotView(WebBridgeView):
             return
         html = self._backend.to_html()
         prepared = self._inject_with_backend_runtime(html)
-        # bypass parent's load_html so we inject the backend runtime too
-        self._is_ready = False
-        self._view.setHtml(prepared, self._backend.base_url())
+        # _load_prepared (parent) routes large offline-inlined pages through a temp
+        # file — setHtml caps at ~2 MB and would otherwise load blank.
+        self._load_prepared(prepared, self._backend.base_url())
 
     def _inject_with_backend_runtime(self, html: str) -> str:
         scripts = [

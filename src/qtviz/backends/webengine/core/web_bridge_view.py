@@ -7,12 +7,17 @@ messages in both directions.
 
 from __future__ import annotations
 
+import atexit
+import contextlib
 import json
+import os
 import sys
+import tempfile
 import time
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from PySide6.QtCore import QObject, QTimer, QUrl, Signal
 from PySide6.QtWebChannel import QWebChannel
@@ -24,11 +29,26 @@ from qtviz.backends.webengine.core._inject import inject_head_scripts, wrap_as_s
 from qtviz.backends.webengine.core._runtime import CORE_JS, load_qwebchannel_js
 from qtviz.backends.webengine.core.bridge import Bridge
 
-
 # System message name used internally by JS to signal "no handler for this
 # Python-sent message." Kept namespaced under `_qtwebplot.*` so it can't
 # collide with a legitimate backend message.
 _UNDELIVERED_NAME = "_qtwebplot.undelivered"
+
+# QWebEngineView.setHtml() silently fails to load content above ~2 MB (it routes
+# through a data: URL). Offline rendering inlines plotly.js (~3.5 MB), so large
+# documents must load from a temp file via setUrl() instead (spec §0.1 offline +
+# the 2 MB cap). The threshold is conservative to allow for percent-encoding.
+_SETHTML_MAX_BYTES = 1_500_000
+
+_TEMP_HTML_FILES: set[str] = set()
+
+
+@atexit.register
+def _cleanup_temp_html() -> None:
+    for path in list(_TEMP_HTML_FILES):
+        with contextlib.suppress(OSError):
+            os.unlink(path)
+    _TEMP_HTML_FILES.clear()
 
 
 # Map the Qt console-level enum to a short string. Comparing the enum
@@ -45,7 +65,7 @@ class _BridgePage(QWebEnginePage):
     """QWebEnginePage subclass that pipes JS console messages to the owning
     WebBridgeView's `log` signal."""
 
-    def __init__(self, owner: "WebBridgeView", parent=None):
+    def __init__(self, owner: WebBridgeView, parent=None):
         super().__init__(parent)
         self._owner = owner
 
@@ -62,7 +82,7 @@ class _Throttle:
     `ms` milliseconds, replaying the latest payload received during the
     cooldown window when it expires."""
 
-    def __init__(self, view: "WebBridgeView", name: str, ms: int) -> None:
+    def __init__(self, view: WebBridgeView, name: str, ms: int) -> None:
         self.view = view
         self.name = name
         self.ms = ms
@@ -144,6 +164,7 @@ class WebBridgeView(QWidget):
         self._page.setWebChannel(self._channel)
 
         self._is_ready = False
+        self._temp_html: str | None = None
         self._command_queue: deque[tuple[str, Any]] = deque(maxlen=128)
 
         self._throttles: dict[str, _Throttle] = {}
@@ -158,9 +179,33 @@ class WebBridgeView(QWidget):
     # ── content ──────────────────────────────────────────────────────────
     def load_html(self, html: str, *, base_url: QUrl | None = None) -> None:
         """Load an HTML document into the view, injecting the bridge bootstrap."""
-        prepared = self._inject_runtime(html)
+        self._load_prepared(self._inject_runtime(html), base_url)
+
+    def _load_prepared(self, prepared: str, base_url: QUrl | None = None) -> None:
+        """Load already-injected HTML, routing large documents (over setHtml's
+        ~2 MB cap — e.g. offline-inlined plotly.js) through a temp file so they
+        actually render instead of silently loading blank."""
         self._is_ready = False
-        self._view.setHtml(prepared, base_url or QUrl("about:blank"))
+        if len(prepared.encode("utf-8")) > _SETHTML_MAX_BYTES:
+            self._load_from_tempfile(prepared)
+        else:
+            self._view.setHtml(prepared, base_url or QUrl("about:blank"))
+
+    def _load_from_tempfile(self, html: str) -> None:
+        self._discard_tempfile()
+        fd, path = tempfile.mkstemp(suffix=".html", prefix="qtviz_")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(html)
+        self._temp_html = path
+        _TEMP_HTML_FILES.add(path)
+        self._view.setUrl(QUrl.fromLocalFile(path))
+
+    def _discard_tempfile(self) -> None:
+        if self._temp_html:
+            _TEMP_HTML_FILES.discard(self._temp_html)
+            with contextlib.suppress(OSError):
+                os.unlink(self._temp_html)
+            self._temp_html = None
 
     def load_url(self, url: QUrl) -> None:
         """Load a URL. Note: external URLs must include the bridge bootstrap

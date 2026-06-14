@@ -12,7 +12,11 @@ labels (MathJax) and map/tile traces — neither is part of the Phase-1 elements
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
+import textwrap
 
 import pytest
 
@@ -62,3 +66,46 @@ def test_bokeh_figure_is_offline():
     fig.scatter([1, 2, 3], [1, 4, 9])
     html = BokehBackend(fig).to_html()
     assert _external(html) == [], f"bokeh fetches external resources: {_external(html)}"
+
+
+# Regression (the offline-inlined page must actually LOAD, not just be CDN-free):
+# inlining plotly.js (~3.5 MB) blows past QWebEngineView.setHtml()'s ~2 MB cap, so
+# the page must load from a temp file via setUrl() or it renders blank. Run in a
+# subprocess so the offscreen QWebEngine teardown segfault can't flake the suite.
+_LOAD_PROBE = textwrap.dedent(
+    """
+    import os, sys
+    import numpy as np
+    import plotly.graph_objects as go
+    from PySide6.QtCore import QEventLoop, QTimer
+    from PySide6.QtWidgets import QApplication
+    import qtviz as qv
+    import qtviz.backends as B
+
+    app = QApplication.instance() or QApplication([])
+    fig = go.Figure(go.Surface(z=np.random.default_rng(0).random((60, 60))))
+    handle = B.get("webengine").render(qv.RawFigure(fig), theme=qv.Theme.light())
+    view = handle.widget
+    assert view._temp_html is not None, "large offline page should load via a temp file"
+    loop, res = QEventLoop(), {}
+    view.load_finished.connect(lambda ok: (res.setdefault("ok", ok), loop.quit()))
+    QTimer.singleShot(15000, loop.quit)
+    loop.exec()
+    print("LOADED" if res.get("ok") else f"NOTLOADED:{res.get('ok')}")
+    sys.stdout.flush()
+    os._exit(0)
+    """
+)
+
+
+def test_inline_offline_page_actually_loads():
+    pytest.importorskip("PySide6.QtWebEngineWidgets")
+    result = subprocess.run(
+        [sys.executable, "-c", _LOAD_PROBE],
+        capture_output=True, text=True,
+        env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
+    )
+    assert "LOADED" in result.stdout, (
+        "the offline-inlined webengine page failed to load (blank render)\n"
+        f"stdout={result.stdout!r}\nstderr={result.stderr[-2000:]}"
+    )
