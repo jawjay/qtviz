@@ -702,9 +702,69 @@ the right `source_id` and that Element's row indices.
 
 **Recommendation.** Lock the per-event map above; implement the single-trace case in
 W1/W2 and the trace→element table when Overlay selection is wired (W2/W3).
-**Status:** ◑ accepted-pending-revisit (per user) — the per-event mapping is locked;
-the **multi-trace `trace→(source_id, row-offset)` table** is flagged to revisit when
-W2/W3 actually wires Overlay selection (the real implementation risk).
+
+**Resolution (W3, per user).** Multi-trace routing **adopts native semantics**: the
+native pyqtgraph backend emits **one `SelectEvent` per selectable element** (each
+with that element's in-bounds row indices — `pyqtgraph/_interaction.py`
+`select_bounds`). Webengine matches it: group a `plotly.selection`'s points by
+`trace_index` → `source_id` (the table `_figure.build` already returns) and emit one
+`SelectEvent` per source element. The W1 flattened surface-level select is replaced.
+A `RawFigure` ([[D31]]) has no sub-elements, so its selection emits a single
+`SelectEvent` under the figure's own id. Click/hover already carry the right
+`source_id` via the same table. The simpler "single flat surface select" is dropped
+because it loses the per-element identity that linked brushing needs.
+**Status:** ✅ resolved (per user) — per-element `SelectEvent` routing (matches
+native); lands in **W3a**. row-offset isn't needed (point_index is the row index per
+trace, so the table is trace→source_id).
+
+---
+
+## [D31] `RawFigure` passthrough — design
+
+**Context.** D26 resolved that an existing Plotly/Bokeh/HoloViews figure enters
+qtviz as a first-class `RawFigure` element negotiating only to webengine. W3 builds
+it; this records the design specifics.
+
+**Underlying.**
+- **Library detection.** `RawFigure(figure, kind=None)` auto-detects the library by
+  object type (plotly `Figure` / bokeh model / hv element), with an explicit `kind=`
+  override for ambiguous inputs.
+- **Hosting.** `WebEngineBackend.render()` branches: a `RawFigure` routes to the
+  matching legacy host (`PlotlyBackend` / `BokehBackend` / `HoloViewsBackend`) and
+  skips `_figure.build`. The legacy `HoloViewsBackend` already renders any hv object
+  via Bokeh, so "raw HoloViews renders" is nearly free.
+- **Composability.** A `RawFigure` is a *whole figure* — it can't overlay with native
+  traces (the webengine path builds one Plotly figure from traces; a raw figure can't
+  merge in). So it's **standalone**: rejected inside an `Overlay`; allowed as a
+  `Layout` pane in W4 (the LayoutHost hosts each pane's own `WebBridgeView`).
+
+**Recommendation.** Auto-detect host + `kind=` override; render-branch in the
+backend; standalone (non-composable) element.
+**Status:** ✅ resolved (per user) — build in W3a; standalone; auto-detect with
+override. Events for a Plotly raw figure use the Plotly map (W3a); Bokeh/hv raw
+figures render in W3a but get typed events in **W3b** ([[D32]]).
+
+---
+
+## [D32] W3 event-translation split — Plotly now (W3a), Bokeh later (W3b)
+
+**Context.** The W3 gate says "raw HoloViews → brush emits typed events." hv renders
+through Bokeh, so meeting it literally needs a **Bokeh** event-translation map
+(`bokeh.tap`→Pick, `bokeh.selection`→Select, `bokeh.ranges_update`→Range) on top of
+the Plotly one — roughly doubling the translation surface.
+
+**Underlying.** Splitting keeps increments verifiable and value-first:
+- **W3a:** `RawFigure` passthrough for all three libraries (they all *render*) +
+  Plotly typed events + per-element selection routing ([[D27]]) + Plotly
+  brush→`SelectEvent`. hv/bokeh raw figures render but emit Plotly-only events (i.e.
+  none for the bokeh-hosted ones yet).
+- **W3b:** the Bokeh event-translation map, so hv/bokeh `RawFigure`s also emit typed
+  events — fully meeting the W3 gate.
+
+**Recommendation.** Split W3a/W3b as above.
+**Status:** ✅ resolved (per user) — W3a now, W3b after. W3a does not fully meet the
+literal "hv brush emits events" gate (that's W3b); W3a's gate is "all 3 libs render +
+Plotly raw figure + native Overlay emit per-element typed events."
 
 ---
 
@@ -805,7 +865,9 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D24 | webengine default Element renderer (Plotly vs Bokeh) | webengine rehome | ✅ resolved — Plotly the only Element renderer; Bokeh a `RawFigure` host |
 | D25 | webengine async render contract | webengine rehome | ◑ handle-now + command queue **firm**; loading-placeholder pending-revisit |
 | D26 | raw-figure passthrough element vs escape hatch | webengine rehome | ✅ resolved — first-class `RawFigure` element (negotiates only to webengine) |
-| D27 | webengine event/selection fidelity mapping | webengine rehome | ◑ per-event map locked; multi-trace `trace→(source_id,row)` table pending-revisit (W2/W3) |
+| D27 | webengine event/selection fidelity mapping | webengine rehome | ✅ resolved — per-element `SelectEvent` routing (matches native pyqtgraph); lands W3a |
 | D28 | `from_holoviews` fallback to webengine | Phase 3 (depends D26) | ◑ principle accepted; wiring pending-revisit (Phase 3) |
 | D29 | webengine transport (JSON now, Arrow IPC later) | webengine rehome / P5 | ◑ JSON now; Arrow IPC pending-revisit (W5/P5) |
 | D30 | webengine packaging + physical move + import shim | Phase 0/6 | ✅ resolved — whole-package move now + `qtwebplot` shim; skip-gate GUI tests |
+| D31 | `RawFigure` passthrough design (detect/host/compose) | webengine W3 | ✅ resolved — auto-detect + `kind=`; backend render-branch; standalone (Layout pane in W4) |
+| D32 | W3 event-translation split (Plotly W3a, Bokeh W3b) | webengine W3 | ✅ resolved — W3a Plotly + RawFigure render-all + per-element select; W3b Bokeh events |
