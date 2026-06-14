@@ -7,8 +7,8 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 from PySide6.QtCore import QUrl
 
 if TYPE_CHECKING:
-    from qtwebplot.core import WebBridgeView
-    from qtwebplot.theme import Theme
+    from qtviz.backends.webengine.core import WebBridgeView
+    from qtviz.backends.webengine.theme import Theme
 
 
 @runtime_checkable

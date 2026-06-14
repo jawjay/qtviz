@@ -12,8 +12,8 @@ import logging
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
-    from qtwebplot.backend import PlotBackend
-    from qtwebplot.view import PlotView
+    from qtviz.backends.webengine.backend import PlotBackend
+    from qtviz.backends.webengine.view import PlotView
 
 
 log = logging.getLogger("qtwebplot.linking")

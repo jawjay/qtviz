@@ -9,8 +9,8 @@ typed events — is inherited as-is from BokehBackend's behavior.
 Usage:
     import holoviews as hv
     hv.extension("bokeh")
-    from qtwebplot import PlotView
-    from qtwebplot.ext.holoviews import HoloViewsBackend
+    from qtviz.backends.webengine import PlotView
+    from qtviz.backends.webengine.ext.holoviews import HoloViewsBackend
 
     curve = hv.Curve([(1, 1), (2, 4), (3, 9)])
     view = PlotView(HoloViewsBackend(curve))
@@ -27,11 +27,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from qtwebplot.backend import PlotBackend
-from qtwebplot.ext.bokeh import BokehBackend, BokehEvents
+from qtviz.backends.webengine.backend import PlotBackend
+from qtviz.backends.webengine.ext.bokeh import BokehBackend, BokehEvents
 
 if TYPE_CHECKING:
-    from qtwebplot.core import WebBridgeView
+    from qtviz.backends.webengine.core import WebBridgeView
 
 
 class HoloViewsBackend(PlotBackend):

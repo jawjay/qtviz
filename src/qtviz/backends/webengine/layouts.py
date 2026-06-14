@@ -24,9 +24,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from qtwebplot._linking import _Link, resolve_view
-from qtwebplot.backend import PlotBackend
-from qtwebplot.view import PlotView
+from qtviz.backends.webengine._linking import _Link, resolve_view
+from qtviz.backends.webengine.backend import PlotBackend
+from qtviz.backends.webengine.view import PlotView
 
 
 __all__ = ["PlotGrid", "PlotSplitter", "PlotTabs"]

@@ -5,7 +5,7 @@ or any visualization library. Anything chart-shaped lives in `qtwebplot` or
 `qtwebplot.ext.*`.
 """
 
-from qtwebplot.core.bridge import Bridge
-from qtwebplot.core.web_bridge_view import WebBridgeView
+from qtviz.backends.webengine.core.bridge import Bridge
+from qtviz.backends.webengine.core.web_bridge_view import WebBridgeView
 
 __all__ = ["Bridge", "WebBridgeView"]

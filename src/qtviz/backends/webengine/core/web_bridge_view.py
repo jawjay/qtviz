@@ -20,9 +20,9 @@ from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from qtwebplot.core._inject import inject_head_scripts, wrap_as_script
-from qtwebplot.core._runtime import CORE_JS, load_qwebchannel_js
-from qtwebplot.core.bridge import Bridge
+from qtviz.backends.webengine.core._inject import inject_head_scripts, wrap_as_script
+from qtviz.backends.webengine.core._runtime import CORE_JS, load_qwebchannel_js
+from qtviz.backends.webengine.core.bridge import Bridge
 
 
 # System message name used internally by JS to signal "no handler for this

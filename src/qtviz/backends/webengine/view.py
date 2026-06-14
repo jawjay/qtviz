@@ -6,11 +6,11 @@ from typing import Any
 
 from PySide6.QtWidgets import QWidget
 
-from qtwebplot.backend import PlotBackend
-from qtwebplot.core._inject import inject_head_scripts, wrap_as_script
-from qtwebplot.core._runtime import CORE_JS, load_qwebchannel_js
-from qtwebplot.core.web_bridge_view import WebBridgeView
-from qtwebplot.theme import Theme
+from qtviz.backends.webengine.backend import PlotBackend
+from qtviz.backends.webengine.core._inject import inject_head_scripts, wrap_as_script
+from qtviz.backends.webengine.core._runtime import CORE_JS, load_qwebchannel_js
+from qtviz.backends.webengine.core.web_bridge_view import WebBridgeView
+from qtviz.backends.webengine.theme import Theme
 
 
 class PlotView(WebBridgeView):

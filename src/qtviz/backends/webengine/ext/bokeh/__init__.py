@@ -3,8 +3,8 @@
 Requires the `bokeh` optional dependency (install `qtwebplot[bokeh]`).
 """
 
-from qtwebplot.ext.bokeh.backend import BokehBackend
-from qtwebplot.ext.bokeh.events import (
+from qtviz.backends.webengine.ext.bokeh.backend import BokehBackend
+from qtviz.backends.webengine.ext.bokeh.events import (
     BokehDoubleTapEvent,
     BokehEvents,
     BokehRangesUpdateEvent,

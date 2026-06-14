@@ -10,10 +10,21 @@ Run:
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 pytest.importorskip("pytestqt")
 pytest.importorskip("PySide6.QtWebEngineWidgets")
+
+# The QWebEngine `ready` handshake is unreliable under the offscreen Qt platform
+# (no GPU/compositor), so these GUI tests time out in headless CI/local. Skip
+# there; set QTVIZ_WEBENGINE_GUI=1 to force them on a host where it works.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+    and os.environ.get("QTVIZ_WEBENGINE_GUI") != "1",
+    reason="QWebEngine ready handshake unreliable offscreen; set QTVIZ_WEBENGINE_GUI=1 to force",
+)
 
 from PySide6.QtCore import Qt  # noqa: E402
 

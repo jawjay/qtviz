@@ -607,6 +607,174 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 
 ---
 
+## [D24] Webengine default Element renderer — Plotly
+
+**Context.** The webengine backend turns native Elements into a *web* figure to
+host in a `QWebEngineView`. The legacy package has two figure libraries wired —
+Plotly and Bokeh (HoloViews delegates to Bokeh). Which one is the Element→figure
+renderer path?
+
+**Underlying.** Reading the code, the Plotly path is already the complete one:
+`ext/plotly/_runtime.py` wires `plotly_hover/click/selected/relayout` through the
+bridge; `ext/plotly/backend.py` exposes the mutation verbs (`react`/`restyle`/
+`relayout`/`extend_traces`/`resize`) and a `Theme`→template translator
+(`_plotly_template_from`). Plotly also gives WebGL (`scattergl`), 3D, native
+box/lasso select, and static export via kaleido — all the capabilities the
+webengine record needs to declare. Bokeh's value is as a *host* for arbitrary
+existing figures (and the HoloViews→Bokeh path), not as a second Element renderer.
+
+**Recommendation.** Plotly is the one Element→figure renderer path. Bokeh stays
+available only as a `RawFigure` host (see [[D26]]). Two element-renderer paths
+would double the surface for no near-term gain.
+**Status:** ✅ resolved (per user) — Plotly is the default/only Element renderer;
+Bokeh is a passthrough host. Drives W1/W2 of `webengine-rehome.md` §8.
+
+---
+
+## [D25] Webengine async render contract — handle now, drain on ready
+
+**Context.** qtviz `Backend.render()` is synchronous: the handle is ready on
+return. A `QWebEngineView` is not — HTML loads, the QWebChannel handshake fires,
+*then* the page is live. How does the async backend satisfy a synchronous contract
+without changing `View`?
+
+**Underlying.** It already fits. `WebBridgeView.send()` buffers into a
+`deque(maxlen=128)` until `_is_ready`, and `_on_ready()` drains it before emitting
+`ready`. So `render()` can return a `WebEngineRenderHandle` immediately; any
+`restore_state`/theme/data issued before `ready` is queued and replayed; events
+start flowing after `ready`. No `View` change, no new async path (contrast the
+*data* async path keyed on `node_is_lazy` — this is *backend* async, self-contained
+in the handle). The soft part is UX: Chromium's first paint is visibly slow, so a
+blank pane looks broken. The data layer already solved the analogous problem with a
+placeholder + keep-last ([[D13]]); reuse that pattern for a "loading" placeholder
+until `ready`.
+
+**Recommendation.** Return the handle immediately and lean on the existing command
+queue + `ready` signal — no `View` change. Show a loading placeholder until `ready`.
+**Status:** ◑ accepted-pending-revisit (per user) — the handle-now + command-queue
+contract is **firm**; the *loading-placeholder* nicety is flagged to revisit once we
+see real page-load latency (might be unnecessary, or might need keep-last on rebuild).
+
+---
+
+## [D26] Raw-figure passthrough — a first-class `RawFigure` element
+
+**Context.** A user has an existing Plotly/Bokeh/HoloViews figure (or
+`from_holoviews` hits an element qtviz doesn't model natively) and wants it hosted.
+Does that figure enter qtviz as an Element, or through a backend-only side door?
+
+**Underlying.**
+- **Backend escape hatch** — `WebEngineBackend.render()` accepts a bare figure
+  object, no Element. Simpler, no negotiation special-case. But it isn't
+  composable: a raw figure can't sit in a `Layout` beside a native pane, can't
+  overlay, and `from_holoviews` has no *uniform* value to return for the long tail.
+- **First-class `RawFigure(figure)` element (chosen)** — a real Element whose only
+  `supports()` backend is webengine. Negotiation already keys off per-element
+  `supports()` (`backends/__init__` + the negotiator), so "exactly one backend
+  supports this element" falls out with no special case; asking pyqtgraph/mpl to
+  render it raises the normal unsupported-element error. It composes in
+  `Layout`/mixed-backend panes and gives `from_holoviews` ([[D28]]) a single uniform
+  fallback return.
+
+**Recommendation.** First-class `RawFigure` element that negotiates only to
+webengine; Bokeh/HoloViews objects are hosted through it ([[D24]]).
+**Status:** ✅ resolved (per user) — build `RawFigure` as an Element in W3;
+`from_holoviews` returns it for unsupported elements.
+
+---
+
+## [D27] Webengine event/selection fidelity mapping
+
+**Context.** The public event stream must be qtviz typed events, so a webengine
+pane is indistinguishable to `View.on(...)`. The legacy per-library event
+dataclasses become an internal detail; what's the precise library→typed-event map?
+
+**Underlying.** Mostly mechanical, given `ext/plotly/_runtime.py`'s payloads:
+`plotly.click`→`PickEvent(point_index, x, y)`; `plotly.hover`→`HoverEvent`;
+`plotly.unhover`→`HoverEvent(point_index=None)`; `plotly.relayout`→`RangeEvent`
+(parse `xaxis.range[0/1]`/`yaxis.range`); `plotly.selection`→`SelectEvent(indices,
+bounds)`. **The one real subtlety:** Plotly identifies a point as `(trace_index,
+point_index)` *per trace*, but `SelectEvent.indices` is a flat list of source-row
+indices. For a single-Element single-trace figure `point_index == row index`
+trivially. For an `Overlay` (many traces), the handle must hold a
+**trace→(source_id, row-offset) table** and translate so each `SelectEvent` carries
+the right `source_id` and that Element's row indices.
+
+**Recommendation.** Lock the per-event map above; implement the single-trace case in
+W1/W2 and the trace→element table when Overlay selection is wired (W2/W3).
+**Status:** ◑ accepted-pending-revisit (per user) — the per-event mapping is locked;
+the **multi-trace `trace→(source_id, row-offset)` table** is flagged to revisit when
+W2/W3 actually wires Overlay selection (the real implementation risk).
+
+---
+
+## [D28] `from_holoviews` fallback to webengine
+
+**Context.** The native HoloViews adapter (Phase 3) translates the common hv
+elements to native qtviz Elements; the long tail (Sankey, Chord, custom hv) has no
+native form. Where does it land?
+
+**Underlying.** Depends on [[D26]], now resolved: the adapter translates what it can
+natively (pyqtgraph/mpl — fast, interactive) and **falls back to a `RawFigure`** for
+the rest, hosted full-fidelity on webengine via the legacy `HoloViewsBackend`
+(`hv.renderer("bokeh").get_plot(obj).state`). That fallback target now exists by
+decision, so the adapter can ship incrementally: common elements native, everything
+else still renders.
+
+**Recommendation.** `from_holoviews` returns native Elements where it can, else
+`RawFigure(<hv state>)` on webengine.
+**Status:** ◑ accepted-pending-revisit (per user) — principle accepted; the detailed
+wiring (which elements native vs fallback, how `DynamicMap`/`Stream` map) is decided
+in **Phase 3** when the adapter is built, not now.
+
+---
+
+## [D29] Webengine transport — JSON now, Arrow IPC later
+
+**Context.** The bridge serializes payloads with `json.dumps` (`_send_now`). Big
+figures / live data could overwhelm JSON; Arrow IPC is the faster binary path.
+
+**Underlying.** JSON is fine for moderate payloads and is what works today. Arrow
+IPC is a real win only at large payloads, and the roadmap already places it at
+Phase 5 (W5), gated on a measured need rather than speculation.
+
+**Recommendation.** Keep JSON for W0–W4; add Arrow IPC at W5/Phase 5 if a measured
+big-payload need shows up.
+**Status:** ◑ accepted-pending-revisit (per user) — JSON now; revisit Arrow IPC at
+**W5/Phase 5** against a real big-payload measurement (<100 ms target).
+
+---
+
+## [D30] Webengine packaging + physical move + import shim
+
+**Context.** The legacy code lives in `src/qtwebplot/`. The rehome moves it under
+qtviz; how much moves when, and what happens to existing `qtwebplot` imports?
+
+**Underlying.** A registered backend is just a *module* exposing
+`name`/`capabilities`/`renderers`/`supports`/`render`/`can_host`
+(`backends/__init__` registers the `pyqtgraph`/`matplotlib` backend modules), so
+`webengine` is a module of the same shape under `src/qtviz/backends/webengine/`.
+The reusable bridge core (`web_bridge_view`, `bridge`, `_runtime`, `_inject`) lifts
+wholesale into `backends/webengine/_bridge/`; the per-library `ext/*` become
+internal figure-hosts. Move scope: do the **whole package at once** in W0 (chosen) —
+the legacy tests travel with it and keep proving the bridge on the new paths — vs. a
+two-step move (bridge+Plotly first). One move is cleaner; the bigger diff is
+acceptable. A top-level `qtwebplot` shim re-exports from the new location with a
+`DeprecationWarning` (roadmap Phase 0/6). Packaging: `qtviz[webengine]` =
+PySide6-WebEngine + per-library sub-extras (plotly/bokeh/holoviews).
+
+**Caveat surfaced during the move:** the legacy WebEngine GUI tests
+(`tests/test_layouts_gui.py`) time out offscreen today (7 failures). W0 must gate
+them behind a "Chromium usable" skip so the suite isn't red on the new paths
+(`webengine-rehome.md` §9).
+
+**Recommendation.** Move all of `src/qtwebplot/` under `backends/webengine/` in W0;
+keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
+**Status:** ✅ resolved (per user) — whole-package move now + import shim; sequence is
+`webengine-rehome.md` §8 W0.
+
+---
+
 ## Index
 
 | ID | Topic | Blocks | Status |
@@ -634,10 +802,10 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D21 | dynamic viewport re-aggregation seam | Phase 4b | ✅ RasterController + RasterTarget (pyqtgraph + matplotlib) |
 | D22 | datashader coverage (lines, categorical color) | Phase 4 | ✅ points + lines + value/categorical agg; deeper gaps → `capabilities-gaps.md` |
 | D23 | color/size encoding — shared mapping + legends | toward HoloViews | ✅ `core/encoding.py`; native `Scatter` `color_by`/`size_by` + auto legend (`milestone-color-encoding.md`) |
-| D24 | webengine default Element renderer (Plotly vs Bokeh) | webengine rehome | open — recommend Plotly (`webengine-rehome.md` §7) |
-| D25 | webengine async render contract | webengine rehome | open — recommend handle-now + command queue, no View change |
-| D26 | raw-figure passthrough element vs escape hatch | webengine rehome | open — affects negotiation + `from_holoviews` fallback |
-| D27 | webengine event/selection fidelity mapping | webengine rehome | open — library events → qtviz typed events |
-| D28 | `from_holoviews` fallback to webengine | Phase 3 (depends D26) | open — native subset + webengine long-tail |
-| D29 | webengine transport (JSON now, Arrow IPC later) | webengine rehome / P5 | open — gated on measured need |
-| D30 | webengine packaging + physical move + import shim | Phase 0/6 | open — `src/qtwebplot` → `backends/webengine/` |
+| D24 | webengine default Element renderer (Plotly vs Bokeh) | webengine rehome | ✅ resolved — Plotly the only Element renderer; Bokeh a `RawFigure` host |
+| D25 | webengine async render contract | webengine rehome | ◑ handle-now + command queue **firm**; loading-placeholder pending-revisit |
+| D26 | raw-figure passthrough element vs escape hatch | webengine rehome | ✅ resolved — first-class `RawFigure` element (negotiates only to webengine) |
+| D27 | webengine event/selection fidelity mapping | webengine rehome | ◑ per-event map locked; multi-trace `trace→(source_id,row)` table pending-revisit (W2/W3) |
+| D28 | `from_holoviews` fallback to webengine | Phase 3 (depends D26) | ◑ principle accepted; wiring pending-revisit (Phase 3) |
+| D29 | webengine transport (JSON now, Arrow IPC later) | webengine rehome / P5 | ◑ JSON now; Arrow IPC pending-revisit (W5/P5) |
+| D30 | webengine packaging + physical move + import shim | Phase 0/6 | ✅ resolved — whole-package move now + `qtwebplot` shim; skip-gate GUI tests |

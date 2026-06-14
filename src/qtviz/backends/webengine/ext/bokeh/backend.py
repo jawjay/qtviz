@@ -17,8 +17,8 @@ abstractions don't force a single library's idioms on every extension:
 Usage:
     from bokeh.plotting import figure
     from bokeh.models import ColumnDataSource
-    from qtwebplot import PlotView
-    from qtwebplot.ext.bokeh import BokehBackend
+    from qtviz.backends.webengine import PlotView
+    from qtviz.backends.webengine.ext.bokeh import BokehBackend
 
     src = ColumnDataSource(data={"x": [1,2,3], "y": [1,4,9]}, name="src")
     p = figure(height=400)
@@ -36,9 +36,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from qtwebplot.backend import PlotBackend
-from qtwebplot.ext.bokeh._runtime import BOKEH_JS
-from qtwebplot.ext.bokeh.events import (
+from qtviz.backends.webengine.backend import PlotBackend
+from qtviz.backends.webengine.ext.bokeh._runtime import BOKEH_JS
+from qtviz.backends.webengine.ext.bokeh.events import (
     BokehDoubleTapEvent,
     BokehEvents,
     BokehRangesUpdateEvent,
@@ -47,8 +47,8 @@ from qtwebplot.ext.bokeh.events import (
 )
 
 if TYPE_CHECKING:
-    from qtwebplot.core import WebBridgeView
-    from qtwebplot.theme import Theme
+    from qtviz.backends.webengine.core import WebBridgeView
+    from qtviz.backends.webengine.theme import Theme
 
 
 _INSTRUMENTED_MARKER = "_qtwebplot_instrumented"

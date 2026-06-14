@@ -31,6 +31,14 @@ dependencies = [
 plotly = ["plotly >=5.20"]
 bokeh = ["bokeh >=3.4"]
 holoviews = ["holoviews >=1.18"]
+# The webengine backend hosts web figure libraries in a QWebEngineView. PySide6
+# (>=6.6, a hard dep) already ships QtWebEngine via PySide6-Addons; this extra
+# adds the figure libraries it can host (roadmap Phase 5, D30).
+webengine = [
+    "plotly >=5.20",
+    "bokeh >=3.4",
+    "holoviews >=1.18",
+]
 all = [
     "plotly >=5.20",
     "bokeh >=3.4",
@@ -60,8 +68,9 @@ Homepage = "https://github.com/markjajeh/qtviz"
 Issues = "https://github.com/markjajeh/qtviz/issues"
 
 [tool.hatch.build.targets.wheel]
-# src/qtwebplot is the legacy Qt WebEngine code; it stays packaged until it is
-# rehomed under qtviz.backends.webengine (roadmap Phase 5).
+# The Qt WebEngine bridge now lives under qtviz.backends.webengine; src/qtwebplot
+# is a thin deprecation shim re-exporting from there, kept packaged for two
+# releases (roadmap Phase 6) so old `import qtwebplot` code keeps working.
 packages = ["src/qtviz", "src/qtwebplot"]
 
 [tool.hatch.build.targets.sdist]

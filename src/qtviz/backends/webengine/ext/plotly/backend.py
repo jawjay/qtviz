@@ -2,8 +2,8 @@
 and exposes Plotly verbs as Python methods.
 
 Usage:
-    from qtwebplot import PlotView
-    from qtwebplot.ext.plotly import PlotlyBackend
+    from qtviz.backends.webengine import PlotView
+    from qtviz.backends.webengine.ext.plotly import PlotlyBackend
 
     backend = PlotlyBackend(fig)
     view = PlotView(backend)
@@ -19,9 +19,9 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from qtwebplot.backend import PlotBackend
-from qtwebplot.ext.plotly._runtime import PLOTLY_JS
-from qtwebplot.ext.plotly.events import (
+from qtviz.backends.webengine.backend import PlotBackend
+from qtviz.backends.webengine.ext.plotly._runtime import PLOTLY_JS
+from qtviz.backends.webengine.ext.plotly.events import (
     PlotlyClickEvent,
     PlotlyEvents,
     PlotlyHoverEvent,
@@ -31,8 +31,8 @@ from qtwebplot.ext.plotly.events import (
 )
 
 if TYPE_CHECKING:
-    from qtwebplot.core import WebBridgeView
-    from qtwebplot.theme import Theme
+    from qtviz.backends.webengine.core import WebBridgeView
+    from qtviz.backends.webengine.theme import Theme
 
 
 _PLOT_DIV_ID = "qtwp-plot"

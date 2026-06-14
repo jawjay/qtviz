@@ -155,9 +155,19 @@ common elements native, everything else still renders.
 
 ## 8. Phased plan
 
+> **Status (W0 ✅ landed).** `src/qtwebplot/` moved wholesale to
+> `src/qtviz/backends/webengine/`; internal imports rewritten; a `sys.modules`
+> redirect shim at `src/qtwebplot/` re-exports from the new location and warns
+> once (`DeprecationWarning`). The WebEngine GUI tests are skip-gated under the
+> offscreen platform (`QTVIZ_WEBENGINE_GUI=1` forces them). Suite green: 245
+> passed, 11 skipped. **As-built deviation:** kept the inner `core/` + `ext/`
+> module names (faithful relocation, smallest diff) — the §5 `_bridge/` rename is
+> deferred to W1 when `WebEngineBackend` is built on top. Pre-existing ruff debt
+> in the legacy code travelled with it untouched (it's superseded in W2–W4).
+
 | Stage | Deliverable | Gate |
 |---|---|---|
-| **W0** | Physical move: bridge core → `backends/webengine/_bridge/`; `qtwebplot` import shim | existing bridge tests pass on new paths |
+| **W0** ✅ | Physical move: whole `qtwebplot` package → `backends/webengine/`; redirect import shim; GUI tests skip-gated | existing bridge tests pass on new paths ✅ |
 | **W1** | `WebEngineBackend` + `WebEngineRenderHandle`; render one `Scatter` via Plotly; register; declare capabilities; range + pick events | `View(Scatter, backend="webengine")` draws; events fire |
 | **W2** | Element→Plotly renderers for the 8 types; theme translation; `capture/restore_state`; png export | the **backend-conformance suite** is green for webengine (the real proof) |
 | **W3** | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure); full event translation incl. brush→`SelectEvent` | a raw HoloViews object renders; brush emits typed events |

@@ -3,8 +3,8 @@
 Requires the `plotly` optional dependency (install `qtwebplot[plotly]`).
 """
 
-from qtwebplot.ext.plotly.backend import PlotlyBackend
-from qtwebplot.ext.plotly.events import (
+from qtviz.backends.webengine.ext.plotly.backend import PlotlyBackend
+from qtviz.backends.webengine.ext.plotly.events import (
     PlotlyClickEvent,
     PlotlyEvents,
     PlotlyHoverEvent,
