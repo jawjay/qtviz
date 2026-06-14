@@ -34,18 +34,45 @@ def _col(ref, name) -> np.ndarray:
     return np.asarray(ref.series(name), dtype="float64")
 
 
+def _u8(rgba_row) -> tuple[int, int, int, int]:
+    return tuple(int(round(v * 255)) for v in rgba_row)
+
+
+def _scaled_sizes(values, lo: float = 5.0, hi: float = 18.0):
+    a = np.asarray(values, dtype="float64")
+    vmin, vmax = float(np.nanmin(a)), float(np.nanmax(a))
+    span = (vmax - vmin) or 1.0
+    return lo + (a - vmin) / span * (hi - lo)
+
+
+def _color_mapping(element, d, theme):
+    from ...core.encoding import map_colors  # noqa: PLC0415
+    from ...core.palette import palettes  # noqa: PLC0415
+
+    return map_colors(
+        np.asarray(d.series("color")), palette=theme.palette,
+        continuous_palette=palettes.get("viridis"), title=element.color_by,
+    )
+
+
 def render_scatter(element: Scatter, ctx):
     d = element.data
-    item = pg.ScatterPlotItem(
-        x=_col(d, "x"),
-        y=_col(d, "y"),
-        brush=pg.mkBrush(_color(element.color, ctx.theme).qt()),
-        pen=None,
-        size=element.size or 6,
-        useCache=True,
-        hoverable=True,
+    kwargs = {"pen": None, "useCache": True, "hoverable": True}
+    kwargs["size"] = (
+        _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6)
     )
+    legend = None
+    if element.color_by is not None:
+        rgba, legend = _color_mapping(element, d, ctx.theme)
+        kwargs["brush"] = [pg.mkBrush(*_u8(c)) for c in rgba]
+    else:
+        kwargs["brush"] = pg.mkBrush(_color(element.color, ctx.theme).qt())
+    item = pg.ScatterPlotItem(x=_col(d, "x"), y=_col(d, "y"), **kwargs)
     ctx.parent_axes.addItem(item)
+    if legend is not None:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        add_legend(ctx.parent_axes, legend, ctx.theme)
     return item
 
 

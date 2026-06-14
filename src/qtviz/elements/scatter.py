@@ -49,3 +49,13 @@ class Scatter(Element):
         self.matplotlib_rasterized = matplotlib_rasterized
         self._validate_tabular()
         self._freeze()
+
+    def channels(self) -> dict:
+        """x/y always; `color`/`size` roles when bound to a data column, so the
+        resolve pipeline materializes them for the native renderers."""
+        ch = {"x": self.x, "y": self.y}
+        if self.color_by is not None:
+            ch["color"] = self.color_by
+        if self.size_by is not None:
+            ch["size"] = self.size_by
+        return ch

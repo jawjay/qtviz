@@ -633,3 +633,4 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D20 | raster output: RGBA shade vs aggregate+theme cmap | Phase 4 | ✅ RGBA shade now; aggregate+theme cmap future |
 | D21 | dynamic viewport re-aggregation seam | Phase 4b | ✅ RasterController + RasterTarget (pyqtgraph + matplotlib) |
 | D22 | datashader coverage (lines, categorical color) | Phase 4 | ✅ points + lines + value/categorical agg; deeper gaps → `capabilities-gaps.md` |
+| D23 | color/size encoding — shared mapping + legends | toward HoloViews | ✅ `core/encoding.py`; native `Scatter` `color_by`/`size_by` + auto legend (`milestone-color-encoding.md`) |

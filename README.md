@@ -80,6 +80,21 @@ qv.Scatter({}, x=np.linspace(0, 1, n), y=values)          # literal arrays
 - a **callable** is the escape hatch for anything else;
 - a **literal array** is just the values.
 
+### Color & size encoding
+Bind `color_by` / `size_by` to a column and qtviz maps it to per-point color/size
+and adds a **legend** automatically — a categorical column becomes a color key, a
+numeric column a continuous ramp + colorbar:
+
+```python
+qv.Scatter(df, x="x", y="y", color_by="category")   # key legend (theme palette)
+qv.Scatter(df, x="x", y="y", color_by="magnitude")  # continuous ramp + colorbar
+qv.Scatter(df, x="x", y="y", size_by="magnitude")   # per-point size
+```
+
+It's the same data → color rule the Datashader path uses, so a column colors
+consistently however it's drawn, on either backend. See
+[`examples/12_color_mapping.py`](examples/12_color_mapping.py).
+
 ### Big data — datashader
 Past a few hundred thousand points a scatter overplots into a blob. Set
 `scale="datashader"` and qtviz aggregates the points into a screen-resolution
@@ -152,8 +167,9 @@ uv run python examples/01_hello.py
 `01_hello` · `02_composition` · `03_backends` · `04_theming` · `05_interaction`
 · `06_data_binding` · `07_mixed_backends` · `08_gallery` · `09_datashader`
 (millions of points, re-aggregated on zoom) · `10_out_of_core` (lazy Dask) ·
-`11_datashader_matplotlib` (same, on matplotlib) · `dashboard_native` (3-panel
-linked dashboard). See [`examples/README.md`](examples/README.md).
+`11_datashader_matplotlib` (same, on matplotlib) · `12_color_mapping`
+(`color_by`/`size_by` + legends) · `dashboard_native` (3-panel linked dashboard).
+See [`examples/README.md`](examples/README.md).
 
 ## What works today
 
@@ -163,6 +179,7 @@ linked dashboard). See [`examples/README.md`](examples/README.md).
 | **Elements** | Scatter · Curve · Bars · Histogram · Image · Heatmap · ErrorBars · Spread |
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
+| **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** on both backends |
 | **Data inputs** | dict · numpy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
 | **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"` aggregate 10M+ points/lines into a raster (density · `color_by` mean · categorical blend), out-of-core, off the GUI thread, **re-aggregating to the viewport on pan/zoom** |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |

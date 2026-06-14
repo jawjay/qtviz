@@ -37,9 +37,9 @@ Grouped by theme. The right-hand column is the roadmap work each gap gates.
 | Gap | Why it matters | Gates |
 |-----|----------------|-------|
 | **Axis transforms** — log / symlog / datetime scales | real scientific/financial data needs them; also unlocks datashader `logx/logy` | all backends; Datashader §1 |
-| **Legends & colorbars** as first-class overlay elements | every `color_by`/categorical/continuous plot is ambiguous without a key | HoloViews adapter, Datashader §1, release |
-| **`color_by` / `size_by` in native renderers** | today these are honored only by Datashader; native `Scatter`/`Curve` ignore them (`render_scatter` uses static `color` only) | a shared `ColorMapping` abstraction (below) |
-| **Shared color-mapping abstraction** | one resolution of value/category → color, used by *both* native per-point rendering and Datashader shading, theme-aware | native `color_by`, Datashader theming, legends |
+| **Shared color-mapping abstraction** | ✅ `core/encoding.py` — `map_colors(values) → (rgba, Legend)`, used by native `Scatter` `color_by`/`size_by`; Datashader still uses its own defaults (align next) | done |
+| **`color_by` / `size_by` in native renderers** | ✅ native `Scatter` maps color (categorical key / continuous ramp) + size, with an auto legend on both backends | done (Scatter) |
+| **Legends & colorbars** | ◑ auto legend/colorbar for native `Scatter` `color_by`; **still missing**: legend on Datashader rasters, legend as a first-class composable element, legends for `Curve`/`Bars`, multi-series overlay legends | partial |
 | **More elements** — Box/Violin, Contour, Quiver, Graph/Network | analysis parity; HoloViews has these | HoloViews adapter, release breadth |
 
 ### Data
@@ -77,8 +77,10 @@ Grouped by theme. The right-hand column is the roadmap work each gap gates.
 Ordered to unblock the most downstream work per unit effort (ties to
 `development-plan.md` §8):
 
-1. **Shared color-mapping + legends/colorbars** — unblocks native `color_by`,
-   Datashader theming, and is a prerequisite the HoloViews adapter will need.
+1. ✅ **Shared color-mapping + native legends/colorbars** — `core/encoding.py`
+   maps `color_by`/`size_by` on `Scatter` with an auto legend on both backends.
+   *Remaining:* a first-class legend element, legends on Datashader rasters, and
+   `Curve`/`Bars` color encoding — fold these in alongside the HoloViews adapter.
 2. **Axis transforms (log/datetime)** — broadly needed; cheap relative to value.
 3. **Reactive `Signal` binding** — the machinery is in place; highest leverage for
    the crossfilter story (with selection identity, below).

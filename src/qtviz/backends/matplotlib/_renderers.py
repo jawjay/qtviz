@@ -33,12 +33,56 @@ def _col(ref, name) -> np.ndarray:
     return np.asarray(ref.series(name), dtype="float64")
 
 
-def render_scatter(element: Scatter, ctx):
-    size = (element.size or 6) ** 2  # mpl `s` is area; our size is ~diameter
-    return ctx.parent_axes.scatter(
-        _col(element.data, "x"), _col(element.data, "y"),
-        color=_color(element.color, ctx.theme).mpl(), s=size, alpha=element.alpha,
+def _scaled_sizes(values, lo: float = 5.0, hi: float = 18.0):
+    a = np.asarray(values, dtype="float64")
+    vmin, vmax = float(np.nanmin(a)), float(np.nanmax(a))
+    span = (vmax - vmin) or 1.0
+    return (lo + (a - vmin) / span * (hi - lo)) ** 2  # mpl `s` is area
+
+
+def _color_mapping(element, d, theme):
+    from ...core.encoding import map_colors  # noqa: PLC0415
+    from ...core.palette import palettes  # noqa: PLC0415
+
+    return map_colors(
+        np.asarray(d.series("color")), palette=theme.palette,
+        continuous_palette=palettes.get("viridis"), title=element.color_by,
     )
+
+
+def render_scatter(element: Scatter, ctx):
+    d = element.data
+    s = _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6) ** 2
+    if element.color_by is not None:
+        rgba, legend = _color_mapping(element, d, ctx.theme)
+        artist = ctx.parent_axes.scatter(
+            _col(d, "x"), _col(d, "y"), c=rgba, s=s, alpha=element.alpha,
+        )
+        _add_legend(ctx.parent_axes, legend, ctx.theme)
+        return artist
+    return ctx.parent_axes.scatter(
+        _col(d, "x"), _col(d, "y"),
+        color=_color(element.color, ctx.theme).mpl(), s=s, alpha=element.alpha,
+    )
+
+
+def _add_legend(ax, legend, theme) -> None:
+    fg = theme.foreground.mpl()
+    if legend.kind == "categorical":
+        from matplotlib.patches import Patch  # noqa: PLC0415
+
+        handles = [Patch(facecolor=c.mpl(), label=label) for label, c in legend.entries]
+        ax.legend(handles=handles, title=legend.title, fontsize=8, framealpha=0.85, labelcolor=fg)
+    else:
+        from matplotlib.cm import ScalarMappable  # noqa: PLC0415
+        from matplotlib.colors import LinearSegmentedColormap, Normalize  # noqa: PLC0415
+
+        cmap = LinearSegmentedColormap.from_list("qtviz", [c.mpl() for c in legend.ramp])
+        sm = ScalarMappable(norm=Normalize(legend.vmin, legend.vmax), cmap=cmap)
+        bar = ax.figure.colorbar(sm, ax=ax)
+        if legend.title:
+            bar.set_label(legend.title, color=fg)
+        bar.ax.tick_params(colors=fg)
 
 
 def render_curve(element: Curve, ctx):
