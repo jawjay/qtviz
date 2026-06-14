@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
 
 from .capabilities import Capabilities
+from .disposable import Disposable
 from .element import Element
 from .event import EventBus
 from .theme import Theme
@@ -96,3 +97,58 @@ class Backend(Protocol):
     def render(self, node, *, theme: Theme, parent: Any = None) -> RenderHandle: ...
 
     def can_host(self, kind: str) -> bool: ...
+
+
+class _MergedBus:
+    """The event bus of a CompositeRenderHandle. A subscription fans out to
+    every child bus, so `View.on(...)` sees one stream no matter how many
+    panes/backends sit underneath (spec §2.8)."""
+
+    def __init__(self, child_buses) -> None:
+        self._buses = list(child_buses)
+
+    def subscribe(self, event_type, cb, *, throttle_ms=None) -> Disposable:
+        disposables = [b.subscribe(event_type, cb, throttle_ms=throttle_ms) for b in self._buses]
+        return Disposable(lambda: [d.dispose() for d in disposables])
+
+    def emit(self, ev) -> None:
+        for b in self._buses:
+            b.emit(ev)
+
+    def _drain(self) -> None:
+        for b in self._buses:
+            b._drain()
+
+    def dispose(self) -> None:
+        for b in self._buses:
+            b.dispose()
+
+
+class CompositeRenderHandle(RenderHandle):
+    """A Layout whose panes span backends (or a splitter/tabs/dock container):
+    the widget is a Qt container built by the LayoutHost (§3.7), and the bus
+    is merged over the per-pane child handles. View holds exactly one root
+    handle — a backend handle or one of these."""
+
+    def __init__(self, widget: Any, child_handles: list[RenderHandle]) -> None:
+        super().__init__(widget, _MergedBus([h.event_bus for h in child_handles]), "composite")
+        self._children = child_handles
+
+    @property
+    def children(self) -> list[RenderHandle]:
+        return self._children
+
+    def dispose(self) -> None:
+        for h in self._children:
+            h.dispose()
+        w = self.widget
+        if w is not None:
+            w.setParent(None)
+            w.deleteLater()
+        self.widget = None
+
+    def export(self, fmt: str, path) -> Path:
+        raise NotImplementedError(
+            "a composite (mixed-backend) view has no single surface to export; "
+            "export each pane via its own handle (handle.children[i].export(...))"
+        )

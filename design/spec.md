@@ -1087,7 +1087,8 @@ Per Q8 (resolved):
 
 `Layout(kind="splitter" | "tabs" | "dock")`, and any `Layout(kind="grid")`
 whose children resolve to more than one backend, are hosted by a
-backend-neutral component — `qtviz.core.compose.LayoutHost` — *not* by a
+backend-neutral component — `qtviz.core._host.LayoutHost` (kept out of
+`compose.py` so negotiation stays Qt-free) via the `render_root` entry — *not* by a
 backend's `render()`. For each child it runs negotiation (§3.2), asks the
 chosen backend to render that child into its own widget, and arranges the
 resulting widgets in a `QSplitter` / `QTabWidget` /

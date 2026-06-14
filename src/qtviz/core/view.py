@@ -11,8 +11,7 @@ from collections.abc import Callable
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from .. import backends
-from .compose import negotiate
+from ._host import render_root
 from .disposable import Disposable
 from .theme import Theme
 from .threading import require_gui_thread
@@ -35,9 +34,7 @@ class View(QWidget):
     def _build(self) -> None:
         choice = self._backend_choice
         name = choice if isinstance(choice, str) else choice.name
-        chosen = negotiate(self._root, name)
-        backend = backends.get(chosen)
-        self._handle = backend.render(self._root, theme=self._theme)
+        self._handle = render_root(self._root, view_backend=name, theme=self._theme)
         self._layout.addWidget(self._handle.widget)
         for event_type, cb, ms in self._subs:
             self._handle.event_bus.subscribe(event_type, cb, throttle_ms=ms)

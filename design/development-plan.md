@@ -227,8 +227,12 @@ shippable, tested increment.
 > events, brushing, linked axes) · M6 ✅ (matplotlib backend — the
 > abstraction proof: adding it touched only `backends/matplotlib/` + one
 > register line + pyproject; conformance green for both backends, vector
-> export real). **M5 next** (mixed-backend `LayoutHost` /
-> `CompositeRenderHandle` — now testable since two backends exist).
+> export real) · M5 ✅ (mixed-backend `LayoutHost` + `CompositeRenderHandle`
+> in `core/_host.py`: splitter/tabs/dock/grid panes spanning backends, merged
+> event bus, homogeneous grid stays single-backend). **The Phase 1 surface is
+> structurally complete.** Remaining: deferred discussion items (D2 selection
+> portability, D3 async materialize, D7 coalescing) and Phases 3–5
+> (HoloViews adapter, reactive/Datashader, data layer + webengine rehome).
 
 ### M0 — Walking skeleton · `View(Scatter) → pyqtgraph → window`
 - **Components:** minimal `Immutable`; `as_data_ref` + one eager adapter

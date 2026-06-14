@@ -342,5 +342,5 @@ gesture calls (and the deterministic test hook). **Status:** ✅ resolved.
 | D8 | event source identity (axes vs element) | M4 | ✅ applied → spec §2.10 |
 | D9 | capabilities scalar vs context | M2 | accepted (scalar) — revisit on mis-route |
 | D10 | negotiation memoization (none) | M2 | accepted (no cache) |
-| D11 | composite export semantics | M5 | accepted — revisit at M5 |
+| D11 | composite export semantics | M5 | ✅ applied — composite.export raises (export panes individually) |
 | D12 | brush selection mechanism (pyqtgraph) | M4 | ✅ resolved → custom QtvizViewBox (Shift-drag) |
