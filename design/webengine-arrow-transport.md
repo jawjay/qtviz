@@ -5,6 +5,41 @@
 > need). Goal: ship large figure payloads to the embedded browser as **binary**
 > instead of JSON. **No code yet** — this is the design to review and decide first.
 
+## 0. Why a transport exists at all (this isn't reinventing Plotly)
+
+A web visualization library (Plotly, Bokeh, HoloViews-via-Bokeh) is a **Python
+library that *describes* a chart plus a JavaScript library that *draws* it in a
+browser**. The renderer (plotly.js / BokehJS) is JS, so the data must reach the
+browser's JS heap. That Python→JS crossing is **inherent to every browser-based
+viz** — not something qtviz added. `fig.show()`, Jupyter `FigureWidget`, Dash, and
+`bokeh serve` all do it; they just hide it:
+
+| Mechanism | How the data reaches JS |
+|---|---|
+| `plotly.io.to_html` / `fig.show()` | figure (incl. data) serialized to JSON, baked into the page's `<script>` |
+| Jupyter `FigureWidget` | JSON over the notebook **comm** channel; events/updates flow back |
+| Dash | JSON over **HTTP** from the Dash server; callbacks resend on interaction |
+| Bokeh / `bokeh serve` | document + `ColumnDataSource` → JSON; updates over a **websocket** |
+
+**qtviz maps onto this exactly:**
+- **Static render** uses Plotly's *own* mechanism — `PlotlyBackend.to_html()` is
+  `plotly.io.to_html(fig)`. The data crosses as JSON the same way it does for any
+  Plotly user; we add nothing here.
+- **The `QWebChannel` bridge** supplies what a static page can't, for a desktop app:
+  (1) plotly.js interactions → qtviz typed events (so `view.on(...)` works), and
+  (2) live `react`/`stream` updates without a page reload. This is the **desktop
+  equivalent of FigureWidget's comm / Dash's HTTP channel** — Plotly's interactive
+  modes have one too; ours is `QWebChannel`.
+
+**The contrast that matters:** the **native** backends (pyqtgraph / matplotlib) draw
+*in-process, straight from your numpy arrays* — no serialization, no boundary. That
+is qtviz's main bet and the fast path for big interactive data. The **webengine**
+backend is the opt-in "I want plotly.js's chart types / I'm hosting an existing
+figure" path, and it pays the same browser-data-crossing cost every Plotly/Bokeh app
+pays. **W5 optimizes the big-data tail of that *unavoidable* crossing** — it does not
+introduce a crossing that wouldn't otherwise exist. Plotly itself is already moving
+this way (base64 typed-array encoding in its JSON); W5 builds on that.
+
 ## 1. The problem
 
 The webengine backend hosts a Plotly figure in a `QWebEngineView` and ships the
@@ -41,6 +76,15 @@ a JSON literal inside a `runJavaScript` source string). The JS bridge API
 (`qtwebplot.on(name, fn)` / `_dispatch`) is the hook where a binary path would land.
 
 ## 3. What has to change (independent of transport)
+
+> **Check the cheap win first.** `_figure.build` currently does
+> `np.asarray(...).tolist()`, handing Plotly **Python lists** — which *defeat*
+> Plotly's own base64 typed-array encoder (it only triggers for **numpy arrays**).
+> So step zero of W5.1 is a spike: keep numpy arrays (drop `.tolist()`) and measure
+> whether `plotly.io.to_json` already emits base64 `{dtype, bdata}` and how much that
+> saves. If it captures most of the win, the custom Arrow transport (§5–6) is needed
+> only for the extreme tail. This is the "leverage Plotly's existing binary support"
+> point made concrete.
 
 Two pieces, separable from the transport choice:
 
@@ -85,11 +129,17 @@ side, freed once fetched or on handle dispose).
 
 ## 6. Recommendation — phased
 
-- **W5.1 — prove the pipeline (Option A, base64).** Split the figure, ship Arrow
-  bytes base64-encoded over the existing `send()` channel, decode in JS → typed
-  arrays → Plotly. Minimal infra; establishes the JS-side Arrow + Plotly
-  typed-array path and the figure-splitting in `_figure`. Good to a few MB; measure
-  against the JSON baseline.
+- **W5.1a — the cheap win (numpy, no new transport). ✅ done.** `_figure.build`
+  keeps numpy arrays and `PlotlyBackend` coerces the figure dict to a `go.Figure`
+  before `to_html`/`to_json`, so Plotly's own base64 typed-array encoder engages.
+  **Measured (1M pts): 757 ms / 38.5 MB → 180 ms / 27.0 MB — ~4.2× faster, ~1.4×
+  smaller**, and plotly.js gets typed arrays (no number-by-number `JSON.parse`). The
+  spike found this only fires for numpy on a real `go.Figure` (a raw dict, even with
+  numpy, stays JSON text). A benchmark guards that base64 stays on.
+- **W5.1b — prove the explicit pipeline (Option A, base64).** If W5.1a leaves a gap:
+  split the figure (data-by-reference) and ship Arrow bytes base64-encoded over the
+  existing `send()` channel, decode in JS → typed arrays → Plotly. Establishes the
+  JS-side Arrow + figure-split path; good to a few MB.
 - **W5.2 — scale (Option B, custom scheme handler).** Swap *only the data-blob
   transport* for a binary `fetch` over a registered `qtviz` scheme, hitting the
   < 100 ms / 100 MB target. The W5.1 split + decode pipeline is unchanged; this is

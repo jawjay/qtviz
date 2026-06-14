@@ -54,15 +54,17 @@ def _element_color(element, theme, idx: int):
     return Color(element.color)
 
 
-def _floats(series) -> list[float]:
-    return np.asarray(series, dtype="float64").tolist()
+def _floats(series) -> np.ndarray:
+    # numpy (not .tolist()) so the figure → go.Figure → Plotly's base64
+    # typed-array encoder engages (W5.1a; the encoder is numpy-only).
+    return np.asarray(series, dtype="float64")
 
 
-def _scaled_sizes(values) -> list[float]:
+def _scaled_sizes(values) -> np.ndarray:
     a = np.asarray(values, dtype="float64")
     vmin, vmax = float(np.nanmin(a)), float(np.nanmax(a))
     span = (vmax - vmin) or 1.0
-    return (_SIZE_LO + (a - vmin) / span * (_SIZE_HI - _SIZE_LO)).tolist()
+    return _SIZE_LO + (a - vmin) / span * (_SIZE_HI - _SIZE_LO)
 
 
 def _color_by_list(element, d, theme) -> list[str]:
@@ -142,12 +144,12 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
     if values.ndim == 2:
         nrows, ncols = values.shape
         return [{
-            "type": "heatmap", "z": values.tolist(),
-            "x": np.linspace(x0, x1, ncols).tolist(),
-            "y": np.linspace(y0, y1, nrows).tolist(),
+            "type": "heatmap", "z": values,
+            "x": np.linspace(x0, x1, ncols),
+            "y": np.linspace(y0, y1, nrows),
             "colorscale": "Viridis", "name": element.id,
         }]
-    return [{"type": "image", "z": values.tolist(), "name": element.id}]  # RGBA raster
+    return [{"type": "image", "z": values, "name": element.id}]  # RGBA raster
 
 
 def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
@@ -159,7 +161,7 @@ def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
     grid = np.full((len(ys), len(xs)), np.nan)
     grid[y_inv, x_inv] = zv                        # last value wins (aggregator TODO §5.5)
     return [{
-        "type": "heatmap", "x": xs.tolist(), "y": ys.tolist(), "z": grid.tolist(),
+        "type": "heatmap", "x": xs, "y": ys, "z": grid,
         "colorscale": "Viridis", "name": element.id,
     }]
 

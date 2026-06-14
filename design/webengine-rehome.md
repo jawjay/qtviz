@@ -203,8 +203,9 @@ common elements native, everything else still renders.
 | **W3a** ✅ | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure — all three *render*); Plotly typed events; **per-element `SelectEvent` routing** (D27); Plotly brush→`SelectEvent` | a raw figure of each lib renders; a Plotly raw figure + native Overlay emit per-element typed events |
 | **W3b** ✅ | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
 | **W4** ✅ | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
-| **W5.1** (Phase 5) | Arrow transport — prove the pipeline: split figure (data-by-reference) + base64 Arrow over the existing channel + JS decode → typed arrays → Plotly | beats the JSON baseline at a few MB; benchmark landed |
-| **W5.2** (Phase 5) | Arrow transport — scale: swap the data blob to a binary `fetch` over a custom `qtviz` URL-scheme handler | <100 ms for a representative ~100 MB payload |
+| **W5.1a** (Phase 5) ✅ | Cheap win — `_figure.build` keeps numpy + `PlotlyBackend` coerces to `go.Figure`, so Plotly's base64 typed-array encoder engages | 1M pts: 757→180 ms, 38.5→27.0 MB; benchmark guards base64 |
+| **W5.1b** (Phase 5) | If needed — explicit data-by-reference split + base64 Arrow over the existing channel | beats W5.1a for the multi-MB tail |
+| **W5.2** (Phase 5) | Scale — swap the data blob to a binary `fetch` over a custom `qtviz` URL-scheme handler | <100 ms for a representative ~100 MB payload |
 
 > **Status (W3a ✅ landed).** `qv.RawFigure(figure, kind=None)` (`elements/raw_figure.py`)
 > — a first-class, standalone passthrough element that auto-detects the library

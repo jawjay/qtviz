@@ -1,13 +1,13 @@
-"""Tier-4 — webengine JSON transport baseline (W5; D29 "measured need").
+"""Tier-4 — webengine Plotly transport (W5; D29 "measured need").
 
-Establishes the cost the Arrow transport (`design/webengine-arrow-transport.md`)
-would replace: the time to serialize a native Scatter→Plotly figure to JSON, and
-the JSON payload size vs the raw float64 floor (what a binary Arrow payload
-approaches). Both are O(n), so the numbers extrapolate linearly — 10M ≈ 10× the
-1M row.
+Compares the two serializations of a native Scatter→Plotly figure:
+- **lists → JSON text** — the pre-W5.1a path (`.tolist()` arrays);
+- **numpy → go.Figure → base64** — W5.1a: Plotly's own typed-array encoder emits
+  `{dtype, bdata}` once the figure is a `go.Figure` with numpy arrays.
 
-Pure / headless — this is the Python half (serialize + payload size). The JS half
-(transfer + `JSON.parse` + first paint) needs a live display and is a manual gate.
+…against the raw float64 floor (what a true-binary Arrow payload approaches). Both
+are O(n), so the numbers extrapolate linearly. Pure / headless — the JS-side decode
++ paint needs a live display and is a manual gate.
 
     pytest -m benchmark tests/qtviz/benchmarks/test_bench_webengine_transport.py
     python tests/qtviz/benchmarks/test_bench_webengine_transport.py
@@ -25,6 +25,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytestmark = pytest.mark.benchmark
 
 SIZES = (100_000, 1_000_000)
+_BDATA = '"bdata"'
 
 
 def make_points(n: int) -> dict:
@@ -35,54 +36,56 @@ def make_points(n: int) -> dict:
 
 
 def measure(n: int) -> dict:
-    """Build the Scatter→Plotly figure and serialize it to JSON (the current
-    bridge payload), against the raw float64 size (the binary floor)."""
+    import numpy as np
+    import plotly.graph_objects as go
     import plotly.io as pio
 
     import qtviz as qv
     from qtviz.backends.webengine import _figure
 
-    points = make_points(n)
     t0 = time.perf_counter()
-    fig, _ids = _figure.build(qv.Scatter(points, x="x", y="y"), qv.Theme.light())
+    fig, _ids = _figure.build(qv.Scatter(make_points(n), x="x", y="y"), qv.Theme.light())
     build_s = time.perf_counter() - t0
 
-    t1 = time.perf_counter()
-    payload = pio.to_json(fig, validate=False)
-    json_s = time.perf_counter() - t1
+    trace = fig["data"][0]
+    as_lists = {**trace, "x": np.asarray(trace["x"]).tolist(), "y": np.asarray(trace["y"]).tolist()}
+    lists_fig = {"data": [as_lists], "layout": fig["layout"]}
+    t = time.perf_counter()
+    js_lists = pio.to_json(lists_fig, validate=False)
+    lists_s = time.perf_counter() - t
 
-    json_bytes = len(payload.encode("utf-8"))
-    raw_bytes = n * 2 * 8  # x + y as float64 — the binary (Arrow) floor
+    t = time.perf_counter()
+    js_b64 = pio.to_json(go.Figure(fig), validate=False)  # the path PlotlyBackend takes
+    b64_s = time.perf_counter() - t
+
     return {
         "build_s": build_s,
-        "json_s": json_s,
-        "json_bytes": json_bytes,
-        "raw_bytes": raw_bytes,
+        "lists_s": lists_s, "lists_bytes": len(js_lists.encode("utf-8")),
+        "b64_s": b64_s, "b64_bytes": len(js_b64.encode("utf-8")), "b64_used": _BDATA in js_b64,
+        "raw_bytes": n * 2 * 8,
     }
 
 
 def _report(rows: dict) -> None:
-    print(
-        f"\n  {'points':>11} {'build':>9} {'to_json':>9} {'json':>9} "
-        f"{'raw':>8} {'inflate':>8} {'ns/pt':>7}"
-    )
+    print(f"\n  {'points':>11} {'build':>7} | {'lists':>8} {'MB':>6} | {'base64':>8} {'MB':>6} "
+          f"| {'raw MB':>7} {'speedup':>8} {'b64?':>5}")
     for n, r in rows.items():
         print(
-            f"  {n:>11,} {r['build_s'] * 1e3:7.0f}ms {r['json_s'] * 1e3:7.0f}ms "
-            f"{r['json_bytes'] / 1e6:7.1f}MB {r['raw_bytes'] / 1e6:6.1f}MB "
-            f"{r['json_bytes'] / r['raw_bytes']:6.1f}x {r['json_s'] / n * 1e9:6.0f}"
+            f"  {n:>11,} {r['build_s'] * 1e3:5.0f}ms | "
+            f"{r['lists_s'] * 1e3:6.0f}ms {r['lists_bytes'] / 1e6:5.1f} | "
+            f"{r['b64_s'] * 1e3:6.0f}ms {r['b64_bytes'] / 1e6:5.1f} | "
+            f"{r['raw_bytes'] / 1e6:6.1f} {r['lists_s'] / r['b64_s']:7.1f}x {str(r['b64_used']):>5}"
         )
 
 
 # ── pytest entry point (opt-in via -m benchmark) ─────────────────────────────
-def test_json_transport_baseline():
+def test_plotly_transport_baseline():
     pytest.importorskip("plotly")
     rows = {n: measure(n) for n in SIZES}
     _report(rows)
     top = rows[max(SIZES)]
-    # The gap Arrow would close: JSON text is materially larger than the raw
-    # float64 floor a binary payload approaches.
-    assert top["json_bytes"] > top["raw_bytes"]
+    assert top["b64_used"], "W5.1a regression: figure no longer base64-encodes"
+    assert top["b64_bytes"] < top["lists_bytes"]  # base64 is smaller than JSON text
 
 
 # ── standalone ───────────────────────────────────────────────────────────────
@@ -92,7 +95,7 @@ def main() -> int:
     except ImportError:
         print("plotly not available — install qtviz[webengine]")
         return 1
-    print("webengine JSON transport baseline (Scatter → Plotly)")
+    print("webengine Plotly transport — lists(JSON) vs numpy(go.Figure→base64)")
     _report({n: measure(n) for n in SIZES})
     return 0
 

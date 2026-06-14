@@ -49,10 +49,10 @@ def test_color_by_maps_per_point_colors(table):
 
 def test_size_by_scales_per_point_sizes(table):
     fig = _figure.build_figure(qv.Scatter(table, x="x", y="y", size_by="z"), qv.Theme.light())
-    size = fig["data"][0]["marker"]["size"]
-    assert isinstance(size, list)
-    assert len(size) == len(table["x"])
-    assert min(size) >= 5.0 - 1e-9
+    # numpy (not a list) so Plotly's base64 typed-array encoder engages (W5.1a)
+    size = np.asarray(fig["data"][0]["marker"]["size"])
+    assert size.shape == (len(table["x"]),)
+    assert size.min() >= 5.0 - 1e-9
 
 
 def test_layout_carries_theme(table):

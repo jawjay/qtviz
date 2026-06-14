@@ -315,7 +315,9 @@ are the current frontier.
 - ✅ Bokeh / HoloViews event translation — passthrough Bokeh and HoloViews figures
   emit qtviz typed events (tap / select / range).
 - ✅ Mixed native + webengine panes in one `Layout`, sharing one event stream.
-- ◻ Arrow IPC transport for large payloads.
+- ✅ Binary (base64 typed-array) transport for large Plotly payloads — ~4× faster
+  serialize at 1M points.
+- ◻ True-binary `fetch` transport (custom URL scheme) for the extreme (100 MB+) tail.
 
 ### Planned
 

@@ -821,8 +821,14 @@ blob into typed arrays and injects them before `Plotly.react`/`newPlot`. Plotly.
 accepts typed arrays / its `{dtype, bdata}` typed-array spec — **but the exact
 ingestion API + minimum Plotly version must be confirmed by a spike** before building.
 
-**Status:** open — spike Plotly's typed-array ingestion API/version; then design the
-`_figure` split + JS reassembly. Lands in W5.1.
+**Cheap-win first.** `_figure.build` currently `.tolist()`s its arrays, handing
+Plotly *lists* and defeating Plotly's own base64 typed-array encoder (numpy-only).
+Step zero is a spike: keep numpy arrays and measure whether `to_json` already emits
+base64 `{dtype, bdata}` — that may capture most of the win with no new transport
+(W5.1a), leaving the explicit base64/Arrow split (W5.1b) only for the tail.
+
+**Status:** open — spike (1) numpy-vs-lists base64 shortcut and (2) Plotly's
+typed-array ingestion API/version; then design the `_figure` split if still needed.
 
 ---
 

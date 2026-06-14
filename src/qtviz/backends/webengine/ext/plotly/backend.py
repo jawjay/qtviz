@@ -58,7 +58,11 @@ class PlotlyBackend(PlotBackend):
         import plotly.graph_objects as go
         from plotly.io import to_html
 
-        fig = self._figure if self._figure is not None else go.Figure()
+        # Coerce a dict figure (qtviz's Element renderers build dicts) into a
+        # go.Figure so Plotly's base64 typed-array encoder engages for numpy
+        # arrays (W5.1a) — a raw dict, even with numpy, serializes as JSON text.
+        src = self._figure
+        fig = src if isinstance(src, go.Figure) else go.Figure(src or {})
         if self._theme is not None:
             fig.update_layout(template=_plotly_template_from(self._theme))
         return to_html(
@@ -162,11 +166,13 @@ class PlotlyBackend(PlotBackend):
 def _figure_to_payload(figure: Any) -> dict:
     """Translate a Plotly Figure to a JSON-friendly {data, layout, config} dict."""
     try:
+        import plotly.graph_objects as go
         from plotly.io import to_json
     except ImportError as e:
         raise RuntimeError("plotly is required for PlotlyBackend") from e
 
-    raw = json.loads(to_json(figure, validate=False))
+    fig = figure if isinstance(figure, go.Figure) else go.Figure(figure)  # base64 (W5.1a)
+    raw = json.loads(to_json(fig, validate=False))
     return {
         "data": raw.get("data", []),
         "layout": raw.get("layout", {}),
