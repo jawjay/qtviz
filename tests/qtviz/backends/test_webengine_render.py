@@ -64,6 +64,32 @@ def test_raw_plotly_figure_renders(web, qtbot):
     handle.dispose()
 
 
+def test_bokeh_raw_figure_emits_typed_events(web, qtbot):
+    bk = pytest.importorskip("bokeh.plotting")
+    fig = bk.figure()
+    fig.scatter([1, 2, 3], [1, 4, 9])
+    handle = web.render(qv.RawFigure(fig), theme=qv.Theme.light())
+    qtbot.addWidget(handle.widget)
+
+    taps: list = []
+    selects: list = []
+    ranges: list = []
+    handle.event_bus.subscribe(qv.TapEvent, taps.append)
+    handle.event_bus.subscribe(qv.SelectEvent, selects.append)
+    handle.event_bus.subscribe(qv.RangeEvent, ranges.append)
+
+    handle.widget.received.emit("bokeh.tap", {"x": 1.0, "y": 2.0})
+    handle.widget.received.emit(
+        "bokeh.selection", {"geometry": {"type": "rect", "x0": 0, "y0": 0, "x1": 3, "y1": 9}}
+    )
+    handle.widget.received.emit("bokeh.ranges_update", {"x0": 0, "x1": 3, "y0": 0, "y1": 9})
+
+    assert taps and taps[0].x == 1.0
+    assert selects and selects[0].bounds == (0.0, 0.0, 3.0, 9.0)
+    assert ranges and ranges[0].x == (0.0, 3.0)
+    handle.dispose()
+
+
 def test_png_export_writes_a_file(web, table, qtbot, tmp_path):
     handle = web.render(qv.Scatter(table, x="x", y="y"), theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

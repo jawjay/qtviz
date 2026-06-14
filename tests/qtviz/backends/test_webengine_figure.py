@@ -168,3 +168,37 @@ def test_parse_relayout_both_forms_and_partial():
     assert _translate.parse_relayout({"xaxis.range": [0.0, 10.0]}) == ((0.0, 10.0), None)
     # autorange reset carries no explicit range
     assert _translate.parse_relayout({"xaxis.autorange": True}) == (None, None)
+
+
+# ── Bokeh / HoloViews event translation (W3b) ─────────────────────────────────
+def test_bokeh_tap_maps_to_tap_event():
+    evs = _t("bokeh.tap", {"x": 1.5, "y": 2.5, "sx": 10, "sy": 20})
+    assert len(evs) == 1 and isinstance(evs[0], qv.TapEvent)
+    assert evs[0].source_id == "surface-id"  # tap is surface-level
+    assert evs[0].x == 1.5 and evs[0].y == 2.5
+
+
+def test_bokeh_rect_selection_maps_to_select_with_bounds():
+    geom = {"type": "rect", "x0": 0.0, "y0": 1.0, "x1": 5.0, "y1": 6.0}
+    evs = _t("bokeh.selection", {"geometry": geom})
+    assert len(evs) == 1 and isinstance(evs[0], qv.SelectEvent)
+    assert evs[0].source_id == "scatter-id"  # the figure's own id
+    assert evs[0].indices == []  # a SelectionGeometry carries the region, not row indices
+    assert evs[0].bounds == (0.0, 1.0, 5.0, 6.0)
+
+
+def test_bokeh_poly_selection_bounds_is_bounding_box():
+    geom = {"type": "poly", "x": [0.0, 2.0, 1.0], "y": [0.0, 1.0, 3.0]}
+    evs = _t("bokeh.selection", {"geometry": geom})
+    assert evs[0].bounds == (0.0, 0.0, 2.0, 3.0)
+
+
+def test_bokeh_double_tap_has_no_qtviz_equivalent():
+    assert _t("bokeh.double_tap", {"x": 1.0, "y": 2.0}) == []
+
+
+def test_parse_bokeh_ranges():
+    full = _translate.parse_bokeh_ranges({"x0": 0.0, "x1": 10.0, "y0": -1.0, "y1": 1.0})
+    assert full == ((0.0, 10.0), (-1.0, 1.0))
+    assert _translate.parse_bokeh_ranges({"x0": 0.0, "x1": 10.0}) == ((0.0, 10.0), None)
+    assert _translate.parse_bokeh_ranges({}) == (None, None)

@@ -1,23 +1,21 @@
-"""Plotly bridge messages → qtviz typed events (D27).
+"""Webengine bridge messages → qtviz typed events (D27, W3a/W3b).
 
-Pure: a message name + payload (+ the trace→source_id table) in, a typed
-``Event`` out. The legacy per-library event dataclasses stay an internal detail;
+Pure: a message name + payload (+ the trace→source_id table) in, typed
+``Event``s out. The legacy per-library event dataclasses stay an internal detail;
 the public stream is qtviz events, so a webengine pane is indistinguishable to
-``View.on(...)``.
+``View.on(...)``. :func:`translate` dispatches by message prefix — ``plotly.*``
+for native-element figures and Plotly ``RawFigure``s; ``bokeh.*`` for Bokeh /
+HoloViews ``RawFigure``s (HoloViews renders through Bokeh).
 
-Self-contained events (click/hover/selection) are mapped by :func:`translate`.
-Range is stateful — a relayout often carries only the changed axis — so
-:func:`parse_relayout` extracts what it can and the RenderHandle merges it
-against its last-known ranges before emitting a ``RangeEvent``.
-
-W1 wires the single-trace case (``point_index`` is the source row index). The
-multi-trace ``trace_index → (source_id, row-offset)`` table is D27's
-pending-revisit, landing with Overlay selection in W2/W3.
+Range is stateful — a Plotly relayout often carries only the changed axis — so
+:func:`parse_relayout` / :func:`parse_bokeh_ranges` extract what they can and the
+RenderHandle merges it against its last-known ranges before emitting a
+``RangeEvent``.
 """
 
 from __future__ import annotations
 
-from ...core.event import HoverEvent, PickEvent, SelectEvent
+from ...core.event import HoverEvent, PickEvent, SelectEvent, TapEvent
 
 
 def _src(trace_index, traces, surface_id: str) -> str:
@@ -36,11 +34,18 @@ def _first_point(payload: dict):
 
 
 def translate(name: str, payload, *, traces: list[str], surface_id: str) -> list:
-    """Map a self-contained Plotly message to typed events (0, 1, or — for a
-    multi-element selection — N)."""
+    """Map a self-contained bridge message to typed events (0, 1, or — for a
+    multi-element Plotly selection — N). Dispatches by message prefix; range
+    messages (plotly.relayout / bokeh.ranges_update) are handled statefully by
+    the RenderHandle, not here."""
     if not isinstance(payload, dict):
         return []
+    if name.startswith("bokeh."):
+        return _translate_bokeh(name, payload, traces, surface_id)
+    return _translate_plotly(name, payload, traces, surface_id)
 
+
+def _translate_plotly(name: str, payload: dict, traces: list[str], surface_id: str) -> list:
     if name == "plotly.click":
         p = _first_point(payload)
         if p is None:
@@ -91,6 +96,52 @@ def _selection_events(payload: dict, traces: list[str], surface_id: str) -> list
         if sid not in order:
             order.append(sid)
     return [SelectEvent(sid, by_source.get(sid, []), bounds) for sid in order]
+
+
+# ── Bokeh / HoloViews (W3b) ───────────────────────────────────────────────────
+def _translate_bokeh(name: str, payload: dict, traces: list[str], surface_id: str) -> list:
+    """Bokeh events for a Bokeh/HoloViews RawFigure. The whole figure is one
+    source (its own id, `traces[0]`); tap/range are surface-level. A Bokeh
+    SelectionGeometry carries the brushed *region*, not row indices (those live
+    in the glyph's data source), so SelectEvent gets bounds with empty indices."""
+    source_id = traces[0] if traces else surface_id
+    kind = name.split(".", 1)[1]
+    if kind == "tap":
+        return [TapEvent(surface_id, _f(payload.get("x")), _f(payload.get("y")))]
+    if kind == "selection":
+        return [SelectEvent(source_id, [], _bokeh_geometry_bounds(payload.get("geometry")))]
+    # double_tap has no qtviz equivalent; ranges_update is handled by the handle.
+    return []
+
+
+def _bokeh_geometry_bounds(geometry) -> tuple[float, float, float, float]:
+    if not isinstance(geometry, dict):
+        return (0.0, 0.0, 0.0, 0.0)
+    if geometry.get("type") == "rect":
+        return (_f(geometry.get("x0")), _f(geometry.get("y0")),
+                _f(geometry.get("x1")), _f(geometry.get("y1")))
+    if geometry.get("type") == "point":
+        x, y = _f(geometry.get("x")), _f(geometry.get("y"))
+        return (x, y, x, y)
+    if geometry.get("type") == "poly":  # lasso → bounding box
+        xs = [v for v in (geometry.get("x") or []) if v is not None]
+        ys = [v for v in (geometry.get("y") or []) if v is not None]
+        if xs and ys:
+            return (float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys)))
+    return (0.0, 0.0, 0.0, 0.0)
+
+
+def parse_bokeh_ranges(payload):
+    """A bokeh.ranges_update payload {x0,x1,y0,y1} → (x_range | None, y_range | None)."""
+    if not isinstance(payload, dict):
+        return None, None
+    try:
+        x0, x1, y0, y1 = (payload.get(k) for k in ("x0", "x1", "y0", "y1"))
+        x = (float(x0), float(x1)) if x0 is not None and x1 is not None else None
+        y = (float(y0), float(y1)) if y0 is not None and y1 is not None else None
+    except (TypeError, ValueError):
+        return None, None
+    return x, y
 
 
 def _axis_range(update: dict, prefix: str):

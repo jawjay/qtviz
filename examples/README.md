@@ -33,6 +33,7 @@ uv sync --extra matplotlib --extra dev
 | 16 | [`16_webengine_export.py`](16_webengine_export.py) | Export a webengine plot to **PNG** (`handle.export("png", path)`). |
 | 17 | [`17_webengine_heatmap.py`](17_webengine_heatmap.py) | A tabular `Heatmap` (x/y/z) → a Plotly heatmap with a Viridis colorscale. |
 | 18 | [`18_webengine_raw_figure.py`](18_webengine_raw_figure.py) | **`RawFigure`** — host an existing Plotly figure (a 3-D surface) qtviz doesn't natively model; events still bridge back. |
+| 19 | [`19_webengine_holoviews.py`](19_webengine_holoviews.py) | **`RawFigure` + HoloViews** — a HoloViews figure rendered via Bokeh, with tap / box-select / range arriving as qtviz typed events (W3b). |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -44,10 +45,10 @@ uv sync --extra datashader --extra dask --extra matplotlib --extra dev
 More examples will be added as the library grows (reactive signals, the
 HoloViews adapter, …).
 
-Examples 13–18 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
-WebEngine view, plus `RawFigure` passthrough; roadmap Phase 5, W1–W3a). They need
-the webengine extra and a real display (a `QWebEngineView` segfaults at teardown
-under offscreen Qt):
+Examples 13–19 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
+WebEngine view, plus `RawFigure` passthrough for Plotly/Bokeh/HoloViews; roadmap
+Phase 5, W1–W3b). They need the webengine extra and a real display (a
+`QWebEngineView` segfaults at teardown under offscreen Qt):
 
 ```bash
 uv sync --extra webengine --extra dev

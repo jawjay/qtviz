@@ -201,7 +201,7 @@ common elements native, everything else still renders.
 | **W1** ✅ | `WebEngineBackend` + `WebEngineRenderHandle`; render one `Scatter` via Plotly; register; declare capabilities; range + pick events | headless: figure+event map green; live draw/events display-gated (offscreen segfault) |
 | **W2** ✅ | Element→Plotly renderers for the 8 types; theme translation; `capture/restore_state`; png export | backend-conformance green for webengine (forced: 36 passed); default-gated by the teardown segfault |
 | **W3a** ✅ | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure — all three *render*); Plotly typed events; **per-element `SelectEvent` routing** (D27); Plotly brush→`SelectEvent` | a raw figure of each lib renders; a Plotly raw figure + native Overlay emit per-element typed events |
-| **W3b** | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
+| **W3b** ✅ | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
 | **W4** | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
 | **W5** (Phase 5) | Arrow IPC transport for large payloads | <100 ms for a representative big payload |
 
@@ -217,6 +217,19 @@ common elements native, everything else still renders.
 > data-less elements through. Headless tests cover detection/negotiation/overlay-reject
 > + multi-trace selection; live raw render is display-gated. Suite: 269 passed, 22
 > skipped (forced: 57 passed). Example 18 hosts a Plotly 3-D surface.
+
+> **Status (W3b ✅ landed).** Bokeh event-translation map in `_translate.py`:
+> `translate()` dispatches by message prefix (`plotly.*` vs `bokeh.*`); a
+> Bokeh/HoloViews `RawFigure` now emits `bokeh.tap`→`TapEvent`,
+> `bokeh.selection`→`SelectEvent` (bounds from the SelectionGeometry — row indices
+> would need a data-source read, deferred), `bokeh.ranges_update`→`RangeEvent`
+> (shadow-merged like Plotly relayout, via the handle's shared `_merge_range`).
+> `bokeh.double_tap` has no qtviz equivalent. HoloViews inherits this for free (it
+> renders through Bokeh and delegates the bridge plumbing). Verified end-to-end on
+> a Bokeh figure and a HoloViews figure. Headless tests cover the bokeh map +
+> `parse_bokeh_ranges`; the live bokeh raw render is display-gated. Suite: 274
+> passed, 23 skipped (forced: 63 passed). Example 19 hosts a HoloViews scatter.
+> **The original W3 gate is fully met.**
 
 After W3, the native HoloViews adapter (Phase 3) can be built against a real
 fallback. W4 retires the legacy composition layer.

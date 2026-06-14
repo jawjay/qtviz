@@ -312,8 +312,8 @@ are the current frontier.
 - ✅ Render all eight Elements as Plotly charts; typed events; PNG export.
 - ✅ `RawFigure` passthrough — host any existing Plotly / Bokeh / HoloViews figure;
   per-element selection routing.
-- ◻ Bokeh/HoloViews event translation (so passthrough Bokeh figures emit typed
-  events).
+- ✅ Bokeh / HoloViews event translation — passthrough Bokeh and HoloViews figures
+  emit qtviz typed events (tap / select / range).
 - ◻ Mixed native + webengine panes in one `Layout`; Arrow IPC transport for large
   payloads.
 

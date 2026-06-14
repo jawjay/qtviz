@@ -56,21 +56,28 @@ class WebEngineRenderHandle(RenderHandle):
     def _on_message(self, name: str, payload) -> None:
         if name == "plotly.relayout":
             update = payload.get("update", {}) if isinstance(payload, dict) else {}
-            x, y = _translate.parse_relayout(update)
-            if x is None and y is None:
-                return
-            if x is not None:
-                self._x_range = x
-            if y is not None:
-                self._y_range = y
-            if self._x_range is not None and self._y_range is not None:
-                self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
+            self._merge_range(*_translate.parse_relayout(update))
+            return
+        if name == "bokeh.ranges_update":
+            self._merge_range(*_translate.parse_bokeh_ranges(payload))
             return
         events = _translate.translate(
             name, payload, traces=self._traces, surface_id=self._surface_id
         )
         for ev in events:
             self.event_bus.emit(ev)
+
+    def _merge_range(self, x, y) -> None:
+        """Merge a (possibly partial) range update into the shadow state and emit
+        a RangeEvent once both axes are known (Plotly relayout / Bokeh ranges)."""
+        if x is None and y is None:
+            return
+        if x is not None:
+            self._x_range = x
+        if y is not None:
+            self._y_range = y
+        if self._x_range is not None and self._y_range is not None:
+            self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
 
     def capture_state(self) -> ViewState:
         return ViewState(x_range=self._x_range, y_range=self._y_range)
