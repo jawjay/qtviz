@@ -48,6 +48,15 @@ def test_on_returns_disposable(table, any_backend, qtbot):
     disposable.dispose()  # no raise
 
 
+def test_auto_backend_resolves_homogeneous_grid(table, any_backend, qtbot):
+    # regression: a Layout(grid) under backend="auto" must resolve to one
+    # concrete backend, not the per-pane "auto" sentinel.
+    layout = qv.Layout([qv.Scatter(table, x="x", y="y"), qv.Curve(table, x="x", y="y")])
+    view = qv.View(layout, backend="auto")
+    qtbot.addWidget(view)
+    assert view.handle is not None
+
+
 def test_subscription_survives_backend_switch(table, qtbot):
     import qtviz.backends as B
 

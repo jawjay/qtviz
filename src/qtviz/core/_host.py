@@ -38,21 +38,28 @@ _DOCK_AREAS = {
 @require_gui_thread
 def render_root(node, *, view_backend, theme, parent=None):
     """Render any Node to a single root handle (backend or composite)."""
-    if isinstance(node, Layout) and _needs_host(node, view_backend):
-        return LayoutHost.render(node, view_backend=view_backend, theme=theme, parent=parent)
+    if isinstance(node, Layout):
+        needs_host, chosen = _resolve_layout(node, view_backend)
+        if needs_host:
+            return LayoutHost.render(node, view_backend=view_backend, theme=theme, parent=parent)
+        return backends.get(chosen).render(node, theme=theme, parent=parent)
     chosen = negotiate(node, view_backend)
     return backends.get(chosen).render(node, theme=theme, parent=parent)
 
 
-def _needs_host(layout: Layout, view_backend) -> bool:
+def _resolve_layout(layout: Layout, view_backend) -> tuple[bool, str | None]:
+    """`(needs_host, backend_name)`. Host splitter/tabs/dock (pure Qt containers)
+    and grids whose panes span backends (or can't be hosted by one backend);
+    otherwise a homogeneous grid renders through its single concrete backend."""
     if layout.kind in ("splitter", "tabs", "dock"):
-        return True  # pure Qt containers; no backend hosts these internally
-    # grid: host only if panes span backends, or the one backend can't host grid
+        return True, None
     child_backends = {negotiate(child, view_backend) for child in layout.children}
     if len(child_backends) > 1:
-        return True
+        return True, None
     chosen = next(iter(child_backends))
-    return not backends.get(chosen).can_host("grid")
+    if chosen == "auto" or not backends.get(chosen).can_host("grid"):  # nested layout / un-hostable
+        return True, None
+    return False, chosen
 
 
 class LayoutHost:

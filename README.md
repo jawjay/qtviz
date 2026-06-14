@@ -5,26 +5,32 @@ through multiple backends — **pyqtgraph** (fast, OpenGL, interactive) and
 **matplotlib** (publication-quality, vector export) today — and drops straight
 into any PySide6 app as a `QWidget`.
 
-> **Status: in active development (pre-release).** The Phase 1 surface
-> (data model, two backends, interaction, mixed-backend layouts) works and is
-> covered by ~100 tests. Not yet on PyPI; APIs may still change.
+> **Status: in active development (pre-release).** The Phase 1 surface (data
+> model, two native backends, interaction, mixed-backend layouts, functional
+> data binding) works and is covered by ~110 tests. Not yet on PyPI; APIs may
+> still change.
 >
 > qtviz began as `qtwebplot` (Qt WebEngine + JS libraries); that path is being
 > rehomed as a future `webengine` backend — see the roadmap.
 
 ## Why
 
-- **Declarative + immutable.** `Element` is pure data; describe *what*, not how.
-- **Multi-backend.** The same `Scatter(...)` renders through pyqtgraph or
-  matplotlib — switch at runtime, or let qtviz auto-pick by data size.
+- **Declarative + immutable.** An `Element` is pure data — it describes *what*
+  to plot, not how. The same Element renders identically across backends.
+- **Multi-backend.** One `Scatter(...)` renders through pyqtgraph or matplotlib;
+  switch at runtime, mix them in one window, or let qtviz auto-pick by data size.
 - **Native Qt.** Real `QWidget`s, signals/slots, GUI-thread discipline — no
   browser, no JS bridge for the native backends.
-- **Container-agnostic data.** Bind a `dict`, numpy array, pandas DataFrame, or
-  Arrow table — with xarray/zarr/Dask planned, lazy-first.
+- **Functional data binding.** Channels bind to column names, serializable
+  **expressions**, callables, or raw arrays — so deriving a channel never means
+  reshaping your data first.
+- **Data-intensive by design.** The data layer is container-agnostic and
+  lazy-first: dict / numpy / pandas / Arrow today; xarray / zarr / Dask resolve
+  off the GUI thread without changing the Element API (in progress).
 
 ## Install (from source)
 
-pyqtgraph is a core dependency; matplotlib is an optional extra.
+`pyqtgraph` + `numpy` are core dependencies; `matplotlib` is an optional extra.
 
 ```bash
 git clone https://github.com/markjajeh/qtviz
@@ -48,60 +54,79 @@ view.show()
 app.exec()
 ```
 
+## Concepts
+
+### Elements
+An `Element` is immutable, value-hashed, Qt-free data: `Scatter`, `Curve`,
+`Bars`, `Histogram`, `Image`, `Heatmap`, `ErrorBars`, `Spread`. It carries its
+data binding and styling and nothing about rendering — backends know how to draw
+each type.
+
+### Data binding — accessors
+A channel (`x`, `y`, `z`, …) binds to an **accessor**, resolved against your data:
+
+```python
+qv.Scatter(df, x="time", y="temp")                       # column name
+qv.Curve(df,  x="time", y=qv.col("raw") - qv.col("base")) # Expression (derived)
+qv.Curve(df,  x="time", y=lambda d: d["raw"].cumsum())    # callable (arbitrary Python)
+qv.Scatter({}, x=np.linspace(0, 1, n), y=values)          # literal arrays
+```
+
+- a **column name** is the easy default;
+- an **`Expression`** (`qv.col(...)` + arithmetic / transforms) is serializable,
+  introspectable, and lazy — the underlying container does the work, so it pushes
+  down to dask/Parquet;
+- a **callable** is the escape hatch for anything else;
+- a **literal array** is just the values.
+
+### Composition
+Operators build a figure tree:
+
+```python
+a * b   # Overlay — same axes, layered
+a + b   # Layout  — side-by-side panels (grid)
+qv.Layout([a, b], kind="splitter")        # or "tabs" | "dock" | "grid"
+qv.Layout([a, b], options=qv.LayoutOptions(cols=2, link_x=True))   # shared X axis
+```
+
+An `Overlay` resolves to a single backend; a `Layout` may mix backends per pane.
+
+### Backends & negotiation
+`View(root, backend=...)` takes `"pyqtgraph"`, `"matplotlib"`, a `Backend`, or
+`"auto"`. Negotiation resolves a backend per node from hints + capabilities;
+`view.set_backend(...)` swaps at runtime, preserving zoom and subscriptions.
+Backends are registered, never imported by the core, so adding one touches only
+its own directory.
+
+### Views & events
+A `View` is a `QWidget`. Subscribe to typed, throttled events:
+
+```python
+view.on(qv.SelectEvent, on_brush)   # Shift-drag rubber-band → row indices + bounds
+view.on(qv.PickEvent,   on_click)   # click a point
+view.on(qv.RangeEvent,  on_zoom)    # pan/zoom (throttled)
+view.on(qv.HoverEvent,  on_hover)
+```
+
+For lazy data, the materialize step runs on a worker thread and the View keeps
+the last render up until the new one is ready.
+
+### Theming
+A `Theme` carries `Color`s and a `Palette`. `Theme.light()` / `dark()` are built
+in; `Theme.from_qt_app()` matches the host app's light/dark mode.
+
 ## Examples
 
-These assume a `data` dict with a few numeric columns (e.g. `x`, `t`, `y`,
-`signal`, `noisy`); wrap each snippet in the `QApplication` boilerplate above to run.
+Runnable, self-contained scripts in [`examples/`](examples) — each has a
+`build()` (returns the widget) and a `main()` (shows a window):
 
-**Compose** — overlay with `*` (same axes), lay out with `+` (side by side):
-
-```python
-overlay = qv.Scatter(data, x="x", y="noisy") * qv.Curve(data, x="x", y="signal")
-side_by_side = qv.Scatter(data, x="x", y="y") + qv.Histogram(data, column="y")
+```bash
+uv run python examples/01_hello.py
 ```
 
-**Theme** — match a dark host app:
-
-```python
-view = qv.View(overlay, theme=qv.Theme.dark())     # or Theme.from_qt_app()
-```
-
-**Choose / switch backends** at runtime:
-
-```python
-view = qv.View(root, backend="matplotlib")   # "pyqtgraph" | "matplotlib" | "auto"
-view.set_backend("pyqtgraph")                # preserves zoom + subscriptions
-```
-
-**Interact** — subscribe to typed events (pan/zoom, Shift-drag to brush-select):
-
-```python
-view = qv.View(qv.Scatter(data, x="x", y="y"))
-view.on(qv.SelectEvent, lambda e: print(f"brushed {len(e.indices)} points"))
-view.on(qv.RangeEvent,  lambda e: print("viewport:", e.x))
-```
-
-**Linked panels** — shared X axis across a grid:
-
-```python
-dash = qv.Layout(
-    [qv.Scatter(data, x="t", y="noisy"), qv.Curve(data, x="t", y="signal")],
-    options=qv.LayoutOptions(cols=2, link_x=True),
-)
-```
-
-**Mixed backends in one window** — a pyqtgraph pane beside a matplotlib pane:
-
-```python
-mixed = qv.Layout(
-    [qv.Scatter(data, x="x", y="y", backend_hint="pyqtgraph"),
-     qv.Curve(data,   x="x", y="y", backend_hint="matplotlib")],
-    kind="splitter",   # or "tabs" | "dock" | "grid"
-)
-# view.on(...) still sees one merged event stream across both panes.
-```
-
-A runnable 3-panel dashboard lives in [`examples/dashboard_native.py`](examples/dashboard_native.py).
+`01_hello` · `02_composition` · `03_backends` · `04_theming` · `05_interaction`
+· `06_data_binding` · `07_mixed_backends` · `08_gallery` · `dashboard_native`
+(3-panel linked dashboard). See [`examples/README.md`](examples/README.md).
 
 ## What works today
 
@@ -110,10 +135,11 @@ A runnable 3-panel dashboard lives in [`examples/dashboard_native.py`](examples/
 | **Backends** | pyqtgraph (native, default) · matplotlib (optional extra) |
 | **Elements** | Scatter · Curve · Bars · Histogram · Image · Heatmap · ErrorBars · Spread |
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
-| **Data inputs** | dict · numpy · pandas · Arrow (container-agnostic, named columns) |
+| **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
+| **Data inputs** | dict · numpy · pandas · Arrow (container-agnostic) |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
-| **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates |
+| **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
 | **Export** | PNG (pyqtgraph) · PNG / SVG / PDF (matplotlib) |
 
 ## Roadmap
@@ -122,23 +148,22 @@ A runnable 3-panel dashboard lives in [`examples/dashboard_native.py`](examples/
 |-------|------|--------|
 | 1 | Core data model + composition + **pyqtgraph** backend | ✅ done |
 | 2 | **matplotlib** backend | ✅ done |
-| — | Mixed-backend layouts + native interaction | ✅ done |
+| — | Mixed-backend layouts · native interaction · functional data binding | ✅ done |
+| 4–5 | **Lazy adapters** (xarray / zarr / Dask) · **Datashader** for 10M+ points · **Reactive** `Signal` binding | in progress |
+| 5 | **Data sources** (Parquet / DuckDB / Dask) · **webengine** backend rehome (Plotly/Bokeh) | planned |
 | 3 | **HoloViews adapter** (`from_holoviews`) | planned |
-| 4 | **Reactive** `Signal` binding · **Datashader** for 10M+ points | planned |
-| 5 | **Data sources** (Parquet / DuckDB / Dask) · lazy xarray/zarr/Dask adapters · **webengine** backend rehome (Plotly/Bokeh) | planned |
 | 6 | Docs, gallery, **`qtviz 0.1` on PyPI** | planned |
 | 7+ | **qtviz Studio** — a desktop app on top of the library | exploring |
 
-The data layer is lazy-first by design, so out-of-core containers (Dask, zarr)
-and query-backed sources slot in as adapters without changing the Element API.
-
 ## Architecture
 
-`Element` (pure data) → negotiation picks a `Backend` → the backend's renderers
-build native primitives → a `RenderHandle` owns the `QWidget` and a typed
-`EventBus`. Backends are registered, never imported by the core, so adding one
-touches only its own directory. Design docs live in [`design/`](design/)
-(`spec.md`, `development-plan.md`, `roadmap.md`).
+`Element` (pure data) → negotiation picks a `Backend` → the resolve pipeline
+turns channel accessors into arrays (off-thread for lazy data) → the backend's
+renderers build native primitives → a `RenderHandle` owns the `QWidget` and a
+typed `EventBus`. Backends and data adapters are both registered, never imported
+by the core, so each new one is additive. Design docs live in
+[`design/`](design/) (`spec.md`, `development-plan.md`, `roadmap.md`,
+`milestone-*.md`, `discussion-items.md`).
 
 ## License
 
