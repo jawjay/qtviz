@@ -44,6 +44,7 @@ from .elements import (
     Scatter,
     Spread,
 )
+from .reactive import Signal, batch, derived, effect, signal
 
 __all__ = [
     # elements
@@ -61,6 +62,8 @@ __all__ = [
     "Capabilities", "set_default_backend", "set_backend_priority",
     # events
     "Event", "RangeEvent", "PickEvent", "SelectEvent", "HoverEvent", "TapEvent",
+    # reactive (Phase 4)
+    "Signal", "signal", "derived", "effect", "batch",
     # subsystems
     "data", "backends", "errors", "threading",
 ]

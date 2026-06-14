@@ -35,6 +35,7 @@ uv sync --extra matplotlib --extra dev
 | 18 | [`18_webengine_raw_figure.py`](18_webengine_raw_figure.py) | **`RawFigure`** — host an existing Plotly figure (a 3-D surface) qtviz doesn't natively model; events still bridge back. |
 | 19 | [`19_webengine_holoviews.py`](19_webengine_holoviews.py) | **`RawFigure` + HoloViews** — a HoloViews figure rendered via Bokeh, with tap / box-select / range arriving as qtviz typed events (W3b). |
 | 20 | [`20_mixed_native_web.py`](20_mixed_native_web.py) | **Mixed backends** — a native pyqtgraph pane beside a webengine Plotly pane in one window, sharing one event stream (W4). |
+| 21 | [`21_reactive_crossfilter.py`](21_reactive_crossfilter.py) | **Reactive crossfilter** — brush one view, a `Signal` + `derived` re-renders another with the selected rows (spec §9). Native, offline. |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):

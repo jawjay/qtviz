@@ -27,7 +27,7 @@ and reactive signals (see the as-built note below and `roadmap.md` §0).
 | Data layer — accessors + lazy adapters (dask/xarray/zarr) | concrete | ✅    |
 | Datashader — big-data raster + viewport re-aggregation  | concrete   | ✅    |
 | HoloViews adapter                                       | sketch     | ⬜    |
-| Reactive `Signal` binding (View-root, S-style)          | concrete   | ⬜    |
+| Reactive `Signal` binding (View-root, S-style)          | concrete   | ✅    |
 | Data sources — Parquet / DuckDB / SQL                   | sketch     | ⬜    |
 | webengine backend rehome                                | sketch     | ⬜    |
 | Release `0.1`                                           | scaffold   | ⬜    |

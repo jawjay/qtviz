@@ -282,6 +282,7 @@ See [`examples/README.md`](examples/README.md) for the full index.
 | **Data inputs** | dict · NumPy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
 | **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
+| **Reactive** | `signal` / `derived` / `effect` / `batch` (S-style auto-tracking) · `View(Signal[Node])` re-renders on change · crossfilter / linked brushing |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
 | **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
 | **Export** | PNG (pyqtgraph) · PNG / SVG / PDF (matplotlib) · PNG (webengine) |
@@ -309,6 +310,9 @@ are the current frontier.
   out-of-core, backend-agnostic.
 - ✅ **Color / size encoding** — `color_by` / `size_by` with automatic legends and
   colorbars.
+- ✅ **Reactive `Signal` binding** — S-style `signal` / `derived` / `effect` / `batch`;
+  `View(Signal[Node])` re-renders on change; linked brushing / crossfilter falls out
+  of `Signal` + `derived` + `View.on` (no manual wiring).
 
 ### In progress — the webengine backend (Phase 5)
 
@@ -325,8 +329,6 @@ are the current frontier.
 
 ### Planned
 
-- ◻ **Reactive `Signal` binding** — a signal-bound channel that re-renders on
-  change; linked brushing across views without manual wiring.
 - ◻ **Data sources** — Parquet / DuckDB / SQL behind the lazy data contract, with
   background queries and a versioned result cache.
 - ◻ **HoloViews adapter** — `from_holoviews(obj)` translating common hv elements to

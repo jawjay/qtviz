@@ -25,7 +25,7 @@ data core had to come first. Net effect:
 | 1 | core compose + pyqtgraph | ✅ |
 | 2 | matplotlib backend | ✅ |
 | 3 | HoloViews adapter | ⬜ not started (independent; Spike-P2 gated) |
-| 4 | reactive + Datashader | **Datashader ✅**; reactive `Signal` ⬜ |
+| 4 | reactive + Datashader | **Datashader ✅**; **reactive `Signal` ✅** (View-root, S-style; crossfilter) |
 | 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0–W4 ✅ · W5.1a base64 transport ✅ · W5-offline (no-CDN) ✅**; W5.2 binary-fetch tail ⬜ deferred — see `webengine-arrow-transport.md` §10) |
 | 6 | release `0.1` | ⬜ |
 
@@ -245,9 +245,9 @@ breakage early.
 
 | Deliverable                                          | Acceptance                                           | Status |
 |------------------------------------------------------|-------------------------------------------------------|--------|
-| `qtviz.reactive` — Signal / derived / effect         | <500 LOC, no async, dispose semantics                | ⬜ |
-| `Element(data=signal(...))` reactive binding          | Changing the signal re-renders the element          | ⬜ |
-| Linked brushing across views via signals              | Brush on one Scatter filters another Element         | ⬜ |
+| `qtviz.reactive` — Signal / derived / effect / batch  | S-style auto-tracking; GUI-thread; dispose semantics | ✅ |
+| **View-root** reactive binding (`View(Signal[Node])`) | Changing the signal re-renders the View (debounced); Elements stay pure — D38 chose View-root over `Element(data=signal)` | ✅ |
+| Linked brushing across views via signals              | Brush on one Scatter filters another (example 21)    | ✅ |
 | `ext.datashader` integration                          | `Scatter(table, scale="datashader")` aggregates out-of-core; backend-agnostic raster | ✅ |
 | Viewport-driven re-aggregation                        | Pan/zoom triggers debounced re-aggregation          | ✅ |
 | Crossfilter rewrite                                    | `examples/dashboard_crossfilter.py` rewritten in ≤80 LOC using signals + native Scatter | ⬜ (needs reactive) |

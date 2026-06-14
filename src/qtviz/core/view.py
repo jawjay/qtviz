@@ -15,7 +15,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
-from PySide6.QtCore import QObject, Qt, Signal, Slot
+from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 from ..data import node_is_lazy, resolve_node
@@ -64,10 +64,15 @@ def _shared_resolver() -> _AsyncResolver:
     return _resolver
 
 
+def _is_reactive(root) -> bool:
+    """A reactive root is a Signal[Node] — duck-typed (get + subscribe) so core
+    doesn't import the reactive package. Nodes (Element/Overlay/Layout) lack these."""
+    return callable(getattr(root, "get", None)) and callable(getattr(root, "subscribe", None))
+
+
 class View(QWidget):
     def __init__(self, root, *, backend="auto", theme: Theme | None = None, parent=None) -> None:
         super().__init__(parent)
-        self._root = root
         self._theme = theme or Theme.light()
         self._backend_choice = backend
         self._subs: list[tuple] = []          # (event_type, cb, throttle_ms)
@@ -78,8 +83,16 @@ class View(QWidget):
         self._pending_state = None
         self._build_id = 0
         self._connected = False
+        self._reactive_timer = None
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
+        # Reactive root (spec §9 / D38): a Signal[Node] re-renders the View on change.
+        if _is_reactive(root):
+            self._root = root.get()
+            sub = root.subscribe(self._on_root_signal)
+            self.destroyed.connect(lambda: sub.dispose())  # no self-ref in the slot
+        else:
+            self._root = root
         self._build()
 
     def _backend_name(self) -> str:
@@ -143,6 +156,16 @@ class View(QWidget):
             self._superseded = self._handle
             self._handle = None
         self._build()
+
+    def _on_root_signal(self, new_node) -> None:
+        """Root `Signal[Node]` changed → re-render, debounced to one rebuild per Qt
+        tick (D40); a `derived` may notify several times in a batch."""
+        self._root = new_node
+        if self._reactive_timer is None:
+            self._reactive_timer = QTimer(self)
+            self._reactive_timer.setSingleShot(True)
+            self._reactive_timer.timeout.connect(self._rebuild)
+        self._reactive_timer.start(0)
 
     @require_gui_thread
     def set_backend(self, name_or_backend) -> None:
