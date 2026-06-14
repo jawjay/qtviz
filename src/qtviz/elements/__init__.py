@@ -8,10 +8,12 @@ from .errorbars import ErrorBars
 from .heatmap import Heatmap
 from .histogram import Histogram
 from .image import Image
+from .raw_figure import RawFigure
 from .scatter import Scatter
 from .spread import Spread
 
 __all__ = [
     "Scatter", "Curve", "Bars", "Image",
     "Heatmap", "Histogram", "ErrorBars", "Spread",
+    "RawFigure",
 ]

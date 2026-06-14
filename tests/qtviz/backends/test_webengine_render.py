@@ -55,6 +55,15 @@ def test_click_message_emits_pick_event(web, table, qtbot):
     handle.dispose()
 
 
+def test_raw_plotly_figure_renders(web, qtbot):
+    go = pytest.importorskip("plotly.graph_objects")
+    fig = go.Figure(go.Scatter(x=[1, 2, 3], y=[1, 4, 9], mode="markers"))
+    handle = web.render(qv.RawFigure(fig), theme=qv.Theme.light())
+    qtbot.addWidget(handle.widget)
+    assert handle.backend_name == "webengine"
+    handle.dispose()
+
+
 def test_png_export_writes_a_file(web, table, qtbot, tmp_path):
     handle = web.render(qv.Scatter(table, x="x", y="y"), theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

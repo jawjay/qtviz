@@ -40,6 +40,7 @@ from .elements import (
     Heatmap,
     Histogram,
     Image,
+    RawFigure,
     Scatter,
     Spread,
 )
@@ -47,6 +48,7 @@ from .elements import (
 __all__ = [
     # elements
     "Scatter", "Curve", "Bars", "Image", "Heatmap", "Histogram", "ErrorBars", "Spread",
+    "RawFigure",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # data binding (accessors, D14) + shape overrides (D17) + raster routing (Phase 4)

@@ -18,6 +18,7 @@ from ...core.backend import RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.event import EventBus, RangeEvent
 from ...core.threading import require_gui_thread
+from ...elements import RawFigure
 from . import _figure, _translate
 from .ext.plotly.backend import PlotlyBackend
 from .view import PlotView
@@ -65,8 +66,10 @@ class WebEngineRenderHandle(RenderHandle):
             if self._x_range is not None and self._y_range is not None:
                 self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
             return
-        ev = _translate.translate(name, payload, traces=self._traces, surface_id=self._surface_id)
-        if ev is not None:
+        events = _translate.translate(
+            name, payload, traces=self._traces, surface_id=self._surface_id
+        )
+        for ev in events:
             self.event_bus.emit(ev)
 
     def capture_state(self) -> ViewState:
@@ -118,7 +121,8 @@ class WebEngineBackend:
             self.renderers.register(element_type, _figure._TRACE_BUILDERS[element_type])
 
     def supports(self, element_type: type) -> bool:
-        return self.renderers.get(element_type) is not None
+        # RawFigure is a passthrough (D26) — no trace renderer, hosted directly.
+        return element_type is RawFigure or self.renderers.get(element_type) is not None
 
     def can_host(self, kind: str) -> bool:
         # No native mixed panes — the LayoutHost composes per-pane WebBridgeViews.
@@ -126,11 +130,39 @@ class WebEngineBackend:
 
     @require_gui_thread
     def render(self, node, *, theme, parent=None) -> WebEngineRenderHandle:
+        if isinstance(node, RawFigure):
+            return self._render_raw(node, parent, theme)
+        # native-element path: build one Plotly figure from the traces. A RawFigure
+        # nested in an Overlay is rejected here by `_figure.build` (it's standalone).
         fig, source_ids = _figure.build(node, theme)
         host = PlotlyBackend(fig)
         view = PlotView(host, parent=parent)
         bus = EventBus()
         return WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme)
+
+    def _render_raw(self, node: RawFigure, parent, theme) -> WebEngineRenderHandle:
+        """Host an existing Plotly/Bokeh/HoloViews figure unchanged (D31). The
+        whole figure is one event source (its own id). Bokeh/HoloViews figures
+        render in W3a but emit typed events only once W3b adds the Bokeh map."""
+        host = _make_host(node.kind, node.figure)
+        view = PlotView(host, parent=parent)
+        bus = EventBus()
+        return WebEngineRenderHandle(view, bus, host, [node.id], uuid.uuid4().hex, theme)
+
+
+def _make_host(kind: str, figure):
+    """The legacy PlotBackend host for a raw figure of the given library."""
+    if kind == "plotly":
+        return PlotlyBackend(figure)
+    if kind == "bokeh":
+        from .ext.bokeh.backend import BokehBackend  # noqa: PLC0415
+
+        return BokehBackend(figure)
+    if kind == "holoviews":
+        from .ext.holoviews.backend import HoloViewsBackend  # noqa: PLC0415
+
+        return HoloViewsBackend(figure)
+    raise ValueError(f"unknown RawFigure kind {kind!r}")
 
 
 backend = WebEngineBackend()

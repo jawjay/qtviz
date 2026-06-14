@@ -92,7 +92,9 @@ def resolve_node(node):
         if not channels:
             # gridded element (e.g. Image): no tabular channels, but a lazy grid
             # (dask/zarr) must still be materialized here, off the GUI thread.
-            if getattr(node.data, "is_lazy", False):
+            # `getattr(..., "data", None)` keeps data-less elements (RawFigure)
+            # passing through untouched.
+            if getattr(getattr(node, "data", None), "is_lazy", False):
                 return node._replace_data(node.data.materialize())
             return node
         arrays = node.data.resolve_channels(channels)

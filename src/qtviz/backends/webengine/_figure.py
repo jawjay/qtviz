@@ -19,8 +19,18 @@ import numpy as np
 
 from ...core.compose import Overlay
 from ...data import resolve_node
-from ...elements import Bars, Curve, ErrorBars, Heatmap, Histogram, Image, Scatter, Spread
-from ...errors import RendererMissingError
+from ...elements import (
+    Bars,
+    Curve,
+    ErrorBars,
+    Heatmap,
+    Histogram,
+    Image,
+    RawFigure,
+    Scatter,
+    Spread,
+)
+from ...errors import IncompatibleOverlayError, RendererMissingError
 
 _SIZE_LO, _SIZE_HI = 5.0, 18.0
 _DASH = {"solid": "solid", "dashed": "dash", "dotted": "dot", "dashdot": "dashdot"}
@@ -219,6 +229,10 @@ def build(node, theme) -> tuple[dict, list[str]]:
     traces: list[dict] = []
     source_ids: list[str] = []
     for idx, element in enumerate(_elements(node)):
+        if isinstance(element, RawFigure):
+            raise IncompatibleOverlayError(
+                "RawFigure is a whole figure and can't be overlaid; render it on its own"
+            )
         builder = _TRACE_BUILDERS.get(type(element))
         if builder is None:
             raise RendererMissingError(

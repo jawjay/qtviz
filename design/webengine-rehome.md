@@ -200,10 +200,23 @@ common elements native, everything else still renders.
 | **W0** ✅ | Physical move: whole `qtwebplot` package → `backends/webengine/`; redirect import shim; GUI tests skip-gated | existing bridge tests pass on new paths ✅ |
 | **W1** ✅ | `WebEngineBackend` + `WebEngineRenderHandle`; render one `Scatter` via Plotly; register; declare capabilities; range + pick events | headless: figure+event map green; live draw/events display-gated (offscreen segfault) |
 | **W2** ✅ | Element→Plotly renderers for the 8 types; theme translation; `capture/restore_state`; png export | backend-conformance green for webengine (forced: 36 passed); default-gated by the teardown segfault |
-| **W3a** | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure — all three *render*); Plotly typed events; **per-element `SelectEvent` routing** (D27); Plotly brush→`SelectEvent` | a raw figure of each lib renders; a Plotly raw figure + native Overlay emit per-element typed events |
+| **W3a** ✅ | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure — all three *render*); Plotly typed events; **per-element `SelectEvent` routing** (D27); Plotly brush→`SelectEvent` | a raw figure of each lib renders; a Plotly raw figure + native Overlay emit per-element typed events |
 | **W3b** | Bokeh event-translation map (`bokeh.tap`/`selection`/`ranges_update` → typed events) | a raw HoloViews/Bokeh object's brush emits typed events |
 | **W4** | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
 | **W5** (Phase 5) | Arrow IPC transport for large payloads | <100 ms for a representative big payload |
+
+> **Status (W3a ✅ landed).** `qv.RawFigure(figure, kind=None)` (`elements/raw_figure.py`)
+> — a first-class, standalone passthrough element that auto-detects the library
+> (override with `kind=`) and negotiates only to webengine (D31). `WebEngineBackend`
+> branches on it and hosts via `PlotlyBackend`/`BokehBackend`/`HoloViewsBackend`; an
+> Overlay containing a `RawFigure` raises `IncompatibleOverlayError`. **D27 done:**
+> `translate()` now returns a list and a `plotly.selection` emits **one `SelectEvent`
+> per source element** (grouped by trace→source-id, matching native pyqtgraph); a raw
+> figure emits one under its own id. Plotly raw figures bridge typed events; bokeh/hv
+> raw figures render but get events in **W3b**. `resolve_node` hardened to pass
+> data-less elements through. Headless tests cover detection/negotiation/overlay-reject
+> + multi-trace selection; live raw render is display-gated. Suite: 269 passed, 22
+> skipped (forced: 57 passed). Example 18 hosts a Plotly 3-D surface.
 
 After W3, the native HoloViews adapter (Phase 3) can be built against a real
 fallback. W4 retires the legacy composition layer.

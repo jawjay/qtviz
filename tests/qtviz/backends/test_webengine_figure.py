@@ -104,39 +104,56 @@ _TRACES = ["scatter-id"]
 _SURFACE = "surface-id"
 
 
-def _t(name, payload):
-    return _translate.translate(name, payload, traces=_TRACES, surface_id=_SURFACE)
+def _t(name, payload, traces=_TRACES):
+    return _translate.translate(name, payload, traces=traces, surface_id=_SURFACE)
 
 
 def test_click_maps_to_pick_event():
-    ev = _t("plotly.click", {"points": [{"trace_index": 0, "point_index": 7, "x": 1.5, "y": 2.5}]})
-    assert isinstance(ev, qv.PickEvent)
-    assert ev.source_id == "scatter-id"
-    assert ev.point_index == 7
-    assert ev.x == 1.5 and ev.y == 2.5
+    evs = _t("plotly.click", {"points": [{"trace_index": 0, "point_index": 7, "x": 1.5, "y": 2.5}]})
+    assert len(evs) == 1 and isinstance(evs[0], qv.PickEvent)
+    assert evs[0].source_id == "scatter-id"
+    assert evs[0].point_index == 7
+    assert evs[0].x == 1.5 and evs[0].y == 2.5
 
 
 def test_hover_and_unhover_map_to_hover_event():
     payload = {"points": [{"trace_index": 0, "point_index": 3, "x": 1.0, "y": 2.0}]}
     hov = _t("plotly.hover", payload)
-    assert isinstance(hov, qv.HoverEvent) and hov.point_index == 3
+    assert len(hov) == 1 and isinstance(hov[0], qv.HoverEvent) and hov[0].point_index == 3
     unhov = _t("plotly.unhover", {"points": []})
-    assert isinstance(unhov, qv.HoverEvent) and unhov.point_index is None
+    assert len(unhov) == 1 and unhov[0].point_index is None
 
 
-def test_selection_maps_to_select_event_with_indices_and_bounds():
+def test_single_trace_selection_emits_one_select_event():
     payload = {
-        "points": [{"point_index": 1}, {"point_index": 3}],
+        "points": [{"trace_index": 0, "point_index": 1}, {"trace_index": 0, "point_index": 3}],
         "range": {"x": [0.0, 5.0], "y": [-1.0, 1.0]},
     }
-    ev = _t("plotly.selection", payload)
-    assert isinstance(ev, qv.SelectEvent)
-    assert ev.indices == [1, 3]
-    assert ev.bounds == (0.0, -1.0, 5.0, 1.0)
+    evs = _t("plotly.selection", payload)
+    assert len(evs) == 1 and isinstance(evs[0], qv.SelectEvent)
+    assert evs[0].source_id == "scatter-id"
+    assert evs[0].indices == [1, 3]
+    assert evs[0].bounds == (0.0, -1.0, 5.0, 1.0)
 
 
-def test_unknown_message_returns_none():
-    assert _t("plotly.attached", {"ok": True}) is None
+def test_multi_trace_selection_emits_one_event_per_source(table):
+    # an Overlay → two traces "a" and "b"; a brush selecting points from both
+    # yields one SelectEvent per source element (matches native pyqtgraph).
+    payload = {
+        "points": [
+            {"trace_index": 0, "point_index": 2},
+            {"trace_index": 1, "point_index": 5},
+            {"trace_index": 1, "point_index": 9},
+        ],
+        "range": {"x": [0.0, 1.0], "y": [0.0, 1.0]},
+    }
+    evs = _t("plotly.selection", payload, traces=["a", "b"])
+    by_src = {e.source_id: e.indices for e in evs}
+    assert by_src == {"a": [2], "b": [5, 9]}
+
+
+def test_unknown_message_returns_empty():
+    assert _t("plotly.attached", {"ok": True}) == []
 
 
 def test_parse_relayout_both_forms_and_partial():

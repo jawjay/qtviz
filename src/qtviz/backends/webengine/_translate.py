@@ -35,40 +35,62 @@ def _first_point(payload: dict):
     return pts[0] if pts else None
 
 
-def translate(name: str, payload, *, traces: list[str], surface_id: str):
-    """Map a self-contained Plotly message to a typed event, or None."""
+def translate(name: str, payload, *, traces: list[str], surface_id: str) -> list:
+    """Map a self-contained Plotly message to typed events (0, 1, or — for a
+    multi-element selection — N)."""
     if not isinstance(payload, dict):
-        return None
+        return []
 
     if name == "plotly.click":
         p = _first_point(payload)
         if p is None:
-            return None
+            return []
         pi = p.get("point_index")
-        return PickEvent(_src(p.get("trace_index"), traces, surface_id),
-                         int(pi) if pi is not None else -1, _f(p.get("x")), _f(p.get("y")))
+        return [PickEvent(_src(p.get("trace_index"), traces, surface_id),
+                          int(pi) if pi is not None else -1, _f(p.get("x")), _f(p.get("y")))]
 
     if name == "plotly.hover":
         p = _first_point(payload)
         if p is None:
-            return None
+            return []
         pi = p.get("point_index")
-        return HoverEvent(_src(p.get("trace_index"), traces, surface_id),
-                          int(pi) if pi is not None else None, _f(p.get("x")), _f(p.get("y")))
+        return [HoverEvent(_src(p.get("trace_index"), traces, surface_id),
+                           int(pi) if pi is not None else None, _f(p.get("x")), _f(p.get("y")))]
 
     if name == "plotly.unhover":
-        return HoverEvent(traces[0] if traces else surface_id, None, 0.0, 0.0)
+        return [HoverEvent(traces[0] if traces else surface_id, None, 0.0, 0.0)]
 
     if name == "plotly.selection":
-        pts = payload.get("points") or []
-        indices = [int(p["point_index"]) for p in pts if p.get("point_index") is not None]
-        rng = payload.get("range") or {}
-        xr = rng.get("x") or (0.0, 0.0)
-        yr = rng.get("y") or (0.0, 0.0)
-        bounds = (_f(xr[0]), _f(yr[0]), _f(xr[1]), _f(yr[1]))
-        return SelectEvent(surface_id, indices, bounds)
+        return _selection_events(payload, traces, surface_id)
 
-    return None
+    return []
+
+
+def _selection_events(payload: dict, traces: list[str], surface_id: str) -> list:
+    """One SelectEvent per source element (matches native pyqtgraph, D27): group
+    the selected points by trace → source-id; emit one event per source in trace
+    order (empty indices for an unselected source), so linked brushing keeps each
+    element's identity."""
+    rng = payload.get("range") or {}
+    xr = rng.get("x") or (0.0, 0.0)
+    yr = rng.get("y") or (0.0, 0.0)
+    bounds = (_f(xr[0]), _f(yr[0]), _f(xr[1]), _f(yr[1]))
+
+    by_source: dict[str, list[int]] = {}
+    for p in payload.get("points") or []:
+        pi = p.get("point_index")
+        if pi is None:
+            continue
+        by_source.setdefault(_src(p.get("trace_index"), traces, surface_id), []).append(int(pi))
+
+    order: list[str] = []
+    for sid in (traces or [surface_id]):
+        if sid not in order:
+            order.append(sid)
+    for sid in by_source:  # a source seen only via points (shouldn't happen, but safe)
+        if sid not in order:
+            order.append(sid)
+    return [SelectEvent(sid, by_source.get(sid, []), bounds) for sid in order]
 
 
 def _axis_range(update: dict, prefix: str):
