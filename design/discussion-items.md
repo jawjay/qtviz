@@ -318,7 +318,13 @@ roadmap Phase 1 gate (linked brushing) at M4.
 **Recommendation.** **C** (modifier-drag select) — no persistent UI, doesn't
 fight zoom, matches common plotting tools. Compute indices per element from
 its snapshot x/y against the dragged bounds. **Blocks.** M4.
-**Status:** open — decide during M4 build.
+
+**Resolution (per user).** Don't layer on pyqtgraph's defaults and manage
+conflicts — **own the mouse model**. Implemented `QtvizViewBox(pg.ViewBox)`
+(`backends/pyqtgraph/_interaction.py`): left-drag pan, wheel zoom, **Shift+
+left-drag** rubber-band select → `SelectEvent`, left-click(empty) → `TapEvent`,
+range → `RangeEvent`. Programmatic `select_bounds()` is the same path the
+gesture calls (and the deterministic test hook). **Status:** ✅ resolved.
 
 ---
 
@@ -333,8 +339,8 @@ its snapshot x/y against the dragged bounds. **Blocks.** M4.
 | D5 | threading enforcement (entry-only) | M4 | accepted — revisit at M4 |
 | D6 | qtwebplot→qtviz rehome (Theme early) | Phase 0 | accepted — revisit at Phase 0 |
 | D7 | update() rebuild flicker/coalesce | M3/M4 | accepted — revisit if seen |
-| D8 | event source identity (axes vs element) | M4 | accepted — apply §2.10 at M4 |
+| D8 | event source identity (axes vs element) | M4 | ✅ applied → spec §2.10 |
 | D9 | capabilities scalar vs context | M2 | accepted (scalar) — revisit on mis-route |
 | D10 | negotiation memoization (none) | M2 | accepted (no cache) |
 | D11 | composite export semantics | M5 | accepted — revisit at M5 |
-| D12 | brush selection mechanism (pyqtgraph) | M4 | open — decide during M4 |
+| D12 | brush selection mechanism (pyqtgraph) | M4 | ✅ resolved → custom QtvizViewBox (Shift-drag) |

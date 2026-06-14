@@ -83,6 +83,12 @@ class _Throttle:
             self._cb(ev)
             self._timer.start(self._ms)
 
+    def flush(self) -> None:
+        """Deliver any coalesced trailing payload immediately (test hook)."""
+        if self._has_pending:
+            ev, self._pending, self._has_pending = self._pending, None, False
+            self._cb(ev)
+
 
 class EventBus:
     """Typed, throttled event delivery. One bus per RenderHandle (§2.10)."""
@@ -106,20 +112,32 @@ class EventBus:
         throttle_ms: int | None = None,
     ) -> Disposable:
         ms = self.DEFAULT_THROTTLE_MS.get(event_type, 0) if throttle_ms is None else throttle_ms
-        sink = _Throttle(cb, ms).submit if ms and ms > 0 else cb
-        entry = (cb, sink)
+        throttle = _Throttle(cb, ms) if ms and ms > 0 else None
+        sink = throttle.submit if throttle is not None else cb
+        entry = (sink, throttle)
         self._subs[event_type].append(entry)
 
         def teardown() -> None:
             lst = self._subs.get(event_type)
-            if lst and entry in lst:
-                lst.remove(entry)
+            if lst:
+                for i, e in enumerate(lst):
+                    if e is entry:
+                        del lst[i]
+                        break
 
         return Disposable(teardown)
 
     def emit(self, ev: Event) -> None:
-        for _cb, sink in list(self._subs.get(type(ev), ())):
+        for sink, _throttle in list(self._subs.get(type(ev), ())):
             sink(ev)
+
+    def _drain(self) -> None:
+        """Flush all coalesced throttle payloads now — deterministic delivery
+        for tests; in a running app the QTimer does this."""
+        for subs in self._subs.values():
+            for _sink, throttle in subs:
+                if throttle is not None:
+                    throttle.flush()
 
     def dispose(self) -> None:
         self._subs.clear()

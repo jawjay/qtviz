@@ -42,9 +42,8 @@ def render_scatter(element: Scatter, ctx):
         pen=None,
         size=element.size or 6,
         useCache=True,
+        hoverable=True,
     )
-    if element.pyqtgraph_use_opengl:
-        item.setData(useCache=True)
     ctx.parent_axes.addItem(item)
     return item
 

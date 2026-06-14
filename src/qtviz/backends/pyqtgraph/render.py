@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 
 import pyqtgraph as pg
@@ -13,6 +14,9 @@ from ...core.element import Element
 from ...core.event import EventBus
 from ...core.threading import require_gui_thread
 from ...errors import RendererMissingError
+from . import _events
+from ._axes import link_axes
+from ._interaction import QtvizViewBox
 from ._renderers import RENDERERS
 from ._theme import apply_theme, style_plot
 
@@ -38,6 +42,10 @@ class PgRenderHandle(RenderHandle):
         self._plots = plots
         self._root = root
         self._backend = backend
+
+    @property
+    def plots(self):
+        return self._plots
 
     def _vb(self):
         return self._plots[0].getViewBox() if self._plots else None
@@ -114,11 +122,15 @@ class PyQtGraphBackend:
             for i, child in enumerate(node.children):
                 r, c = divmod(i, ncols)
                 self._render_cell(child, widget, theme, bus, plots, r, c)
+            opts = node.options
+            if opts.link_x or opts.link_y:
+                link_axes(plots, link_x=opts.link_x, link_y=opts.link_y)
         else:
             self._render_cell(node, widget, theme, bus, plots, 0, 0)
 
     def _render_cell(self, node, widget, theme, bus, plots, row, col) -> None:
-        plot = widget.addPlot(row=row, col=col)
+        vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex)
+        plot = widget.addPlot(row=row, col=col, viewBox=vb)
         style_plot(plot, theme)
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
@@ -132,4 +144,5 @@ class PyQtGraphBackend:
                 f"pyqtgraph has no renderer for {type(element).__name__}"
             )
         ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self, parent_axes=plot)
-        fn(element, ctx)
+        item = fn(element, ctx)
+        _events.attach(element, item, ctx)

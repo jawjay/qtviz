@@ -658,6 +658,15 @@ class TapEvent(Event):
 The Phase 1 vocabulary. Backends emit only what their `Capabilities`
 declare; capabilities-not-declared = events-never-fired.
 
+**Source identity (Q-D8, applied M4).** `source_id` is *surface-level* for
+axes events (`RangeEvent`, `TapEvent`) — minted per rendering surface —
+and *element-level* for point events (`PickEvent`, `HoverEvent`) — the
+Element's `id`. `SelectEvent` is element-level *with bounds*: a brush emits
+one `SelectEvent` per selectable element, carrying that element's `id`, the
+in-bounds row `indices`, and the `bounds` (so surface-level subscribers can
+react too). This is what lets linked brushing route by element while a
+viewport zoom routes by surface.
+
 #### EventBus + throttling
 
 Per Q7 (resolved): subscriptions are throttled by default, with per-event
