@@ -267,6 +267,10 @@ mpl-rendered Datashader image.
 > in-memory lazy objects), out-of-core and off-thread [D1, D17, `milestone-data-core.md`].
 > What remains here is the *source* layer below (`DataSource` reading Parquet/DuckDB/
 > SQL/CSV from disk or a DB) and the **webengine backend rehome** — both still ⬜.
+> The rehome is planned in detail in **`webengine-rehome.md`** (wrap the legacy
+> Qt↔JS bridge behind the native Backend protocol; supersede its layouts/linking
+> with qtviz's; W0–W5 stages) — it should land before/with the HoloViews adapter,
+> which falls back to it for elements qtviz doesn't natively model.
 
 | Deliverable                                          | Acceptance                                           |
 |------------------------------------------------------|-------------------------------------------------------|

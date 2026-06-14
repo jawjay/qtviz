@@ -210,7 +210,8 @@ renderers build native primitives → a `RenderHandle` owns the `QWidget` and a
 typed `EventBus`. Backends and data adapters are both registered, never imported
 by the core, so each new one is additive. Design docs live in
 [`design/`](design/) (`spec.md`, `development-plan.md`, `roadmap.md`,
-`milestone-*.md`, `discussion-items.md`, `capabilities-gaps.md`).
+`milestone-*.md`, `discussion-items.md`, `capabilities-gaps.md`,
+`webengine-rehome.md`).
 
 ## License
 

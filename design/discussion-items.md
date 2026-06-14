@@ -634,3 +634,10 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D21 | dynamic viewport re-aggregation seam | Phase 4b | ✅ RasterController + RasterTarget (pyqtgraph + matplotlib) |
 | D22 | datashader coverage (lines, categorical color) | Phase 4 | ✅ points + lines + value/categorical agg; deeper gaps → `capabilities-gaps.md` |
 | D23 | color/size encoding — shared mapping + legends | toward HoloViews | ✅ `core/encoding.py`; native `Scatter` `color_by`/`size_by` + auto legend (`milestone-color-encoding.md`) |
+| D24 | webengine default Element renderer (Plotly vs Bokeh) | webengine rehome | open — recommend Plotly (`webengine-rehome.md` §7) |
+| D25 | webengine async render contract | webengine rehome | open — recommend handle-now + command queue, no View change |
+| D26 | raw-figure passthrough element vs escape hatch | webengine rehome | open — affects negotiation + `from_holoviews` fallback |
+| D27 | webengine event/selection fidelity mapping | webengine rehome | open — library events → qtviz typed events |
+| D28 | `from_holoviews` fallback to webengine | Phase 3 (depends D26) | open — native subset + webengine long-tail |
+| D29 | webengine transport (JSON now, Arrow IPC later) | webengine rehome / P5 | open — gated on measured need |
+| D30 | webengine packaging + physical move + import shim | Phase 0/6 | open — `src/qtwebplot` → `backends/webengine/` |
