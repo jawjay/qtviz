@@ -82,6 +82,13 @@ def _autoregister() -> None:
     except Exception as e:  # pragma: no cover - pyqtgraph is a hard dep
         log.warning("pyqtgraph backend failed to load: %s", e)
 
+    try:
+        from .matplotlib import backend as _mpl  # noqa: PLC0415
+
+        register(_mpl)
+    except ImportError:
+        log.info("matplotlib backend unavailable; install qtviz[matplotlib]")
+
 
 _autoregister()
 
