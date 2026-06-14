@@ -27,7 +27,7 @@ and reactive signals (see the as-built note below and `roadmap.md` §0).
 | Data layer — accessors + lazy adapters (dask/xarray/zarr) | concrete | ✅    |
 | Datashader — big-data raster + viewport re-aggregation  | concrete   | ✅    |
 | HoloViews adapter                                       | sketch     | ⬜    |
-| Reactive `Signal` binding                               | sketch     | ⬜    |
+| Reactive `Signal` binding (View-root, S-style)          | concrete   | ⬜    |
 | Data sources — Parquet / DuckDB / SQL                   | sketch     | ⬜    |
 | webengine backend rehome                                | sketch     | ⬜    |
 | Release `0.1`                                           | scaffold   | ⬜    |
@@ -1633,30 +1633,73 @@ Streams (`RangeXY`, `BoundsXY`, `Tap`, `Selection1D`): register our
 typed events on the resulting View and forward to the HoloViews
 stream's `event()` method, so HoloViews-side callbacks fire normally.
 
-## 9. Reactive layer (Phase 4 sketch)
+## 9. Reactive layer (Phase 4) — concrete
 
-S-style minimal:
+S-style minimal reactivity. Lives in `qtviz/reactive/`; public API:
+`qv.signal`, `qv.derived`, `qv.effect`, `qv.batch`. Decisions: [D38]–[D40].
+
+### 9.1 Primitives
 
 ```python
 class Signal[T]:
-    def get(self) -> T: ...
-    def set(self, v: T) -> None: ...
+    def get(self) -> T: ...                                  # read (auto-tracks)
+    def set(self, v: T) -> None: ...                         # write (GUI-thread; marshals)
     def subscribe(self, cb: Callable[[T], None]) -> Disposable: ...
 
-def derived[T](f: Callable[[], T]) -> Signal[T]: ...
-def effect(f: Callable[[], None]) -> Disposable: ...
+def signal[T](initial: T) -> Signal[T]: ...
+def derived[T](f: Callable[[], T]) -> Signal[T]: ...         # computed, memoized
+def effect(f: Callable[[], None], *, owner: QObject | None = None) -> Disposable: ...
+def batch(f: Callable[[], None]) -> None: ...                # coalesce many .set into one pass
 ```
 
-A View subscribes to all Signals referenced in its Element tree via
-the same `subscribe` mechanism `DataRef` uses. Any signal change
-schedules a re-render on the next Qt event loop tick (debounced,
-trailing-edge — same throttle pattern as Events).
+**Auto-tracking ([D39]).** A global *current-observer* stack: while a `derived`/`effect`
+body runs, every `Signal.get()` registers that computation as a subscriber — so
+dependencies are discovered automatically, no explicit dep lists. Synchronous, no async.
+Propagation is simple (a `.set` notifies subscribers, which recompute); `batch()` defers
+notification until the end. **Not** topological/glitch-free — a node in a deep graph may
+recompute more than once; plotting-state graphs are shallow, so this is acceptable
+(revisit only on a real glitch).
 
-Cross-thread `.set` per §2.14: `Signal` internally holds a `QObject`
-and emits a queued signal connection.
+### 9.2 Binding — reactivity at the View root ([D38])
 
-Scope is intentionally tiny: no async, no time-travel, no remote-source
-plumbing. ~500 LOC.
+Reactivity attaches to the **`View` root**, not inside Elements (which stay immutable,
+value-hashed, **Qt-free** per §2.1). `View` accepts a `Signal[Node]` as its root:
+
+```python
+View.__init__(self, root: Node | Signal[Node], *, backend="auto", theme=None, parent=None)
+```
+
+If `root` is a `Signal[Node]`, the View subscribes to it; each change schedules **one
+debounced full rebuild** on the next Qt tick — reusing `View._rebuild` (keep-last-visible;
+async for lazy data) + the trailing-edge throttle from §2.10. Elements are built *fresh*
+inside the user's `derived`, so the **whole node tree** is reactive (data, structure,
+backend, theme). Per-element targeted updates are a later optimization, not v1.
+
+`Scatter(data=signal(...))` is **not** supported in v1; if added later it is *sugar* that
+desugars to a `View`-root `derived` — never a Signal stored in an Element.
+
+### 9.3 Threading & lifecycle ([D40])
+
+- **Threading.** `Signal.set` off the GUI thread marshals onto it via `run_on_gui`
+  (§2.14); the reactive graph runs GUI-thread-only (no locks).
+- **Lifecycle.** `subscribe`/`effect` return a `Disposable` (idempotent). The `View` owns
+  and disposes its root-signal subscription on teardown. `effect(..., owner=qobj)`
+  auto-disposes when `qobj` is destroyed.
+
+### 9.4 The payoff — linked brushing / crossfilter
+
+Falls out of the primitives + typed events, **no special machinery**:
+
+```python
+sel = qv.signal(None)
+left  = qv.View(qv.Scatter(table, x="a", y="b"))
+left.on(qv.SelectEvent, lambda e: sel.set(e.indices))
+right = qv.View(qv.derived(lambda: qv.Scatter(filter_rows(table, sel.get()), x="a", y="c")))
+# brushing `left` re-renders `right`
+```
+
+Scope is intentionally tiny: no async, no time-travel, no topological scheduling, no
+remote-source plumbing. ~500 LOC.
 
 ## 10. Studio (Phases 7+, sketch)
 

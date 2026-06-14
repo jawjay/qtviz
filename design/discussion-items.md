@@ -877,6 +877,73 @@ locally, never a CDN. Conformance asserted headlessly on the generated HTML.
 
 ---
 
+## [D38] Reactivity binds at the View root, not inside Elements
+
+**Context.** Reactive `Signal` binding (roadmap Phase 4): state changes → the plot
+re-renders, incl. linked brushing / crossfilter. Where does a `Signal` attach?
+
+**Underlying.** Two models:
+- **Signal inside the Element** (`Scatter(data=signal(df))`, the roadmap's phrasing).
+  Ergonomic for "just swap the data", but **breaks the Element invariant** (spec §2.1:
+  immutable, value-hashed, **Qt-free**) — a `Signal` is a `QObject`, pulling Qt into
+  the pure data model and muddying value identity; and only the *bound field* is
+  reactive (not tree structure / backend / theme).
+- **Signal at the View root (chosen).** `View(derived(lambda: Scatter(filter(sel.get()),
+  …)))` — Elements are built *fresh inside a `derived`* that reads signals and
+  auto-tracks; the reactive graph lives *outside* the data model. Elements stay pure,
+  the **whole node tree** is reactive (data, structure, backend, theme), and crossfilter
+  falls out of `Signal + derived + View.on` with no special machinery.
+
+**Recommendation.** View-root reactivity (`View` accepts a `Signal[Node]`). The
+`Scatter(data=signal)` ergonomic can come later as **sugar that desugars to a
+derived** — never as Qt-in-the-Element.
+**Status:** ✅ accepted (per user) — Option B; Elements stay pure; `View(Signal[Node])`.
+Common-case sugar deferred. Follows [[feedback-abstractions]] (general form, sugar later).
+
+---
+
+## [D39] Reactive runtime — auto-tracking, synchronous, simple propagation
+
+**Context.** How do `derived` / `effect` know their dependencies and when to recompute?
+
+**Underlying.** **Auto-tracking** (S-style): a global "current observer" stack; a
+`Signal.get()` during a computation registers that computation as a subscriber — so
+`derived(f)`/`effect(f)` track reads automatically (the sketch's intent). Kept
+**synchronous, no async**. Propagation is **simple** (a `.set` notifies subscribers,
+which recompute) plus a **`batch()`** to coalesce multiple `.set`s into one pass —
+**not** full topological / glitch-free scheduling (which is what blows past the
+~500-LOC budget). Honest cost: in a deep `derived` graph a node may recompute more
+than once per update; acceptable for plotting-state graphs (shallow), revisit if a
+real glitch shows.
+
+**Recommendation.** Auto-tracking + synchronous + simple propagation + `batch()`;
+defer topological ordering.
+**Status:** ✅ accepted (per user).
+
+---
+
+## [D40] Reactive render, threading & lifecycle
+
+**Context.** What happens on a signal change, on which thread, and how is it disposed?
+
+**Underlying.**
+- **Render:** a root-signal change schedules **one debounced full View rebuild** on the
+  next Qt tick — reuse `View._rebuild` (keeps the last render visible; async for lazy
+  data) + the trailing-edge throttle from `event.py`. Targeted per-element updates are a
+  later optimization, not v1.
+- **Threading:** `Signal.set` off the GUI thread marshals onto it via the existing
+  `run_on_gui` (`core/threading.py`); the reactive graph runs **GUI-thread-only**, so
+  no locks.
+- **Lifecycle:** `Signal.subscribe` / `effect` return a `Disposable`; the `View` owns
+  and disposes its root-signal subscription on teardown; optional `owner=<QObject>` for
+  auto-dispose tied to a Qt object's destruction.
+
+**Recommendation.** Debounced full rebuild; `run_on_gui` for cross-thread `.set`;
+`Disposable` + View-owned subscription + optional `owner=`.
+**Status:** ✅ accepted (per user).
+
+---
+
 ## [D28] `from_holoviews` fallback to webengine
 
 **Context.** The native HoloViews adapter (Phase 3) translates the common hv
@@ -985,3 +1052,6 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D35 | webengine W5 figure-splitting + Plotly typed-array API | webengine W5.1 | open — spike Plotly's `{dtype,bdata}` ingestion; then design `_figure` split + JS reassembly |
 | D36 | webengine W5 custom-scheme registration timing | webengine W5.2 | open — decide when/where to register the scheme (before QApplication) |
 | D37 | **qtviz runs 100% offline — no CDN, ever** | spec §0.1 / webengine | ✅ accepted — bundle JS locally (inline now, `qtviz://` in W5.2); HTML has no external URL |
+| D38 | reactivity binds at View root, not in Elements | reactive (Phase 4) | ✅ accepted — Option B: `View(Signal[Node])`; Elements stay pure; sugar later |
+| D39 | reactive runtime — auto-track, sync, simple+batch | reactive (Phase 4) | ✅ accepted — S-style auto-tracking; defer topological glitch-freedom |
+| D40 | reactive render / threading / lifecycle | reactive (Phase 4) | ✅ accepted — debounced rebuild; `run_on_gui`; `Disposable` + View-owned + `owner=` |
