@@ -28,6 +28,15 @@ def _f(v) -> float:
     return float(v) if v is not None else 0.0
 
 
+def _scalar_index(pi):
+    """A single integer row index, or None when there isn't one — a surface /
+    heatmap / contour point is a multi-dim `[row, col]` cell (Plotly sends a list),
+    not a row index, and a RawFigure has no row identity anyway."""
+    if isinstance(pi, bool) or not isinstance(pi, (int, float)):
+        return None
+    return int(pi)
+
+
 def _first_point(payload: dict):
     pts = payload.get("points") or []
     return pts[0] if pts else None
@@ -50,17 +59,16 @@ def _translate_plotly(name: str, payload: dict, traces: list[str], surface_id: s
         p = _first_point(payload)
         if p is None:
             return []
-        pi = p.get("point_index")
+        idx = _scalar_index(p.get("point_index"))
         return [PickEvent(_src(p.get("trace_index"), traces, surface_id),
-                          int(pi) if pi is not None else -1, _f(p.get("x")), _f(p.get("y")))]
+                          idx if idx is not None else -1, _f(p.get("x")), _f(p.get("y")))]
 
     if name == "plotly.hover":
         p = _first_point(payload)
         if p is None:
             return []
-        pi = p.get("point_index")
         return [HoverEvent(_src(p.get("trace_index"), traces, surface_id),
-                           int(pi) if pi is not None else None, _f(p.get("x")), _f(p.get("y")))]
+                           _scalar_index(p.get("point_index")), _f(p.get("x")), _f(p.get("y")))]
 
     if name == "plotly.unhover":
         return [HoverEvent(traces[0] if traces else surface_id, None, 0.0, 0.0)]
@@ -83,10 +91,10 @@ def _selection_events(payload: dict, traces: list[str], surface_id: str) -> list
 
     by_source: dict[str, list[int]] = {}
     for p in payload.get("points") or []:
-        pi = p.get("point_index")
-        if pi is None:
+        idx = _scalar_index(p.get("point_index"))
+        if idx is None:  # skip multi-dim (surface/heatmap) cells — no row identity
             continue
-        by_source.setdefault(_src(p.get("trace_index"), traces, surface_id), []).append(int(pi))
+        by_source.setdefault(_src(p.get("trace_index"), traces, surface_id), []).append(idx)
 
     order: list[str] = []
     for sid in (traces or [surface_id]):

@@ -156,6 +156,34 @@ def test_unknown_message_returns_empty():
     assert _t("plotly.attached", {"ok": True}) == []
 
 
+# A 3-D surface / heatmap / contour point is a multi-dim [row, col] cell — Plotly
+# sends point_index as a list, which has no single row identity (regression: this
+# crashed int(point_index)).
+_SURFACE_PT = {"points": [{"trace_index": 0, "point_index": [3, 5], "x": 1.0, "y": 2.0}]}
+
+
+def test_surface_hover_multidim_index_degrades_to_none():
+    evs = _t("plotly.hover", _SURFACE_PT)
+    assert len(evs) == 1 and isinstance(evs[0], qv.HoverEvent)
+    assert evs[0].point_index is None
+    assert evs[0].x == 1.0 and evs[0].y == 2.0
+
+
+def test_surface_click_multidim_index_uses_sentinel():
+    evs = _t("plotly.click", _SURFACE_PT)
+    assert len(evs) == 1 and isinstance(evs[0], qv.PickEvent)
+    assert evs[0].point_index == -1
+
+
+def test_selection_skips_multidim_indices():
+    payload = {
+        "points": [{"trace_index": 0, "point_index": [1, 2]}, {"trace_index": 0, "point_index": 4}],
+        "range": {"x": [0.0, 5.0], "y": [0.0, 5.0]},
+    }
+    evs = _t("plotly.selection", payload)
+    assert evs[0].indices == [4]  # only the scalar index survives
+
+
 def test_parse_relayout_both_forms_and_partial():
     full = _translate.parse_relayout(
         {
