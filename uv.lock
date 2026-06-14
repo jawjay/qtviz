@@ -1531,6 +1531,11 @@ matplotlib = [
 plotly = [
     { name = "plotly" },
 ]
+webengine = [
+    { name = "bokeh" },
+    { name = "holoviews" },
+    { name = "plotly" },
+]
 xarray = [
     { name = "xarray" },
     { name = "zarr", version = "3.1.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
@@ -1541,14 +1546,17 @@ xarray = [
 requires-dist = [
     { name = "bokeh", marker = "extra == 'all'", specifier = ">=3.4" },
     { name = "bokeh", marker = "extra == 'bokeh'", specifier = ">=3.4" },
+    { name = "bokeh", marker = "extra == 'webengine'", specifier = ">=3.4" },
     { name = "dask", extras = ["dataframe"], marker = "extra == 'dask'", specifier = ">=2026.6.0" },
     { name = "datashader", marker = "extra == 'datashader'", specifier = ">=0.19.1" },
     { name = "holoviews", marker = "extra == 'all'", specifier = ">=1.18" },
     { name = "holoviews", marker = "extra == 'holoviews'", specifier = ">=1.18" },
+    { name = "holoviews", marker = "extra == 'webengine'", specifier = ">=1.18" },
     { name = "matplotlib", marker = "extra == 'matplotlib'", specifier = ">=3.11.0" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "plotly", marker = "extra == 'all'", specifier = ">=5.20" },
     { name = "plotly", marker = "extra == 'plotly'", specifier = ">=5.20" },
+    { name = "plotly", marker = "extra == 'webengine'", specifier = ">=5.20" },
     { name = "pyqtgraph", specifier = ">=0.13" },
     { name = "pyside6", specifier = ">=6.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
@@ -1557,7 +1565,7 @@ requires-dist = [
     { name = "xarray", marker = "extra == 'xarray'", specifier = ">=2026.4.0" },
     { name = "zarr", marker = "extra == 'xarray'", specifier = ">=3.1.6" },
 ]
-provides-extras = ["plotly", "bokeh", "holoviews", "all", "dev", "matplotlib", "dask", "xarray", "datashader"]
+provides-extras = ["plotly", "bokeh", "holoviews", "webengine", "all", "dev", "matplotlib", "dask", "xarray", "datashader"]
 
 [[package]]
 name = "requests"

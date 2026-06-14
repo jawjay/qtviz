@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import uuid
+from pathlib import Path
 
 from ...core.backend import RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
@@ -30,9 +31,8 @@ _CAPS = Capabilities(
     streaming=True,
     max_recommended_points=1_000_000,
     animation=True,
-    # png/svg/pdf need a rendered page (grab) or kaleido — deferred to W2 once
-    # we can verify them on a real display; declaring none keeps the contract honest.
-    exports=frozenset(),
+    # png via QWebEngineView.grab (a rendered page); svg/pdf would need kaleido — later.
+    exports=frozenset({"png"}),
     threading_model="gui_only",
 )
 
@@ -88,6 +88,15 @@ class WebEngineRenderHandle(RenderHandle):
         fig, source_ids = _figure.build(new_root, self._theme)
         self._traces = source_ids
         self._host.react(fig)
+
+    def export(self, fmt: str, path) -> Path:
+        if fmt != "png":
+            raise NotImplementedError(
+                f"webengine exports png (svg/pdf would need kaleido); got {fmt!r}"
+            )
+        if self.widget.size().isEmpty():
+            self.widget.resize(800, 600)  # grab needs a non-empty widget
+        return self.widget.to_png(path)
 
     def dispose(self) -> None:
         w = self.widget

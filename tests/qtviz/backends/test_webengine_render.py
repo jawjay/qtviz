@@ -55,6 +55,16 @@ def test_click_message_emits_pick_event(web, table, qtbot):
     handle.dispose()
 
 
+def test_png_export_writes_a_file(web, table, qtbot, tmp_path):
+    handle = web.render(qv.Scatter(table, x="x", y="y"), theme=qv.Theme.light())
+    qtbot.addWidget(handle.widget)
+    out = handle.export("png", tmp_path / "plot.png")
+    assert out.exists() and out.stat().st_size > 0
+    with pytest.raises(NotImplementedError):
+        handle.export("svg", tmp_path / "plot.svg")
+    handle.dispose()
+
+
 def test_relayout_message_emits_range_and_updates_state(web, table, qtbot):
     handle = web.render(qv.Scatter(table, x="x", y="y"), theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

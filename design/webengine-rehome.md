@@ -180,12 +180,26 @@ common elements native, everything else still renders.
 > it stays clean (256 passed, 20 skipped). **As-built:** reused the legacy
 > `PlotView` as the internal host widget; the `core/` → `_bridge/` rename is
 > still deferred (cosmetic, no functional need yet).
+>
+> **Status (W2 ✅ landed).** Element→Plotly renderers for all 8 types (`_figure.py`,
+> each builder returns a *list* of traces so Spread's two-trace band keeps the
+> trace→source-id table 1:1); every builder's output is validated to coerce
+> through `plotly.io` (valid Plotly). Theme→layout translation; png export via
+> `QWebEngineView.grab` (svg/pdf would need kaleido — later), `exports={"png"}`.
+> **The real proof:** forced with `QTVIZ_WEBENGINE_GUI=1` the backend-conformance
+> suite is **green for webengine — 36 passed** (all 8 elements render/dispose,
+> state round-trips, png writes, subscriptions). The forced *offscreen* run still
+> exits 139 at QApplication teardown (the known PySide6 WebEngine segfault, after
+> the summary), so webengine stays gated out of the default suite by
+> `requires_display`; the default suite is clean (259 passed, 21 skipped). New
+> headless figure tests cover all 8 builders. Still deferred: `core/`→`_bridge/`
+> rename; multi-trace selection routing (D27); svg/pdf export.
 
 | Stage | Deliverable | Gate |
 |---|---|---|
 | **W0** ✅ | Physical move: whole `qtwebplot` package → `backends/webengine/`; redirect import shim; GUI tests skip-gated | existing bridge tests pass on new paths ✅ |
 | **W1** ✅ | `WebEngineBackend` + `WebEngineRenderHandle`; render one `Scatter` via Plotly; register; declare capabilities; range + pick events | headless: figure+event map green; live draw/events display-gated (offscreen segfault) |
-| **W2** | Element→Plotly renderers for the 8 types; theme translation; `capture/restore_state`; png export | the **backend-conformance suite** is green for webengine (the real proof) |
+| **W2** ✅ | Element→Plotly renderers for the 8 types; theme translation; `capture/restore_state`; png export | backend-conformance green for webengine (forced: 36 passed); default-gated by the teardown segfault |
 | **W3** | `RawFigure` passthrough (host an existing Plotly/Bokeh/HV figure); full event translation incl. brush→`SelectEvent` | a raw HoloViews object renders; brush emits typed events |
 | **W4** | Mixed-backend `LayoutHost` panes (pyqtgraph + webengine), merged EventBus; drop legacy layouts/linking | a grid with a native pane beside a webengine pane shares one event stream |
 | **W5** (Phase 5) | Arrow IPC transport for large payloads | <100 ms for a representative big payload |

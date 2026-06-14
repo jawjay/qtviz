@@ -62,11 +62,41 @@ def test_layout_carries_theme(table):
     assert dark["xaxis"]["gridcolor"].startswith("rgb(")
 
 
-def test_unsupported_element_raises(table):
+def test_supports_all_eight_elements():
+    names = {t.__name__ for t in _figure.supported_types()}
+    assert names == {
+        "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars", "Spread",
+    }
+
+
+def test_every_element_builds_at_least_one_trace(make_elements):
+    for name, el in make_elements(qv).items():
+        fig = _figure.build_figure(el, qv.Theme.light())
+        assert fig["data"], f"{name} produced no traces"
+        assert all("type" in tr for tr in fig["data"])
+
+
+def test_element_trace_shapes(make_elements):
+    els = make_elements(qv)
+    light = qv.Theme.light()
+    assert _figure.build_figure(els["Curve"], light)["data"][0]["mode"] == "lines"
+    assert _figure.build_figure(els["Bars"], light)["data"][0]["type"] == "bar"
+    assert _figure.build_figure(els["Histogram"], light)["data"][0]["type"] == "histogram"
+    assert _figure.build_figure(els["Image"], light)["data"][0]["type"] == "heatmap"
+    assert _figure.build_figure(els["Heatmap"], light)["data"][0]["type"] == "heatmap"
+    assert "error_y" in _figure.build_figure(els["ErrorBars"], light)["data"][0]
+    spread = _figure.build_figure(els["Spread"], light)["data"]
+    assert len(spread) == 2 and spread[1]["fill"] == "tonexty"
+
+
+def test_unsupported_element_raises():
     from qtviz.errors import RendererMissingError
 
+    class _Fake:
+        pass
+
     with pytest.raises(RendererMissingError):
-        _figure.build_figure(qv.Curve(table, x="x", y="y"), qv.Theme.light())
+        _figure.build_figure(_Fake(), qv.Theme.light())
 
 
 # ── event translation (D27) ──────────────────────────────────────────────────

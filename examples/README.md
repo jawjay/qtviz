@@ -29,6 +29,9 @@ uv sync --extra matplotlib --extra dev
 | 12 | [`12_color_mapping.py`](12_color_mapping.py) | `color_by` / `size_by` a column → per-point color/size + an **automatic legend / colorbar**. |
 | 13 | [`13_webengine.py`](13_webengine.py) | The same `Scatter` rendered through **Plotly in a QWebEngineView** (`backend="webengine"`); typed events bridge back; toggle to a native backend. |
 | 14 | [`14_webengine_overlay.py`](14_webengine_overlay.py) | An `Overlay` → multiple Plotly traces in one figure; a PickEvent carries the originating **series id**. |
+| 15 | [`15_webengine_elements.py`](15_webengine_elements.py) | Several element types (Spread + Curve + Scatter) in **one** webengine Plotly figure. |
+| 16 | [`16_webengine_export.py`](16_webengine_export.py) | Export a webengine plot to **PNG** (`handle.export("png", path)`). |
+| 17 | [`17_webengine_heatmap.py`](17_webengine_heatmap.py) | A tabular `Heatmap` (x/y/z) → a Plotly heatmap with a Viridis colorscale. |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -40,8 +43,8 @@ uv sync --extra datashader --extra dask --extra matplotlib --extra dev
 More examples will be added as the library grows (reactive signals, the
 HoloViews adapter, …).
 
-Examples 13–14 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
-WebEngine view; roadmap Phase 5, W1). They need the webengine extra and a real
+Examples 13–17 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
+WebEngine view; roadmap Phase 5, W1–W2). They need the webengine extra and a real
 display (a `QWebEngineView` segfaults at teardown under offscreen Qt):
 
 ```bash

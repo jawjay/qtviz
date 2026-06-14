@@ -8,6 +8,9 @@ Output is a plain ``{"data": [...traces], "layout": {...}}`` dict — a Plotly
 figure spec that ``PlotlyBackend`` hosts in a ``WebBridgeView``. Building dicts
 (not ``plotly.graph_objects``) keeps this layer importable and testable without
 plotly installed; the host validates when it renders.
+
+Each builder returns a **list** of traces so a multi-trace element (Spread's
+band = two traces) keeps the trace_index → source-id table 1:1.
 """
 
 from __future__ import annotations
@@ -16,15 +19,33 @@ import numpy as np
 
 from ...core.compose import Overlay
 from ...data import resolve_node
-from ...elements import Scatter
+from ...elements import Bars, Curve, ErrorBars, Heatmap, Histogram, Image, Scatter, Spread
 from ...errors import RendererMissingError
 
 _SIZE_LO, _SIZE_HI = 5.0, 18.0
+_DASH = {"solid": "solid", "dashed": "dash", "dotted": "dot", "dashdot": "dashdot"}
 
 
 def _css(color) -> str:
     r, g, b = (int(round(c * 255)) for c in color.rgba[:3])
     return f"rgb({r},{g},{b})"
+
+
+def _rgba_css(color, alpha: float) -> str:
+    r, g, b = (int(round(c * 255)) for c in color.rgba[:3])
+    return f"rgba({r},{g},{b},{alpha})"
+
+
+def _element_color(element, theme, idx: int):
+    from ...core.color import Color  # noqa: PLC0415
+
+    if getattr(element, "color", None) is None:
+        return theme.palette[idx % len(theme.palette)]
+    return Color(element.color)
+
+
+def _floats(series) -> list[float]:
+    return np.asarray(series, dtype="float64").tolist()
 
 
 def _scaled_sizes(values) -> list[float]:
@@ -34,49 +55,143 @@ def _scaled_sizes(values) -> list[float]:
     return (_SIZE_LO + (a - vmin) / span * (_SIZE_HI - _SIZE_LO)).tolist()
 
 
-def _element_color(element, theme, idx: int):
-    from ...core.color import Color  # noqa: PLC0415
+def _color_by_list(element, d, theme) -> list[str]:
+    from ...core.encoding import map_colors  # noqa: PLC0415
+    from ...core.palette import palettes  # noqa: PLC0415
 
-    if element.color is None:
-        return theme.palette[idx % len(theme.palette)]
-    return Color(element.color)
-
-
-def _scatter_trace(element: Scatter, theme, idx: int) -> dict:
-    d = element.data
-    marker: dict = {}
-    marker["size"] = (
-        _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6)
+    rgba, _legend = map_colors(
+        np.asarray(d.series("color")),
+        palette=theme.palette,
+        continuous_palette=palettes.get("viridis"),
+        title=element.color_by,
     )
-    if element.color_by is not None:
-        from ...core.encoding import map_colors  # noqa: PLC0415
-        from ...core.palette import palettes  # noqa: PLC0415
+    return [
+        f"rgb({int(round(r * 255))},{int(round(g * 255))},{int(round(b * 255))})"
+        for r, g, b, _a in rgba
+    ]
 
-        rgba, _legend = map_colors(
-            np.asarray(d.series("color")),
-            palette=theme.palette,
-            continuous_palette=palettes.get("viridis"),
-            title=element.color_by,
-        )
-        marker["color"] = [
-            f"rgb({int(round(r * 255))},{int(round(g * 255))},{int(round(b * 255))})"
-            for r, g, b, _a in rgba
-        ]
+
+# ── per-element trace builders (each returns a list of Plotly traces) ─────────
+def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
+    d = element.data
+    marker: dict = {
+        "size": (
+            _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6)
+        ),
+        "opacity": element.alpha,
+    }
+    if element.color_by is not None:
+        marker["color"] = _color_by_list(element, d, theme)
     else:
         marker["color"] = _css(_element_color(element, theme, idx))
-    marker["opacity"] = element.alpha
-    return {
-        "type": "scattergl",
-        "mode": "markers",
-        "x": np.asarray(d.series("x"), dtype="float64").tolist(),
-        "y": np.asarray(d.series("y"), dtype="float64").tolist(),
-        "marker": marker,
-        "name": element.color_by or element.id,
+    return [{
+        "type": "scattergl", "mode": "markers",
+        "x": _floats(d.series("x")), "y": _floats(d.series("y")),
+        "marker": marker, "name": element.color_by or element.id,
+    }]
+
+
+def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
+    d = element.data
+    line = {"color": _css(_element_color(element, theme, idx)), "width": element.line_width,
+            "dash": _DASH.get(element.line_style, "solid")}
+    return [{
+        "type": "scattergl", "mode": "lines",
+        "x": _floats(d.series("x")), "y": _floats(d.series("y")),
+        "line": line, "opacity": element.alpha, "name": element.id,
+    }]
+
+
+def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
+    d = element.data
+    x = list(np.asarray(d.series("x")))            # keep categorical labels as-is
+    trace = {"type": "bar", "marker": {"color": _css(_element_color(element, theme, idx))},
+             "name": element.id}
+    if element.orient == "h":
+        trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
+    else:
+        trace["x"], trace["y"] = x, _floats(d.series("y"))
+    return [trace]
+
+
+def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
+    trace = {
+        "type": "histogram", "x": _floats(element.data.series("column")),
+        "marker": {"color": _css(_element_color(element, theme, idx))}, "name": element.id,
     }
+    if isinstance(element.bins, int):
+        trace["nbinsx"] = element.bins
+    if element.density:
+        trace["histnorm"] = "probability density"
+    return [trace]
+
+
+def _image_trace(element: Image, theme, idx: int) -> list[dict]:
+    values = np.asarray(element.data.grid().values)
+    x0, y0, x1, y1 = element.bounds
+    if values.ndim == 2:
+        nrows, ncols = values.shape
+        return [{
+            "type": "heatmap", "z": values.tolist(),
+            "x": np.linspace(x0, x1, ncols).tolist(),
+            "y": np.linspace(y0, y1, nrows).tolist(),
+            "colorscale": "Viridis", "name": element.id,
+        }]
+    return [{"type": "image", "z": values.tolist(), "name": element.id}]  # RGBA raster
+
+
+def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
+    d = element.data
+    xv, yv = np.asarray(d.series("x")), np.asarray(d.series("y"))
+    zv = np.asarray(d.series("z"), dtype="float64")
+    xs, x_inv = np.unique(xv, return_inverse=True)
+    ys, y_inv = np.unique(yv, return_inverse=True)
+    grid = np.full((len(ys), len(xs)), np.nan)
+    grid[y_inv, x_inv] = zv                        # last value wins (aggregator TODO §5.5)
+    return [{
+        "type": "heatmap", "x": xs.tolist(), "y": ys.tolist(), "z": grid.tolist(),
+        "colorscale": "Viridis", "name": element.id,
+    }]
+
+
+def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
+    d = element.data
+    color = _css(_element_color(element, theme, idx))
+    err = {"type": "data", "array": _floats(d.series("err_hi")),
+           "arrayminus": _floats(d.series("err_lo")), "symmetric": False, "color": color}
+    trace = {
+        "type": "scattergl", "mode": "markers",
+        "x": _floats(d.series("x")), "y": _floats(d.series("y")),
+        "marker": {"color": color}, "name": element.id,
+    }
+    trace["error_y" if element.direction in ("y", "both") else "error_x"] = err
+    return [trace]
+
+
+def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
+    d = element.data
+    x = _floats(d.series("x"))
+    color = _element_color(element, theme, idx)
+    line_css = _css(color)
+    # lower edge first (no fill), then upper edge filling down to it.
+    lo = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_lo")),
+          "line": {"width": 0, "color": line_css}, "showlegend": False, "hoverinfo": "skip",
+          "name": element.id}
+    hi = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_hi")),
+          "line": {"width": 0, "color": line_css}, "fill": "tonexty",
+          "fillcolor": _rgba_css(color, element.alpha), "name": element.id}
+    return [lo, hi]
 
 
 _TRACE_BUILDERS = {
     Scatter: _scatter_trace,
+    Curve: _curve_trace,
+    Bars: _bars_trace,
+    Histogram: _histogram_trace,
+    Image: _image_trace,
+    Heatmap: _heatmap_trace,
+    ErrorBars: _errorbars_trace,
+    Spread: _spread_trace,
 }
 
 
@@ -97,7 +212,8 @@ def build(node, theme) -> tuple[dict, list[str]]:
     """Resolve `node` → (Plotly figure spec, per-trace source-id table).
 
     The source-id list is the D27 trace_index → Element.id map the event layer
-    needs to route pick/select back to the originating Element.
+    needs to route pick/select back to the originating Element. Multi-trace
+    elements repeat their id once per trace.
     """
     node = resolve_node(node)
     traces: list[dict] = []
@@ -108,13 +224,14 @@ def build(node, theme) -> tuple[dict, list[str]]:
             raise RendererMissingError(
                 f"webengine has no Plotly renderer for {type(element).__name__}"
             )
-        traces.append(builder(element, theme, idx))
-        source_ids.append(element.id)
+        el_traces = builder(element, theme, idx)
+        traces.extend(el_traces)
+        source_ids.extend([element.id] * len(el_traces))
     return {"data": traces, "layout": plotly_layout(theme)}, source_ids
 
 
 def build_figure(node, theme) -> dict:
-    """Resolve `node` and build a Plotly figure spec (one trace per Element)."""
+    """Resolve `node` and build a Plotly figure spec."""
     return build(node, theme)[0]
 
 
