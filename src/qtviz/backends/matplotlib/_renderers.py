@@ -70,8 +70,13 @@ def render_histogram(element: Histogram, ctx):
 
 def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.bounds
+    values = np.asarray(element.data.grid().values)
+    if values.ndim == 3:  # RGBA raster (e.g. datashaded scatter)
+        return ctx.parent_axes.imshow(
+            values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto"
+        )
     return ctx.parent_axes.imshow(
-        np.asarray(element.data.grid().values, dtype="float64"),
+        np.asarray(values, dtype="float64"),
         extent=(x0, x1, y0, y1), origin="lower", aspect="auto", cmap=element.colormap,
     )
 

@@ -6,7 +6,7 @@ from . import adapters as _adapters  # noqa: F401  — registers built-ins on im
 from .accessor import Accessor, accessor_columns, resolve_accessor
 from .expr import Expr as Expression
 from .expr import col, lit
-from .pipeline import node_is_lazy, resolve_node
+from .pipeline import node_is_lazy, resolve_node, set_raster_size, set_raster_threshold
 from .ref import DataRef, EagerGriddedRef, EagerTabularRef, GridData, GriddedRef, Schema, TabularRef
 from .registry import (
     DataAdapter,
@@ -40,4 +40,6 @@ __all__ = [
     "resolve_accessor",
     "resolve_node",
     "node_is_lazy",
+    "set_raster_threshold",
+    "set_raster_size",
 ]

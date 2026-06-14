@@ -85,8 +85,11 @@ def render_histogram(element: Histogram, ctx):
 def render_image(element: Image, ctx):
     from PySide6.QtCore import QRectF  # noqa: PLC0415
 
-    values = np.asarray(element.data.grid().values, dtype="float64")
-    item = pg.ImageItem(values)
+    values = np.asarray(element.data.grid().values)
+    if values.ndim == 3:  # RGBA raster (e.g. datashaded scatter): row 0 = ymin
+        item = pg.ImageItem(values, axisOrder="row-major")
+    else:
+        item = pg.ImageItem(np.asarray(values, dtype="float64"))
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)

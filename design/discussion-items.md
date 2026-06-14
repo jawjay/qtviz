@@ -628,3 +628,8 @@ overrides for ambiguous cases. No ref-level bridging, no Element changes.
 | D15 | materialize safety guard (huge un-windowed lazy) | data-core | ✅ accepted — warn + `limit=`; Datashader P4 |
 | D16 | viewport→window auto-trigger deferral | data-core / P4 | ✅ accepted — `window` primitive now, loop P4 |
 | D17 | shape chosen by adapter (no ref bridging) | data-core | ✅ accepted — adapter picks shape + `tabular()`/`gridded()` |
+| D18 | datashader: backend-agnostic pipeline transform | Phase 4 | ✅ Scatter→Image in resolve_node (see milestone-phase4) |
+| D19 | datashader auto-route policy | Phase 4 | ✅ `set_raster_threshold`; lazy/unknown size routes |
+| D20 | raster output: RGBA shade vs aggregate+theme cmap | Phase 4 | ✅ RGBA shade now; aggregate+theme cmap future |
+| D21 | dynamic viewport re-aggregation seam | Phase 4b | open — RasterController + RasterTarget |
+| D22 | datashader coverage (lines, categorical color) | Phase 4 | open — points now; line/count_cat follow-ups |

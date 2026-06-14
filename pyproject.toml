@@ -51,6 +51,9 @@ xarray = [
     "xarray>=2026.4.0",
     "zarr>=3.1.6",
 ]
+datashader = [
+    "datashader>=0.19.1",
+]
 
 [project.urls]
 Homepage = "https://github.com/markjajeh/qtviz"

@@ -23,7 +23,16 @@ from .core.options import LayoutOptions, Options, OverlayOptions
 from .core.palette import Palette, palettes
 from .core.theme import Theme
 from .core.view import View
-from .data import Accessor, Expression, col, gridded, lit, tabular
+from .data import (
+    Accessor,
+    Expression,
+    col,
+    gridded,
+    lit,
+    set_raster_size,
+    set_raster_threshold,
+    tabular,
+)
 from .elements import (
     Bars,
     Curve,
@@ -40,8 +49,9 @@ __all__ = [
     "Scatter", "Curve", "Bars", "Image", "Heatmap", "Histogram", "ErrorBars", "Spread",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
-    # data binding (accessors, D14) + shape overrides (D17)
+    # data binding (accessors, D14) + shape overrides (D17) + raster routing (Phase 4)
     "Accessor", "Expression", "col", "lit", "tabular", "gridded",
+    "set_raster_threshold", "set_raster_size",
     # styling
     "Color", "ColorSpec", "Palette", "palettes", "Theme",
     "Options", "OverlayOptions", "LayoutOptions",

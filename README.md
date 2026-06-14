@@ -138,6 +138,7 @@ uv run python examples/01_hello.py
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
 | **Data inputs** | dict · numpy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
+| **Big data** | **Datashader** rasterization — `Scatter(..., scale="datashader" \| "auto")` aggregates 10M+ points into a density image, out-of-core, off the GUI thread |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
 | **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
@@ -151,7 +152,8 @@ uv run python examples/01_hello.py
 | 2 | **matplotlib** backend | ✅ done |
 | — | Mixed-backend layouts · native interaction · functional data binding | ✅ done |
 | — | **Lazy adapters** — Dask / xarray / zarr, out-of-core & off-thread | ✅ done |
-| 4 | **Datashader** for 10M+ points · **Reactive** `Signal` binding | planned |
+| 4 | **Datashader** for 10M+ points (`scale="datashader"` / `"auto"`, out-of-core) | ✅ done (static); viewport re-aggregation next |
+| 4 | **Reactive** `Signal` binding | planned |
 | 5 | **Data sources** (Parquet / DuckDB / Dask) · **webengine** backend rehome (Plotly/Bokeh) | planned |
 | 3 | **HoloViews adapter** (`from_holoviews`) | planned |
 | 6 | Docs, gallery, **`qtviz 0.1` on PyPI** | planned |
