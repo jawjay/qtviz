@@ -347,7 +347,9 @@ are the current frontier.
 - ◻ **Axis transforms** — log / symlog / datetime scales across all backends.
 - ◻ **Raster selection** — brush / linked-select on a datashaded view (pixel → source
   rows), building on the hover reverse-lookup already shipped.
-- ◻ **`qtviz 0.1` on PyPI** — documentation site, gallery, migration guide.
+- ◻ **`qtviz 0.1` on PyPI** — release prep is done (versioned metadata, an mkdocs docs
+  site, the examples gallery, a migration note, and a CHANGELOG); the PyPI publish and
+  docs-site deploy are the remaining steps.
 
 ### Exploring
 

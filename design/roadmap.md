@@ -21,18 +21,19 @@ data core had to come first. Net effect:
 
 | Phase | Scope | Status |
 |-------|-------|--------|
-| 0 | rename · CI · spikes | ◑ rename ✅; spikes folded into Phase 1; **CI matrix still open** |
+| 0 | rename · CI · spikes | ✅ rename done; spikes folded into Phase 1; **CI matrix ✅** (macOS/Lin/Win × 3.11–3.13) |
 | 1 | core compose + pyqtgraph | ✅ |
 | 2 | matplotlib backend | ✅ |
 | 3 | HoloViews adapter | ✅ Spike-P2 [D41]; **3a static `from_holoviews` ✅** (8 elements + Points/Area, containers, RawFigure fallback); **3b ✅** — `DynamicMap`→`Signal[Node]` one-way ([D44] L1) + `from_hvplot` ([D43] Path A); L2 bidirectional streams + `.qtviz` accessor deferred — see `milestone-holoviews-adapter.md` §7 |
 | 4 | reactive + Datashader | **Datashader ✅**; **reactive `Signal` ✅** (View-root, S-style; crossfilter) |
 | 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0–W4 ✅ · W5.1a base64 transport ✅ · W5-offline (no-CDN) ✅**; W5.2 binary-fetch tail ⬜ deferred — see `webengine-arrow-transport.md` §10) |
-| 6 | release `0.1` | ⬜ |
+| 6 | release `0.1` | ◑ release-prep done (0.1.0 metadata · docs/CHANGELOG · mkdocs site · API docstrings); **PyPI publish + Pages deploy remain** |
 
-**Recommended next order** (detail in `development-plan.md` §8): finish Datashader
-coverage [D22] → reactive signals → data sources (Parquet/DuckDB) → HoloViews
-adapter → webengine rehome → release. The phase tables below are retained as the
-original estimate/acceptance reference, with status annotated inline.
+**Recommended next order** (detail in `development-plan.md` §8): finish the 0.1 release
+(publish to PyPI · deploy the docs site) → data sources (Parquet/DuckDB) → axis transforms
+→ raster selection (pixel→rows) → remaining Datashader coverage (raster legends · theme
+colors · aggregation surface). The phase tables below are retained as the original
+estimate/acceptance reference, with status annotated inline.
 
 ## 1. Architecture
 
@@ -152,7 +153,7 @@ qtvizstudio/                    # Phases 7+ (separate package)
 Each phase: deliverables · acceptance · risks. Length = full-time
 estimate.
 
-### Phase 0 — Pivot prep + spikes (1 month) · ◑ rename done; CI matrix open
+### Phase 0 — Pivot prep + spikes (1 month) · ✅ rename + CI matrix done; spikes folded into Phase 1
 
 | Deliverable                                                | Acceptance                                          |
 |------------------------------------------------------------|------------------------------------------------------|
@@ -216,7 +217,7 @@ toolbars. Both backends pass the same test suite.
 **Risks.** mpl picking has known fiddliness; spec the typed events
 clearly and accept that mpl may need polling for some events.
 
-### Phase 3 — HoloViews adapter (1 month) · ⬜ not started
+### Phase 3 — HoloViews adapter (1 month) · ✅ done — 3a static + 3b DynamicMap/hvplot (L2 streams + `.qtviz` accessor deferred)
 
 | Deliverable                                          | Acceptance                                           |
 |------------------------------------------------------|-------------------------------------------------------|
@@ -235,13 +236,14 @@ through pyqtgraph. No browser, no Bokeh server.
 range; CI tests against the pinned and latest HoloViews to catch
 breakage early.
 
-### Phase 4 — Reactive + Datashader (1.5 months) · ◑ Datashader done; reactive open
+### Phase 4 — Reactive + Datashader (1.5 months) · ✅ Datashader + reactive done (coverage follow-ups in `capabilities-gaps.md` §1)
 
-> **Status.** The Datashader rows below (✅) shipped — but *as a backend-agnostic
+> **Status.** Both halves of this phase shipped. Datashader landed *as a backend-agnostic
 > pipeline transform* (Scatter→Image in `resolve_node`), not the pyqtgraph-only
-> `pg.ImageItem` path this table assumed; it works on every backend, out-of-core,
-> with debounced viewport re-aggregation [D18–D21, `milestone-phase4-datashader.md`].
-> The reactive `Signal` rows (⬜) are the remaining half of this phase.
+> `pg.ImageItem` path this table assumed — it works on every backend, out-of-core, with
+> debounced viewport re-aggregation and hover reverse-lookup [D18–D22, D46,
+> `milestone-phase4-datashader.md`]. The reactive `Signal` layer (View-root binding +
+> crossfilter) is in too [D38–D40]. Coverage follow-ups in `capabilities-gaps.md` §1.
 
 | Deliverable                                          | Acceptance                                           | Status |
 |------------------------------------------------------|-------------------------------------------------------|--------|
@@ -250,7 +252,7 @@ breakage early.
 | Linked brushing across views via signals              | Brush on one Scatter filters another (example 21)    | ✅ |
 | `ext.datashader` integration                          | `Scatter(table, scale="datashader")` aggregates out-of-core; backend-agnostic raster | ✅ |
 | Viewport-driven re-aggregation                        | Pan/zoom triggers debounced re-aggregation          | ✅ |
-| Crossfilter rewrite                                    | `examples/dashboard_crossfilter.py` rewritten in ≤80 LOC using signals + native Scatter | ⬜ (needs reactive) |
+| Crossfilter rewrite                                    | shipped as `examples/21_reactive_crossfilter.py` — signals + native Scatter, offline | ✅ |
 
 **Acceptance milestone.** Reactive crossfilter dashboard, 10M rows,
 pyqtgraph backend, Datashader for any single view that exceeds 1M
@@ -260,17 +262,17 @@ visible points. ≤80 LOC.
 Mitigation: spike during Phase 0; if >100 ms typical, drop to
 mpl-rendered Datashader image.
 
-### Phase 5 — Data layer + webengine backend rehome (2 months) · ◑ lazy adapters done; sources + webengine open
+### Phase 5 — Data layer + webengine backend rehome (2 months) · ◑ lazy adapters + webengine rehome done; Parquet/DuckDB sources + W5.2 binary transport open
 
 > **Status.** The lazy-first *adapter* layer this phase implied is already built —
 > container-agnostic `DataRef` adapters for dask/xarray/zarr (wrap existing
 > in-memory lazy objects), out-of-core and off-thread [D1, D17, `milestone-data-core.md`].
 > What remains here is the *source* layer below (`DataSource` reading Parquet/DuckDB/
-> SQL/CSV from disk or a DB) and the **webengine backend rehome** — both still ⬜.
-> The rehome is planned in detail in **`webengine-rehome.md`** (wrap the legacy
-> Qt↔JS bridge behind the native Backend protocol; supersede its layouts/linking
-> with qtviz's; W0–W5 stages) — it should land before/with the HoloViews adapter,
-> which falls back to it for elements qtviz doesn't natively model.
+> SQL/CSV from disk or a DB) — still ⬜. The **webengine backend rehome is done**
+> (`webengine-rehome.md`): the legacy Qt↔JS bridge now sits behind the native Backend
+> protocol, with qtviz's layouts/linking superseding the legacy ones, and the adapter
+> falls back to it for elements qtviz doesn't natively model. W0–W4 + base64 transport +
+> offline (no-CDN) shipped; only the W5.2 binary `fetch` transport tail is deferred.
 
 | Deliverable                                          | Acceptance                                           |
 |------------------------------------------------------|-------------------------------------------------------|
@@ -291,7 +293,7 @@ renders via Plotly. Same Element, three backends, user picks.
 edge cases. Mitigation: define minimum viable Element API; backends
 declare unsupported options rather than silently ignoring.
 
-### Phase 6 — Library 0.1 release (1 month) · ⬜ not started
+### Phase 6 — Library 0.1 release (1 month) · ◑ in progress — release prep done; PyPI publish + Pages deploy remain
 
 | Deliverable                                          | Acceptance                                           |
 |------------------------------------------------------|-------------------------------------------------------|
@@ -347,13 +349,13 @@ inventing on top of `WebBridgeView`.
 ## 5. Critical path
 
 ```
-0 ─→ 1 (pyqtgraph) ─→ 2 (mpl) ─→ 3 (hv adapter) ─→ 4 (reactive+datashader) ─→ 5 (data+webengine rehome) ─→ 6 (lib 0.1)
-          │
-          └─ halt if pyqtgraph composition is impractical (Spike P1 fails)
+0 ✅ ─→ 1 ✅ (pyqtgraph) ─→ 2 ✅ (mpl) ─→ 3 ✅ (hv adapter) ─→ 4 ✅ (reactive+datashader)
+   ─→ 5 ◑ (data layer ✅ + webengine ✅; Parquet/DuckDB sources open) ─→ 6 ◑ (lib 0.1: prep done, publish + deploy remain)
 ```
 
-Spike P2 (HoloViews adapter feasibility) is the gate for Phase 3, not
-the whole project — if it fails, drop Phase 3, ship native-only.
+The Phase-0 spike gates have all been cleared: P1 (pyqtgraph composition) and P2
+(HoloViews adapter feasibility, [D41]) both passed, so the adapter shipped rather than
+being cut. The remaining critical path is Phase 5's data sources, then the 0.1 release.
 
 ## 6. Risks (ranked)
 
@@ -384,17 +386,21 @@ the whole project — if it fails, drop Phase 3, ship native-only.
 | 10| Old `qtwebplot` users                | **Import shim + deprecation warning for 2 releases**            |
 | 11| Telemetry                            | **None in library; opt-in in Studio later**                     |
 
-## 8. What to do first
+## 8. What to do next
 
-1. Confirm the recommendations in §7 (or override).
-2. Run the four Phase 0 spikes (P1: pyqtgraph composition; P2: HoloViews
-   adapter prototype; P3: mpl HoloViews wrap; D1: 1M scatter perf).
-   Total ~10 days.
-3. Rename the package and set up CI matrix (parallel to spikes).
-4. After spikes pass: begin Phase 1 with `qtviz.core.element` and the
-   pyqtgraph backend's Scatter.
+> The original Phase-0 startup steps (confirm decisions §7, run the spikes, rename, set up
+> CI) are all complete. This section now tracks the remaining work toward and beyond 0.1.
 
-If P1 fails (pyqtgraph can't carry the composition load) the whole
-pivot is questionable — re-plan. If only P2 fails (HoloViews adapter is
-impractical), drop Phase 3 and ship native-only. P3 and D1 are
-performance gates that influence scope but don't kill the plan.
+1. **Finish the 0.1 release** — publish `0.1.0` to PyPI (the build is `twine check`-clean)
+   and deploy the mkdocs site to GitHub Pages (enable Pages → run the Docs workflow).
+2. **Data sources (Phase 5)** — `DataSource` for Parquet/DuckDB/SQL behind the lazy
+   `DataRef` contract; background queries; versioned result cache.
+3. **Axis transforms** — log / symlog / datetime across all backends (also unlocks
+   Datashader `logx`/`logy`).
+4. **Raster selection** — pixel → source rows for brush/linked-select on datashaded views
+   (builds on the [D46] hover reverse-lookup).
+5. **Remaining Datashader coverage** — raster legends/colorbars, theme-driven colors, a
+   wider aggregation surface (`capabilities-gaps.md` §1).
+
+Deferred / optional: webengine W5.2 binary transport; HoloViews adapter L2 (bidirectional
+streams) + the `.qtviz` accessor; Studio (Phases 7–9, post-1.0).
