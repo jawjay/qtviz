@@ -44,7 +44,7 @@ uv sync --extra matplotlib --extra dev
 | 27 | [`27_market_analytics.py`](27_market_analytics.py) | **Real-world: market analytics** — price `Curve` + 20/50-day MAs + Bollinger `Spread`, over an X-linked volume `Bars` panel; brush a day window. |
 | 28 | [`28_event_density_map.py`](28_event_density_map.py) | **Real-world: big-data map** — 2M categorized events → Datashaded categorical density; hover for the event count under the cursor. |
 | 29 | [`29_climate_field.py`](29_climate_field.py) | **Real-world: gridded science** — an `xarray` 2-D field → `Image` map + a 1-D `da.isel` cross-section `Curve`, X-linked. |
-| 30 | [`30_xarray_sensor_lines.py`](30_xarray_sensor_lines.py) | **Real-world: xarray cube** — a 3-D `(time, sensor, instance)` `DataArray`; `.sel` one sensor, overlay every instance as a `Curve` (Viridis ramp) + a bold `.mean` envelope. |
+| 30 | [`30_xarray_sensor_lines.py`](30_xarray_sensor_lines.py) | **Real-world: xarray cube** — a 3-D `10_000 × 4 × 250` `(time, sensor, instance)` `DataArray`; `.sel` one sensor, overlay all 250 instances (~2.5M line points) as faint `Curve`s + a bold `.mean` envelope. |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):

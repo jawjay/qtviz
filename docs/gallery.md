@@ -19,7 +19,7 @@ Larger examples that combine several features around a realistic dataset and dat
 | `27_market_analytics` | Equity price `Curve` + 20/50-day moving averages + a Bollinger `Spread`, over an X-linked volume `Bars` panel; brush a window of days. |
 | `28_event_density_map` | 2M categorized events → a Datashaded categorical density map; hover anywhere for the event count under the cursor (stays correct as you zoom). |
 | `29_climate_field` | An `xarray` 2-D field rendered as an `Image` map plus a 1-D `da.isel` cross-section `Curve` — one library, two data shapes, X-linked. |
-| `30_xarray_sensor_lines` | A 3-D `xarray` cube `(time, sensor, instance)`: `.sel` one sensor, then overlay every instance as a `Curve` (Viridis ramp) with a bold `.mean` envelope. |
+| `30_xarray_sensor_lines` | A 3-D `xarray` cube `10_000 × 4 × 250` `(time, sensor, instance)`: `.sel` one sensor, then overlay all 250 instances (~2.5M line points) as faint `Curve`s with a bold `.mean` envelope. |
 
 ## Native
 

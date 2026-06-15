@@ -13,6 +13,12 @@ one sensor you slice the cube and overlay every instance as its own line:
 One `xarray` object in; selection/reduction stay in xarray; qtviz draws the slices —
 no manual reshaping to columns.
 
+Scale: the cube is `10_000 × 4 × 250` (~10M samples); one sensor is **250 instances ×
+10k timesteps ≈ 2.5M line points** overlaid as native pyqtgraph curves, drawn faint so
+the overplotting reads as a density band with the mean envelope on top. (For an order of
+magnitude more lines, route a single long-form line through `scale="datashader"` for a
+line-density raster — see `examples/28_event_density_map.py` for the raster path.)
+
 Run (needs the xarray extra):
     uv sync --extra xarray --extra dev
     uv run python examples/30_xarray_sensor_lines.py
@@ -28,8 +34,8 @@ import numpy as np
 import qtviz as qv
 
 SENSORS = ["temperature", "pressure", "humidity", "vibration"]
-N_TIME = 240
-N_INSTANCES = 14
+N_TIME = 10_000
+N_INSTANCES = 250
 
 
 def _cube():
@@ -68,11 +74,11 @@ def build(sensor: str = "vibration", theme: qv.Theme | None = None):
 
     lines = [
         qv.Curve(panel.isel(instance=i), x="time", y="reading",
-                 color=ramp.at(i / (n - 1)), line_width=1.1, alpha=0.65)
+                 color=ramp.at(i / (n - 1)), line_width=0.8, alpha=0.35)
         for i in range(n)
     ]
     mean = qv.Curve(panel.mean("instance"), x="time", y="reading",
-                    color="#ffffff", line_width=2.6)
+                    color="#ffffff", line_width=2.8)
     print(f"sensor {sensor!r}: {n} instances over {panel.sizes['time']} timesteps")
 
     return qv.View(qv.Overlay([*lines, mean]), theme=theme or qv.Theme.dark())
