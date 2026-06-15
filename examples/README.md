@@ -36,6 +36,10 @@ uv sync --extra matplotlib --extra dev
 | 19 | [`19_webengine_holoviews.py`](19_webengine_holoviews.py) | **`RawFigure` + HoloViews** — a HoloViews figure rendered via Bokeh, with tap / box-select / range arriving as qtviz typed events (W3b). |
 | 20 | [`20_mixed_native_web.py`](20_mixed_native_web.py) | **Mixed backends** — a native pyqtgraph pane beside a webengine Plotly pane in one window, sharing one event stream (W4). |
 | 21 | [`21_reactive_crossfilter.py`](21_reactive_crossfilter.py) | **Reactive crossfilter** — brush one view, a `Signal` + `derived` re-renders another with the selected rows (spec §9). Native, offline. |
+| 22 | [`22_from_holoviews.py`](22_from_holoviews.py) | **`from_holoviews`** — translate a HoloViews `scatter * curve + bars` tree into native qtviz Elements; no browser. |
+| 23 | [`23_from_holoviews_dynamicmap.py`](23_from_holoviews_dynamicmap.py) | **HoloViews `DynamicMap`** — drive a `freq` kdim with a Qt control; `from_holoviews_dmap` → `Signal[Node]` re-renders ([D44] L1). |
+| 24 | [`24_from_hvplot.py`](24_from_hvplot.py) | **`from_hvplot`** — a pandas `df.hvplot(kind="scatter")` one-liner rendered as a native Qt widget ([D43]). |
+| 25 | [`25_raster_inspect.py`](25_raster_inspect.py) | **Raster hover-inspect** — hover a 1M-point datashaded scatter; `HoverEvent.value` reports the `count` under the cursor ([D46]). |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -44,8 +48,13 @@ Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotli
 uv sync --extra datashader --extra dask --extra matplotlib --extra dev
 ```
 
-More examples will be added as the library grows (reactive signals, the
-HoloViews adapter, …).
+Examples 22–24 use the HoloViews adapter; 24 also needs the `hvplot` extra:
+
+```bash
+uv sync --extra holoviews --extra hvplot --extra dev
+```
+
+Example 25 needs the `datashader` extra.
 
 Examples 13–20 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
 WebEngine view, plus `RawFigure` passthrough for Plotly/Bokeh/HoloViews, and a

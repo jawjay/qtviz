@@ -30,12 +30,13 @@ That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan
 and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 `backend="webengine"` — and the same line renders through a different engine.
 
-> **Status — pre-release, in active development.** The native stack (data model,
-> pyqtgraph + matplotlib backends, interaction, mixed-backend layouts, functional
-> data binding, the lazy data layer, and Datashader) is built and covered by
-> **~270 passing tests**. The `webengine` backend (Plotly, plus `RawFigure`
-> passthrough for existing Plotly/Bokeh/HoloViews figures) is new and progressing
-> through its rollout. Not yet on PyPI; APIs may still change.
+> **Status — `0.1`, pre-release.** The native stack (data model, pyqtgraph +
+> matplotlib backends, interaction, mixed-backend layouts, functional data binding,
+> the lazy data layer, Datashader, reactive signals, and the HoloViews/hvplot
+> adapter) is built and covered by **~330 passing tests** across macOS/Linux/Windows
+> × Python 3.11–3.13. The `webengine` backend (Plotly, plus `RawFigure` passthrough
+> for existing Plotly/Bokeh/HoloViews figures) is in too; only its large-payload
+> binary-transport tail is still in flight. Not yet on PyPI; APIs may still change.
 
 ---
 
@@ -260,11 +261,17 @@ uv run python examples/01_hello.py
 `04_theming` · `05_interaction` · `06_data_binding` · `07_mixed_backends` ·
 `08_gallery` (all eight elements) · `09_datashader` (millions of points,
 re-aggregated on zoom) · `10_out_of_core` (lazy Dask) · `11_datashader_matplotlib`
-· `12_color_mapping` · `dashboard_native` (3-panel linked dashboard).
+· `12_color_mapping` · `25_raster_inspect` (hover a datashaded plot for the count
+under the cursor) · `dashboard_native` (3-panel linked dashboard).
+
+**Reactive & adapter:** `21_reactive_crossfilter` (brush one view → a `Signal`
+re-renders another) · `22_from_holoviews` (render a HoloViews tree natively) ·
+`23_from_holoviews_dynamicmap` (drive a `DynamicMap` with a Qt control) ·
+`24_from_hvplot` (a pandas `.hvplot` one-liner as a native widget).
 
 **webengine:** `13_webengine` · `14_webengine_overlay` · `15_webengine_elements` ·
 `16_webengine_export` (PNG) · `17_webengine_heatmap` · `18_webengine_raw_figure`
-(host a Plotly 3-D surface).
+(host a Plotly 3-D surface) · `19_webengine_holoviews` · `20_mixed_native_web`.
 
 See [`examples/README.md`](examples/README.md) for the full index.
 
@@ -280,8 +287,9 @@ See [`examples/README.md`](examples/README.md) for the full index.
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
 | **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** |
 | **Data inputs** | dict · NumPy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
-| **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom |
+| **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom; **hover a raster for the aggregated value** (`HoverEvent.value`) |
 | **Interaction** | pan / zoom · brush-select (Shift-drag) · pick · hover · tap · linked axes · typed events via `View.on` |
+| **HoloViews / hvplot** | `from_holoviews(obj)` translates a HoloViews tree to native Elements (8 elements + containers; `RawFigure` fallback) · `DynamicMap` → `Signal[Node]` (kdim-driven re-render) · `from_hvplot(df, kind, …)` one-liner |
 | **Reactive** | `signal` / `derived` / `effect` / `batch` (S-style auto-tracking) · `View(Signal[Node])` re-renders on change · crossfilter / linked brushing |
 | **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
 | **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
@@ -313,6 +321,11 @@ are the current frontier.
 - ✅ **Reactive `Signal` binding** — S-style `signal` / `derived` / `effect` / `batch`;
   `View(Signal[Node])` re-renders on change; linked brushing / crossfilter falls out
   of `Signal` + `derived` + `View.on` (no manual wiring).
+- ✅ **HoloViews / hvplot adapter** — `from_holoviews(obj)` translates a HoloViews
+  tree to native Elements (`RawFigure` fallback for the long tail); `DynamicMap` →
+  `Signal[Node]` one-way re-render; `from_hvplot(df, kind, …)` one-liner.
+- ✅ **Raster hover-inspect** — hovering a datashaded view reports the aggregated
+  `count` / `mean` under the cursor via `HoverEvent.value`, fresh through pan/zoom.
 
 ### In progress — the webengine backend (Phase 5)
 
@@ -331,9 +344,9 @@ are the current frontier.
 
 - ◻ **Data sources** — Parquet / DuckDB / SQL behind the lazy data contract, with
   background queries and a versioned result cache.
-- ◻ **HoloViews adapter** — `from_holoviews(obj)` translating common hv elements to
-  native qtviz, falling back to `RawFigure` for the long tail.
 - ◻ **Axis transforms** — log / symlog / datetime scales across all backends.
+- ◻ **Raster selection** — brush / linked-select on a datashaded view (pixel → source
+  rows), building on the hover reverse-lookup already shipped.
 - ◻ **`qtviz 0.1` on PyPI** — documentation site, gallery, migration guide.
 
 ### Exploring
@@ -366,6 +379,16 @@ Both **backends and data adapters are registered, never imported by the core**, 
 every new engine or container type is purely additive. The design documents —
 specification, development plan, milestone notes, and the full decision log — live
 in [`design/`](design/).
+
+---
+
+## Migrating from `qtwebplot`
+
+qtviz began as `qtwebplot`; the Qt↔JS bridge now lives under
+`qtviz.backends.webengine`. Existing `import qtwebplot` code keeps working through a
+compatibility shim that transparently redirects to the new location and emits a
+`DeprecationWarning`. Update imports to `qtviz.backends.webengine` (or the public
+`qtviz` API) when convenient — the shim is kept for two releases, then removed.
 
 ---
 

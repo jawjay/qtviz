@@ -439,26 +439,28 @@ Tier 2(offscreen) + ruff on every PR; Tier 4 on a schedule/manual.
 
 ## 8. What's next
 
-The Phase 1–2 surface, the data core, and Datashader are built and green. The
-remaining work, in recommended order (each opened with its own spec-first
-benchmark suite, per cadence):
+Most of the original sequence has shipped — **done & green:** the Phase 1–2 surface,
+the data core, Datashader (incl. [D22] line/categorical coverage **and** [D46]
+hover reverse-lookup), reactive `Signal` binding (Phase 4), the HoloViews/hvplot
+adapter (Phase 3, 3a + 3b), the webengine rehome (W0–W5.1a + offline), and the CI
+matrix (macOS/Linux/Windows × 3.11–3.13).
 
-1. **Finish Datashader coverage [D22]** (small) — datashade `Curve`/line via
-   `canvas.line`, and categorical color via `count_cat` + `color_by`. The 4a/4b
-   machinery already handles points; this extends the aggregation + shade step.
-2. **Reactive `Signal` binding** (roadmap Phase 4) — `Signal`/derived/effect tied
-   to QObject lifecycle; a signal-bound accessor re-renders the Element on change;
-   cross-view linked brushing without manual wiring. Builds directly on the
-   accessor + async-resolve machinery already in place.
-3. **Data sources** (roadmap Phase 5) — a `DataSource` for Parquet/DuckDB/SQL
-   behind the existing adapter contract; lazy + background queries. The lazy
-   `DataRef` contract is already proven by dask/xarray/zarr, so this is additive.
-4. **HoloViews adapter** (roadmap Phase 3) — `from_holoviews()` for the 8 elements;
-   independent of the above and gated on the Spike-P2 feasibility check.
-5. **webengine backend rehome** (roadmap Phase 5) — the legacy qtwebplot bridge
-   moves under `backends/webengine/` behind the Backend protocol.
-6. **Release `0.1`** (roadmap Phase 6) — docs/gallery, PyPI, `qtwebplot` import shim.
+**In progress — release `0.1` (Phase 6):** docs/code cohesiveness pass, a
+lightweight mkdocs site, packaging/metadata for PyPI, and the `qtwebplot` import
+shim (already in place). This is the current focus.
 
-Cross-cutting, still open: the CI matrix (never set up — §5.5), the
-`qtviz.data_adapters` entry-point for third-party adapters, and D7 (update
-coalescing). Full decision log in `discussion-items.md`.
+**Remaining / planned** (each opened with its own spec-first benchmark suite, per
+cadence):
+
+1. **Data sources** (roadmap Phase 5) — a `DataSource` for Parquet/DuckDB/SQL behind
+   the existing adapter contract; lazy + background queries. The lazy `DataRef`
+   contract is already proven by dask/xarray/zarr, so this is additive.
+2. **Axis transforms** — log / symlog / datetime scales across all backends; also
+   unlocks Datashader `logx`/`logy`.
+3. **Raster selection** — brush / linked-select on a datashaded view (pixel → source
+   rows), building on the [D46] hover reverse-lookup.
+4. **webengine W5.2** — true-binary `fetch` transport (custom URL scheme) for the
+   100 MB+ payload tail (deferred; gated on a measured need).
+
+Cross-cutting, still open: the `qtviz.data_adapters` entry-point for third-party
+adapters, and D7 (update coalescing). Full decision log in `discussion-items.md`.
