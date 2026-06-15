@@ -31,6 +31,8 @@ dependencies = [
 plotly = ["plotly >=5.20"]
 bokeh = ["bokeh >=3.4"]
 holoviews = ["holoviews >=1.18"]
+# hvplot one-liner entry ([D43] Path A): df.hvplot(...) → from_holoviews → native widget
+hvplot = ["hvplot >=0.10"]
 # The webengine backend hosts web figure libraries in a QWebEngineView. PySide6
 # (>=6.6, a hard dep) already ships QtWebEngine via PySide6-Addons; this extra
 # adds the figure libraries it can host (roadmap Phase 5, D30).
@@ -45,6 +47,7 @@ all = [
     "plotly >=5.20",
     "bokeh >=3.4",
     "holoviews >=1.18",
+    "hvplot >=0.10",
     "matplotlib>=3.11.0",
     "dask[dataframe]>=2026.6.0",
     "xarray>=2026.4.0",

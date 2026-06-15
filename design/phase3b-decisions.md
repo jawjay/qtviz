@@ -274,12 +274,25 @@ So a coherent 0.1 story is one of:
 > against the actual session. The reactive substrate and 3a translation already exist,
 > which is why L1 and Path A are small.
 
-## 5. Decision checklist (fill in next session)
+## 5. Decision checklist (decided 2026-06-15)
 
-- [ ] **D43:** Path A only · A+B · B only · (C is rejected). _Decision:_ ____
-- [ ] If A: wrapper `qv.from_hvplot(...)` or docs-only? _Decision:_ ____
-- [ ] If B: which `kind`s (recommend our 8)? _Decision:_ ____
-- [ ] **D44:** confirm L1 for 0.1, L2 deferred. _Decision:_ ____
-- [ ] **D44:** kdim widgets as built-in Qt panel, or exposed as `Signal`s for the app? _Decision:_ ____
-- [ ] **D44:** stream-only DynamicMap fallback before L2 — warn-and-static or webengine RawFigure? _Decision:_ ____
-- [ ] Update [D43]/[D44] status in `discussion-items.md` once chosen.
+- [x] **D43:** Path A only · ~~A+B~~ · ~~B only~~ · (C is rejected). **Decision: Path A
+  only** (translate hvplot output via existing `from_holoviews`). Path B (`.qtviz`
+  accessor) is a deferred follow-up, not in 0.1.
+- [x] If A: wrapper `qv.from_hvplot(...)` or docs-only? **Decision: a thin wrapper**
+  `qv.from_hvplot(data, kind=..., **kw)` *and* docs (wrapping hvplot output directly
+  also works). Centralizes the lazy hvplot import and gives one discoverable entry.
+- [x] If B: which `kind`s? **N/A** — B deferred. (If built later: exactly our 8.)
+- [x] **D44:** confirm L1 for 0.1, L2 deferred. **Decision: yes — L1 for 0.1, L2
+  (bidirectional stream write-back) deferred to a follow-up.**
+- [x] **D44:** kdim widgets as built-in Qt panel, or exposed as `Signal`s for the app?
+  **Decision: exposed as `Signal`s** (composable core; `from_holoviews_dmap` →
+  `(node_signal, {kdim: Signal})`). A built-in Qt kdim panel ships only as an optional
+  **example/helper**, not core — keeps the UI un-baked-in.
+- [x] **D44:** stream-only DynamicMap fallback before L2 — warn-and-static or webengine
+  RawFigure? **Decision: warn-and-static** (resolve + translate the current frame
+  natively, emit a warning); webengine `RawFigure` is the documented full-fidelity
+  escape hatch users can opt into.
+- [x] Update [D43]/[D44] status in `discussion-items.md` once chosen. **Done.**
+
+> Firm 3b spec written from these decisions: `milestone-holoviews-adapter.md` §3b.

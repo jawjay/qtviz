@@ -7,7 +7,7 @@ acceptance suite (tests/qtviz) targets.
 from __future__ import annotations
 
 from . import backends, data, errors, threading  # data layer first, then backends auto-register
-from .adapter import from_holoviews
+from .adapter import from_holoviews, from_holoviews_dmap, from_hvplot
 from .backends import set_backend_priority, set_default_backend
 from .core.capabilities import Capabilities
 from .core.color import Color, ColorSpec
@@ -54,7 +54,7 @@ __all__ = [
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)
-    "from_holoviews",
+    "from_holoviews", "from_holoviews_dmap", "from_hvplot",
     # data binding (accessors, D14) + shape overrides (D17) + raster routing (Phase 4)
     "Accessor", "Expression", "col", "lit", "tabular", "gridded",
     "set_raster_threshold", "set_raster_size",

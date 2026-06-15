@@ -1600,7 +1600,7 @@ bokeh_server = "qtviz_bokeh_server:backend"
 No file in `qtviz/core/`, `qtviz/elements/`, or any other backend is
 modified. This is the test the design must pass.
 
-## 8. HoloViews adapter (Phase 3 sketch)
+## 8. HoloViews adapter (Phase 3 — 3a shipped; 3b firm spec in `milestone-holoviews-adapter.md` §7)
 
 ```python
 def from_holoviews(obj) -> Node:
@@ -1614,16 +1614,24 @@ def from_holoviews(obj) -> Node:
     if isinstance(obj, hv.Layout):
         return Layout(tuple(from_holoviews(c) for c in obj), kind="grid")
     if isinstance(obj, hv.DynamicMap):
-        ...   # signal-driven
+        return from_holoviews_dmap(obj).node   # → Signal[Node], 3b/[D44] L1
     raise UnsupportedHoloViewsElement(type(obj).__name__)
 ```
 
-`DynamicMap`: subscribe to HoloViews's stream events; translate each
-update into a `Signal` value change, which drives a re-render.
+`DynamicMap` (**3b, [D44] Level 1 — one-way**): `from_holoviews_dmap(dm)` builds one
+writable `Signal` per kdim feeding a `derived` `Signal[Node]` that resolves `dm[values]`
+and runs the static translation on each frame; `View` re-renders on the signal change
+(debounced, §9 / `_is_reactive`). Returns `(node_signal, {kdim: Signal})` so the app
+drives kdims; `from_holoviews(dm)` is sugar for `.node`. Stream-only maps (no kdims)
+degrade to **warn-and-static**. Firm spec: `milestone-holoviews-adapter.md` §7.
 
-Streams (`RangeXY`, `BoundsXY`, `Tap`, `Selection1D`): register our
-typed events on the resulting View and forward to the HoloViews
-stream's `event()` method, so HoloViews-side callbacks fire normally.
+Streams (`RangeXY`, `BoundsXY`, `Tap`, `Selection1D`) — **bidirectional write-back**
+(register our typed events on the View and forward to the HoloViews stream's `event()`
+so hv-side callbacks fire) is **Level 2, deferred** past 0.1 ([D44]).
+
+hvplot (**3b, [D43] Path A**): `qv.from_hvplot(data, kind, **kw)` ==
+`from_holoviews(data.hvplot(...))` — hvplot's output is a HoloViews object, so the
+adapter already consumes it; `hvplot` is an optional `[hvplot]` extra.
 
 ## 9. Reactive layer (Phase 4) — concrete
 

@@ -69,7 +69,7 @@ Grouped by theme. The right-hand column is the roadmap work each gap gates.
 |-----|----------------|-------|
 | **webengine backend** — Element → Plotly/Bokeh traces, capability declarations | ◑ W0–W4 + W5.1a done (8 elements, RawFigure, mixed panes, base64 typed-array transport); binary `qtviz://` transport is W5.2 | roadmap Phase 5 |
 | **Offline rendering (no CDN)** — bundle plotly.js/bokeh.js from the installed package | **hard requirement (spec §0.1)**; webengine currently loads JS from a CDN → blank plots offline. Inline now, `qtviz://`-served in W5.2 | Phase 5 / before 0.1 |
-| **HoloViews adapter** — element translation, Overlay/Layout/GridSpace, `DynamicMap`→reactive, `Stream`→event | one-way `from_holoviews()`; depends on legends + the element set above | roadmap Phase 3 |
+| **HoloViews adapter** — element translation, Overlay/Layout/GridSpace, `DynamicMap`→reactive, `Stream`→event, `hvplot` entry | ◑ 3a static `from_holoviews` ✅; 3b ✅ — `DynamicMap`→`Signal[Node]` one-way ([D44] L1, kdims as Signals + `kdim_panel`), `from_hvplot` ([D43] Path A). **Deferred:** L2 bidirectional `Stream` write-back (`RangeXY`/`Selection1D`→hv), `.qtviz` accessor (Path B). Pixel-faithful `.opts` styling out of scope | roadmap Phase 3 |
 | **Composite / mixed-backend export** | a `CompositeRenderHandle` raises on `export` — no single surface | release |
 | **CI matrix** (macOS/Linux/Windows × 3.11–3.13) | never set up; the only cross-platform guarantee today is local | every phase |
 

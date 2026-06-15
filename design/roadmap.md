@@ -24,7 +24,7 @@ data core had to come first. Net effect:
 | 0 | rename · CI · spikes | ◑ rename ✅; spikes folded into Phase 1; **CI matrix still open** |
 | 1 | core compose + pyqtgraph | ✅ |
 | 2 | matplotlib backend | ✅ |
-| 3 | HoloViews adapter | ◑ Spike-P2 ✅ [D41]; **3a static `from_holoviews` ✅** (8 elements + Points/Area, containers, RawFigure fallback); 3b reactive/`hvplot`/fallback-render ⬜ — see `milestone-holoviews-adapter.md` |
+| 3 | HoloViews adapter | ✅ Spike-P2 [D41]; **3a static `from_holoviews` ✅** (8 elements + Points/Area, containers, RawFigure fallback); **3b ✅** — `DynamicMap`→`Signal[Node]` one-way ([D44] L1) + `from_hvplot` ([D43] Path A); L2 bidirectional streams + `.qtviz` accessor deferred — see `milestone-holoviews-adapter.md` §7 |
 | 4 | reactive + Datashader | **Datashader ✅**; **reactive `Signal` ✅** (View-root, S-style; crossfilter) |
 | 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0–W4 ✅ · W5.1a base64 transport ✅ · W5-offline (no-CDN) ✅**; W5.2 binary-fetch tail ⬜ deferred — see `webengine-arrow-transport.md` §10) |
 | 6 | release `0.1` | ⬜ |

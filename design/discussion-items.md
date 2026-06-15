@@ -1035,7 +1035,20 @@ most-public surface (consistent with [D41]'s public-API-only principle). Detaile
 path analysis (3 paths incl. "hvplot-as-builder" + effort) in
 `phase3b-decisions.md` §1.
 
-**Status:** open — see `phase3b-decisions.md` for the full tradeoff briefing.
+**Decision (3b).** **Path A — hvplot-as-builder.** hvplot's *output* is a HoloViews
+object, which `from_holoviews` already translates; so we add only a thin convenience
+`qv.from_hvplot(data, kind=..., **kw)` (== `from_holoviews(data.hvplot(kind=kind,
+**kw))`, hvplot imported lazily) and document that wrapping hvplot output also works.
+This rides hvplot's stable public contract (its return value), keeps coupling low
+([D41]), and inherits `DynamicMap` support from [D44] L1 (hvplot emits a `DynamicMap`
+for `groupby`/widgets/`datashade`). `hvplot` ships as an **optional extra**
+`[hvplot]`; `import qtviz` never imports it. Path B (a native `.qtviz` accessor) is a
+**deferred follow-up** — nice as an hvplot-free entry point but a second API surface
+to own. Path C (a HoloViews plotting backend) is **rejected** — it re-opens the
+already-rejected "Option A" (binds us to hv's plot-class internals;
+`native-pivot-research.md` §2c).
+
+**Status:** ✅ decided (3b) — Path A (thin `from_hvplot` + docs); B deferred; C rejected.
 
 ---
 
@@ -1051,7 +1064,22 @@ bidirectional stream write-back (`Selection1D`/`RangeXY` → hv) to a follow-up.
 Levels (L0/L1/L2), effort, and the read-vs-write breakdown in
 `phase3b-decisions.md` §2.
 
-**Status:** open — see `phase3b-decisions.md` for the full tradeoff briefing.
+**Decision (3b).** **Level 1 — one-way re-render** for 0.1; **defer Level 2**
+(bidirectional stream write-back) to a follow-up once native event semantics settle.
+Mechanism leans on the reactive substrate already built: `from_holoviews(dm)` returns
+a **`Signal[Node]`** (the View already accepts a `Signal[Node]` root, `core/view.py`
+`_is_reactive`), implemented as one writable `Signal` per kdim feeding a `derived`
+that resolves `dm[values]` and runs the **static** translation on each frame.
+**kdim exposure is composable, not a baked-in UI** (favoring general abstractions):
+a sibling `from_holoviews_dmap(dm)` returns `(node_signal, {kdim: Signal})` so the app
+drives kdims however it likes; a turnkey Qt kdim panel is shipped only as an
+**optional example/helper**, not core. **Stream-only `DynamicMap`** (no kdims, can't
+be widget-driven) degrades to **warn-and-static** — resolve + translate the current
+frame natively and emit a warning that stream interactivity needs L2; the webengine
+`RawFigure` path ([D28]) is the documented full-fidelity escape hatch.
+
+**Status:** ✅ decided (3b) — L1 one-way (DynamicMap→Signal[Node], kdims as Signals,
+optional widget-panel example); L2 deferred; stream-only → warn-and-static.
 
 ---
 
@@ -1169,6 +1197,6 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D40 | reactive render / threading / lifecycle | reactive (Phase 4) | ✅ accepted — debounced rebuild; `run_on_gui`; `Disposable` + View-owned + `owner=` |
 | D41 | **Spike-P2 — HoloViews adapter feasibility (Phase 3 gate)** | Phase 3 | ✅ GO — 10/10 render via pyqtgraph on public API only (no internals); findings deferred to Phase 3 |
 | D42 | hv `Histogram`/`Spread` shape handling | Phase 3 | ✅ accepted — `Histogram`→`Bars`, `Spread`→`Spread` via Expression `y±Δ`; no API change |
-| D43 | `hvplot` integration mechanism | Phase 3 (3b) | open — hvplot backend vs `.qtviz` accessor; decide at 3b |
-| D44 | `DynamicMap`/stream scope for 0.1 | Phase 3 (3b) | open — recommend one-way re-render; defer bidirectional stream write-back |
+| D43 | `hvplot` integration mechanism | Phase 3 (3b) | ✅ decided — Path A (thin `from_hvplot` + docs; optional `[hvplot]` extra); B deferred; C rejected |
+| D44 | `DynamicMap`/stream scope for 0.1 | Phase 3 (3b) | ✅ decided — L1 one-way (DynamicMap→`Signal[Node]`, kdims as Signals); L2 deferred; stream-only → warn-and-static |
 | D45 | HoloViews import crashes offscreen-Qt teardown | Phase 3 / test infra | open — mitigated (importorskip order); lazy hv import at impl |
