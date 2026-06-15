@@ -184,6 +184,16 @@ def test_selection_skips_multidim_indices():
     assert evs[0].indices == [4]  # only the scalar index survives
 
 
+def test_categorical_coordinate_does_not_crash():
+    import math
+
+    # a Bars hover sends x as the category label string, not a number
+    evs = _t("plotly.hover", {"points": [{"trace_index": 0, "point_index": 5, "x": "d", "y": 3.0}]})
+    assert len(evs) == 1 and isinstance(evs[0], qv.HoverEvent)
+    assert math.isnan(evs[0].x)  # non-numeric category → NaN, not a ValueError
+    assert evs[0].y == 3.0
+
+
 def test_parse_relayout_both_forms_and_partial():
     full = _translate.parse_relayout(
         {

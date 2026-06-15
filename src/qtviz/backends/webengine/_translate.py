@@ -25,7 +25,14 @@ def _src(trace_index, traces, surface_id: str) -> str:
 
 
 def _f(v) -> float:
-    return float(v) if v is not None else 0.0
+    """A coordinate as a float; a non-numeric value (e.g. a categorical-axis label
+    like a bar's `x="d"`) becomes NaN rather than crashing `float()`."""
+    if v is None:
+        return 0.0
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return float("nan")
 
 
 def _scalar_index(pi):
