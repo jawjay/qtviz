@@ -25,6 +25,8 @@ _CATEGORY10 = (
 
 
 class Palette(Immutable):
+    """An ordered, cycling sequence of colors used for categorical encoding."""
+
     def __init__(
         self,
         colors: Sequence[ColorSpec],

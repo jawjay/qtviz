@@ -8,6 +8,8 @@ from ..data import Accessor, as_data_ref
 
 
 class Spread(Element):
+    """A filled band between `y_lo` and `y_hi` (e.g. a confidence interval)."""
+
     REQUIRED_OPTIONS = ("x", "y_lo", "y_hi")
     RECOMMENDED_OPTIONS = ("color", "alpha")
     CHANNELS = ("x", "y_lo", "y_hi")

@@ -9,6 +9,8 @@ from ..data import Accessor, as_data_ref
 
 
 class Heatmap(Element):
+    """A grid of tidy x/y cells shaded by a `z` value."""
+
     REQUIRED_OPTIONS = ("x", "y", "z")
     RECOMMENDED_OPTIONS = ("colormap", "aggregator")
     CHANNELS = ("x", "y", "z")

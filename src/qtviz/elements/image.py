@@ -9,6 +9,8 @@ from ..data import as_data_ref
 
 
 class Image(Element):
+    """A 2-D array drawn as an image over explicit `bounds` (also hosts RGBA rasters)."""
+
     REQUIRED_OPTIONS = ("bounds",)
     RECOMMENDED_OPTIONS = ("colormap", "interpolation")
 

@@ -10,6 +10,8 @@ from ..data import Accessor, as_data_ref
 
 
 class Curve(Element):
+    """A connected line through ordered x/y points."""
+
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "line_width", "line_style", "alpha")
     CHANNELS = ("x", "y")

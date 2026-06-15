@@ -8,6 +8,8 @@ from ..data import Accessor, as_data_ref
 
 
 class Histogram(Element):
+    """Binned frequency of a single raw `column`."""
+
     REQUIRED_OPTIONS = ("column",)
     RECOMMENDED_OPTIONS = ("bins", "density", "color")
     CHANNELS = ("column",)

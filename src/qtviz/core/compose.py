@@ -96,6 +96,9 @@ def _data_size(el: Element) -> int | None:
 
 # ── negotiation ──────────────────────────────────────────────────────────────
 def negotiate(node: Node, view_backend: str | None, *, ancestor_hint: str | None = None) -> str:
+    """Resolve the backend name for `node` from its hint, ancestors, the view choice,
+    and the global default; raises if an Overlay's children disagree or an Element is
+    unsupported. `"auto"` defers to `auto_negotiate`."""
     from .. import backends
 
     chosen = node.backend_hint or ancestor_hint or view_backend or backends.global_default()
@@ -129,6 +132,8 @@ def negotiate(node: Node, view_backend: str | None, *, ancestor_hint: str | None
 
 
 def auto_negotiate(node: Node, *, ancestor_hint: str | None = None) -> str:
+    """Pick a backend for `node` by capability + data size when no explicit choice is
+    given — the engine behind `backend="auto"`."""
     from .. import backends
 
     if isinstance(node, Overlay):

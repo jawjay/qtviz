@@ -182,10 +182,12 @@ class Clip(Expr):
 
 
 def col(name: str) -> Col:
+    """Reference a data column by name in an `Expression` (e.g. `col("a") - col("b")`)."""
     return Col(name)
 
 
 def lit(value) -> Lit:
+    """A literal scalar inside an `Expression` (broadcast against the columns)."""
     return Lit(value)
 
 

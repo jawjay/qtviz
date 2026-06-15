@@ -15,6 +15,8 @@ from .palette import Palette
 
 
 class Options(Immutable):
+    """Universal per-Element style options: `color`, `alpha`, `palette`, `label`."""
+
     def __init__(
         self,
         *,
@@ -33,6 +35,8 @@ class Options(Immutable):
 
 
 class OverlayOptions(Immutable):
+    """Shared-surface options for an `Overlay`: title, axis labels, legend, background."""
+
     def __init__(
         self,
         *,
@@ -58,6 +62,9 @@ def _as_pairs(m) -> tuple | None:
 
 
 class LayoutOptions(Immutable):
+    """Arrangement options for a `Layout`: rows/cols, spacing, axis linking
+    (`link_x`/`link_y`), and tab/dock labels."""
+
     def __init__(
         self,
         *,

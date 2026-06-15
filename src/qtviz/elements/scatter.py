@@ -10,6 +10,8 @@ from ..data import Accessor, as_data_ref
 
 
 class Scatter(Element):
+    """A point cloud — x/y positions with optional `color`/`size` encoding."""
+
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker")
     CHANNELS = ("x", "y")

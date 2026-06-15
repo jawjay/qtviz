@@ -153,14 +153,18 @@ class _Derived(Signal[T], _Tracking):
 
 # ── public API ────────────────────────────────────────────────────────────────
 def signal(initial: T) -> Signal[T]:
+    """Create a writable reactive cell holding `initial`."""
     return Signal(initial)
 
 
 def derived(fn: Callable[[], T]) -> Signal[T]:
+    """A read-only signal that recomputes `fn` when any signal it reads changes."""
     return _Derived(fn)
 
 
 def effect(fn: Callable[[], None], *, owner=None) -> Disposable:
+    """Run `fn` now and re-run it on any tracked-signal change; dispose to stop
+    (auto-disposed when `owner` QObject is destroyed)."""
     comp = _Computation(fn)
     disp = Disposable(comp.dispose)
     if owner is not None:

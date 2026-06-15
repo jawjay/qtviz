@@ -49,11 +49,13 @@ def registered() -> list[Any]:
 
 
 def set_default_backend(name: str) -> None:
+    """Set the backend used when a `View` is created with `backend="auto"` and no hint."""
     global _DEFAULT
     _DEFAULT = name
 
 
 def set_backend_priority(names) -> None:
+    """Set the preference order `auto_negotiate` tries when several backends qualify."""
     _PRIORITY[:] = list(names)
 
 

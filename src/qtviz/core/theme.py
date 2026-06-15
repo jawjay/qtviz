@@ -18,6 +18,9 @@ _DARK_CATEGORY = (
 
 
 class Theme(Immutable):
+    """Backend-agnostic styling (background, axes, palette) applied to any `View`.
+    Construct directly or via `Theme.light()` / `dark()` / `from_qt_app()`."""
+
     def __init__(
         self,
         *,

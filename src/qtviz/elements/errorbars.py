@@ -10,6 +10,8 @@ from ..data import Accessor, as_data_ref
 
 
 class ErrorBars(Element):
+    """Error bars around `y` — `err` is symmetric, or `(lo, hi)` for asymmetric."""
+
     REQUIRED_OPTIONS = ("x", "y", "err")
     RECOMMENDED_OPTIONS = ("direction", "color")
 

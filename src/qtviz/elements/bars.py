@@ -10,6 +10,8 @@ from ..data import Accessor, as_data_ref
 
 
 class Bars(Element):
+    """Bars — `x` categories (or numeric positions) with `y` heights."""
+
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("group", "color", "orient")
     CHANNELS = ("x", "y")
