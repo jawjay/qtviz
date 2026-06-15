@@ -273,7 +273,8 @@ re-renders another) · `22_from_holoviews` (render a HoloViews tree natively) ·
 flagged anomalies, residual panel) · `27_market_analytics` (price + moving averages +
 Bollinger band over a linked volume panel) · `28_event_density_map` (2M categorized
 events, Datashaded, hover for counts) · `29_climate_field` (an `xarray` 2-D field as an
-`Image` map + a 1-D cross-section).
+`Image` map + a 1-D cross-section) · `30_xarray_sensor_lines` (a 3-D `xarray` cube →
+all instance lines for one sensor).
 
 **webengine:** `13_webengine` · `14_webengine_overlay` · `15_webengine_elements` ·
 `16_webengine_export` (PNG) · `17_webengine_heatmap` · `18_webengine_raw_figure`
