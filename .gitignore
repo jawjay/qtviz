@@ -6,6 +6,7 @@ __pycache__/
 .eggs/
 build/
 dist/
+site/
 .Python
 
 # Virtual envs

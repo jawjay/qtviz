@@ -63,6 +63,10 @@ dev = [
     "pytest-qt >=4.4",
     "ruff >=0.5",
 ]
+docs = [
+    "mkdocs-material >=9.5",
+    "mkdocstrings[python] >=0.25",
+]
 matplotlib = [
     "matplotlib>=3.11.0",
 ]

@@ -1,0 +1,44 @@
+name: Docs
+
+# Manual trigger only — this does NOT auto-fire on push. Deploying requires enabling
+# GitHub Pages (Settings → Pages → Source: GitHub Actions) once; that's a repo setting
+# the maintainer owns. Run this workflow from the Actions tab when ready to publish.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      # mkdocstrings imports qtviz to autodoc it, so install the package + its deps too.
+      - name: Install (docs + runtime deps)
+        run: uv sync --frozen --extra docs --extra matplotlib
+
+      - name: Build site (strict)
+        run: uv run mkdocs build --strict
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
