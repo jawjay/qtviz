@@ -1031,9 +1031,11 @@ one-liner that returns a Qt-native widget. Two ways to wire it.
 that builds Elements directly, sidestepping hvplot internals.
 
 **Recommendation.** Decide when stage 3b starts; lean toward whichever rides the
-most-public surface (consistent with [D41]'s public-API-only principle).
+most-public surface (consistent with [D41]'s public-API-only principle). Detailed
+path analysis (3 paths incl. "hvplot-as-builder" + effort) in
+`phase3b-decisions.md` §1.
 
-**Status:** open.
+**Status:** open — see `phase3b-decisions.md` for the full tradeoff briefing.
 
 ---
 
@@ -1046,8 +1048,10 @@ stream's `.event(...)` so hv-side callbacks fire.
 **Recommendation.** For 0.1, support **one-way** re-render (kdim widgets / param
 changes → recompute node → `Signal[Node]` → debounced rebuild, [D38]); **defer**
 bidirectional stream write-back (`Selection1D`/`RangeXY` → hv) to a follow-up.
+Levels (L0/L1/L2), effort, and the read-vs-write breakdown in
+`phase3b-decisions.md` §2.
 
-**Status:** open — recommendation pending user review.
+**Status:** open — see `phase3b-decisions.md` for the full tradeoff briefing.
 
 ---
 
