@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "qtviz"
-version = "0.0.1"
-description = "Native-Qt declarative plotting — one immutable API across pyqtgraph and matplotlib backends (webengine planned)."
+version = "0.1.0"
+description = "Native-Qt declarative plotting — one immutable API across pyqtgraph, matplotlib, and webengine backends."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -13,10 +13,14 @@ authors = [{ name = "Mark Jajeh" }]
 keywords = ["pyside6", "qt", "pyqtgraph", "matplotlib", "plotting", "visualization", "qtviz"]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Environment :: X11 Applications :: Qt",
+    "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Visualization",
     "License :: OSI Approved :: MIT License",
 ]
@@ -41,8 +45,8 @@ webengine = [
     "bokeh >=3.4",
     "holoviews >=1.18",
 ]
-# Everything a user might want except the `dev` test tooling — keep in sync with
-# the individual extras (webengine + matplotlib + dask + xarray + datashader).
+# Everything a user might want except the `dev`/`docs` tooling — keep in sync with
+# the individual extras (webengine + hvplot + matplotlib + dask + xarray + datashader).
 all = [
     "plotly >=5.20",
     "bokeh >=3.4",
@@ -75,7 +79,10 @@ datashader = [
 
 [project.urls]
 Homepage = "https://github.com/markjajeh/qtviz"
+Documentation = "https://github.com/markjajeh/qtviz#readme"
+Repository = "https://github.com/markjajeh/qtviz"
 Issues = "https://github.com/markjajeh/qtviz/issues"
+Changelog = "https://github.com/markjajeh/qtviz/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 # The Qt WebEngine bridge now lives under qtviz.backends.webengine; src/qtwebplot

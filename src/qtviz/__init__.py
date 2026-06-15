@@ -6,6 +6,14 @@ acceptance suite (tests/qtviz) targets.
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
+
+try:
+    __version__ = _pkg_version("qtviz")
+except PackageNotFoundError:  # source tree without installed metadata
+    __version__ = "0.0.0+unknown"
+
 from . import backends, data, errors, threading  # data layer first, then backends auto-register
 from .adapter import from_holoviews, from_holoviews_dmap, from_hvplot
 from .backends import set_backend_priority, set_default_backend
@@ -69,4 +77,6 @@ __all__ = [
     "Signal", "signal", "derived", "effect", "batch",
     # subsystems
     "data", "backends", "errors", "threading",
+    # metadata
+    "__version__",
 ]
