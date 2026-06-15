@@ -26,7 +26,7 @@ and reactive signals (see the as-built note below and `roadmap.md` §0).
 | Mixed-backend layouts (host + composite handle)         | concrete   | ✅    |
 | Data layer — accessors + lazy adapters (dask/xarray/zarr) | concrete | ✅    |
 | Datashader — big-data raster + viewport re-aggregation  | concrete   | ✅    |
-| HoloViews adapter                                       | sketch     | ⬜    |
+| HoloViews adapter (`from_holoviews`)                    | concrete   | ◑ 3a ✅; 3b ⬜ |
 | Reactive `Signal` binding (View-root, S-style)          | concrete   | ✅    |
 | **webengine backend** — Plotly · RawFigure · offline · base64 transport | concrete¹ | ✅²   |
 | Data sources — Parquet / DuckDB / SQL                   | sketch     | ⬜    |

@@ -965,7 +965,115 @@ in **Phase 3** when the adapter is built, not now.
 
 ---
 
-## [D29] Webengine transport — JSON now, Arrow IPC later
+## [D41] Spike-P2 — HoloViews adapter feasibility (the Phase 3 gate)
+
+**Context.** Roadmap §0 / dev-plan §8 make Phase 3 (`from_holoviews`) the one
+remaining major item gated on a feasibility spike. The risk (roadmap §6 #3): if
+translation needs HoloViews *internals* that drift every release, the adapter is a
+maintenance sink and we cut it (ship native-only).
+
+**What was run.** A throwaway prototype (`from_holoviews`) walked an hv tree and
+translated leaves + containers to qtviz Nodes, rendered headlessly via
+`render_root(..., view_backend="pyqtgraph")`. HoloViews 1.22.1.
+
+**Result — GO.** 10/10 cases rendered to a `GraphicsLayoutWidget`: Scatter, Points,
+Curve, Bars, HeatMap, ErrorBars, Image, Overlay (`*`), Layout (`+`), and a nested
+`(Scatter*Curve)+Bars`. Translation rode entirely on **stable public API** —
+`.dframe()`, `.kdims`/`.vdims` (`.name`), `.dimension_values(2, flat=False)` +
+`.bounds.lbrt()` for gridded Image, and plain iteration for Overlay/Layout. **Zero
+internals touched.** Brittleness risk is low; the adapter does not bind us to hv's
+private surface.
+
+**Findings to carry into Phase 3 (deferred — not applied now):**
+- Map dimensions **by role per element type**, not blind position: hv auto-promotes
+  undeclared DataFrame columns to vdims, so e.g. `Points` must take x/y from both
+  kdims while `Scatter` takes y from the first vdim.
+- **Semantic-shape mismatches** (not blockers): hv `Histogram` is *pre-binned*
+  (kdim=bin centers, vdim=Frequency) but qtviz `Histogram` bins a raw column → map
+  hv `Histogram` onto qtviz `Bars`, or add a pre-binned mode. hv `Spread` is
+  `y ± delta` (vdims `[y, spread]`) vs qtviz `Spread(y_lo, y_hi)` → translate via a
+  derived accessor (`y-spread`, `y+spread`).
+- Long-tail elements (Sankey/Chord/etc.) route to `RawFigure` on webengine per
+  [[D28]]; `DynamicMap`/`Stream` map to `Signal`/typed events per spec §8.
+
+**Status:** ✅ resolved — Spike-P2 passes; Phase 3 is feasible and unblocked. The
+prototype is throwaway; the production adapter is built spec-first in Phase 3 (its
+own milestone doc → benchmark suite → implement), folding in the findings above.
+
+---
+
+## [D42] HoloViews `Histogram`/`Spread` shape handling
+
+**Context.** Two hv elements don't share qtviz's data shape (surfaced by [D41]).
+hv `Histogram` is **pre-binned** (kdim=bin center, vdim=Frequency) but qtviz
+`Histogram` bins a *raw* column. hv `Spread` carries `y ± Δ` (vdims `[y, spread]`)
+but qtviz `Spread` takes explicit `y_lo`/`y_hi`.
+
+**Recommendation.** Map hv `Histogram` → qtviz **`Bars`** (already-binned bars), and
+hv `Spread` → qtviz **`Spread`** via Expression arithmetic (`y_lo=col(y)-col(Δ)`,
+`y_hi=col(y)+col(Δ)`). No qtviz API change; the adapter absorbs the impedance.
+Alternative considered: add a "pre-binned" mode to qtviz `Histogram` — rejected for
+0.1 as scope the adapter doesn't justify.
+
+**Status:** ✅ accepted (per user) — `Histogram`→`Bars`, `Spread`→`Spread` via
+Expression `y±Δ`; no qtviz API change.
+
+---
+
+## [D43] `hvplot` integration mechanism
+
+**Context.** The `hvplot` win (`native-pivot-research.md` §2e) is a pandas/xarray
+one-liner that returns a Qt-native widget. Two ways to wire it.
+
+**Options.** (a) Register `qtviz` as an **hvplot/HoloViews backend** so
+`df.hvplot(kind="scatter", backend="qtviz")` flows through hvplot's machinery; or
+(b) ship a thin **`.qtviz` DataFrame/Series accessor** (`df.qtviz.scatter(x, y)`)
+that builds Elements directly, sidestepping hvplot internals.
+
+**Recommendation.** Decide when stage 3b starts; lean toward whichever rides the
+most-public surface (consistent with [D41]'s public-API-only principle).
+
+**Status:** open.
+
+---
+
+## [D44] `DynamicMap` / stream scope for 0.1
+
+**Context.** hv `DynamicMap` + streams (`RangeXY`/`BoundsXY`/`Tap`/`Selection1D`)
+are interactive. Full fidelity is bidirectional: qtviz events write back to the hv
+stream's `.event(...)` so hv-side callbacks fire.
+
+**Recommendation.** For 0.1, support **one-way** re-render (kdim widgets / param
+changes → recompute node → `Signal[Node]` → debounced rebuild, [D38]); **defer**
+bidirectional stream write-back (`Selection1D`/`RangeXY` → hv) to a follow-up.
+
+**Status:** open — recommendation pending user review.
+
+---
+
+## [D45] HoloViews import destabilizes the offscreen-Qt test teardown
+
+**Context.** Discovered while writing the Phase-3 spec-first suite: importing
+`holoviews` (it pulls in numba/llvmlite + bokeh) at pytest **collection** time
+crashes the whole offscreen suite at *interpreter teardown* (native fault in the
+runpy/atexit path — numba/Qt teardown ordering). Same family as the "de-flake
+suite (lazy WebEngine)" fragility.
+
+**Mitigations.** (1) Spec-first modules order the adapter-absent `importorskip`
+*before* the holoviews import, so collection never imports holoviews while the
+adapter is unbuilt (done — keeps the default suite green now). (2) When the adapter
+is implemented, import holoviews **lazily inside `from_holoviews`**, not at the
+`qtviz.adapter.holoviews` module top, so importing the adapter (and hence
+collecting its tests) stays cheap and safe. (3) If the full-run teardown still
+faults once tests activate, isolate the holoviews render tests (separate process /
+`-p no:cacheprovider` subrun in CI).
+
+**Status:** ◑ mitigated — (1) + (2) applied in stage 3a (`from_holoviews` imports
+holoviews lazily; `import qtviz` does **not** pull in holoviews). With the adapter
+implemented and its tests active (holoviews imported at collection), the full
+offscreen suite ran green **3× consecutively** — the earlier teardown fault did not
+reproduce. Keep (3) (process isolation) in reserve and watch CI on Linux/Windows,
+where numba/Qt teardown ordering may differ.
 
 **Context.** The bridge serializes payloads with `json.dumps` (`_send_now`). Big
 figures / live data could overwhelm JSON; Arrow IPC is the faster binary path.
@@ -1055,3 +1163,8 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D38 | reactivity binds at View root, not in Elements | reactive (Phase 4) | ✅ accepted — Option B: `View(Signal[Node])`; Elements stay pure; sugar later |
 | D39 | reactive runtime — auto-track, sync, simple+batch | reactive (Phase 4) | ✅ accepted — S-style auto-tracking; defer topological glitch-freedom |
 | D40 | reactive render / threading / lifecycle | reactive (Phase 4) | ✅ accepted — debounced rebuild; `run_on_gui`; `Disposable` + View-owned + `owner=` |
+| D41 | **Spike-P2 — HoloViews adapter feasibility (Phase 3 gate)** | Phase 3 | ✅ GO — 10/10 render via pyqtgraph on public API only (no internals); findings deferred to Phase 3 |
+| D42 | hv `Histogram`/`Spread` shape handling | Phase 3 | ✅ accepted — `Histogram`→`Bars`, `Spread`→`Spread` via Expression `y±Δ`; no API change |
+| D43 | `hvplot` integration mechanism | Phase 3 (3b) | open — hvplot backend vs `.qtviz` accessor; decide at 3b |
+| D44 | `DynamicMap`/stream scope for 0.1 | Phase 3 (3b) | open — recommend one-way re-render; defer bidirectional stream write-back |
+| D45 | HoloViews import crashes offscreen-Qt teardown | Phase 3 / test infra | open — mitigated (importorskip order); lazy hv import at impl |

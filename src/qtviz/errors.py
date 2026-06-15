@@ -40,3 +40,8 @@ class RendererMissingError(QtvizError):
 
 class AdapterError(QtvizError):
     """No registered data adapter handles the given input (§6.3)."""
+
+
+class UnsupportedHoloViewsElement(QtvizError):
+    """`from_holoviews` met an element it can neither translate natively nor host
+    as a `RawFigure` (Phase 3, [D28]). Carries the offending type name + a hint."""
