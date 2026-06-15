@@ -269,6 +269,12 @@ re-renders another) · `22_from_holoviews` (render a HoloViews tree natively) ·
 `23_from_holoviews_dynamicmap` (drive a `DynamicMap` with a Qt control) ·
 `24_from_hvplot` (a pandas `.hvplot` one-liner as a native widget).
 
+**Real-world scenarios:** `26_telemetry_monitoring` (rolling baseline, tolerance band,
+flagged anomalies, residual panel) · `27_market_analytics` (price + moving averages +
+Bollinger band over a linked volume panel) · `28_event_density_map` (2M categorized
+events, Datashaded, hover for counts) · `29_climate_field` (an `xarray` 2-D field as an
+`Image` map + a 1-D cross-section).
+
 **webengine:** `13_webengine` · `14_webengine_overlay` · `15_webengine_elements` ·
 `16_webengine_export` (PNG) · `17_webengine_heatmap` · `18_webengine_raw_figure`
 (host a Plotly 3-D surface) · `19_webengine_holoviews` · `20_mixed_native_web`.

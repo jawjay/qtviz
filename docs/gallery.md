@@ -9,6 +9,17 @@ exposes a `build()` (returns the widget, handy for embedding/testing) and a `mai
 uv run python examples/01_hello.py
 ```
 
+## Real-world scenarios
+
+Larger examples that combine several features around a realistic dataset and data type.
+
+| Example | Shows |
+|---------|-------|
+| `26_telemetry_monitoring` | Sensor time series: a rolling baseline, a 3σ tolerance `Spread`, flagged-anomaly `Scatter`, and an X-linked residual panel derived with an `Expression`. |
+| `27_market_analytics` | Equity price `Curve` + 20/50-day moving averages + a Bollinger `Spread`, over an X-linked volume `Bars` panel; brush a window of days. |
+| `28_event_density_map` | 2M categorized events → a Datashaded categorical density map; hover anywhere for the event count under the cursor (stays correct as you zoom). |
+| `29_climate_field` | An `xarray` 2-D field rendered as an `Image` map plus a 1-D `da.isel` cross-section `Curve` — one library, two data shapes, X-linked. |
+
 ## Native
 
 | Example | Shows |

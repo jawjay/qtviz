@@ -40,6 +40,10 @@ uv sync --extra matplotlib --extra dev
 | 23 | [`23_from_holoviews_dynamicmap.py`](23_from_holoviews_dynamicmap.py) | **HoloViews `DynamicMap`** — drive a `freq` kdim with a Qt control; `from_holoviews_dmap` → `Signal[Node]` re-renders ([D44] L1). |
 | 24 | [`24_from_hvplot.py`](24_from_hvplot.py) | **`from_hvplot`** — a pandas `df.hvplot(kind="scatter")` one-liner rendered as a native Qt widget ([D43]). |
 | 25 | [`25_raster_inspect.py`](25_raster_inspect.py) | **Raster hover-inspect** — hover a 1M-point datashaded scatter; `HoverEvent.value` reports the `count` under the cursor ([D46]). |
+| 26 | [`26_telemetry_monitoring.py`](26_telemetry_monitoring.py) | **Real-world: sensor monitoring** — rolling baseline + 3σ `Spread` band + flagged-anomaly `Scatter`; an X-linked residual panel derived via an `Expression`. |
+| 27 | [`27_market_analytics.py`](27_market_analytics.py) | **Real-world: market analytics** — price `Curve` + 20/50-day MAs + Bollinger `Spread`, over an X-linked volume `Bars` panel; brush a day window. |
+| 28 | [`28_event_density_map.py`](28_event_density_map.py) | **Real-world: big-data map** — 2M categorized events → Datashaded categorical density; hover for the event count under the cursor. |
+| 29 | [`29_climate_field.py`](29_climate_field.py) | **Real-world: gridded science** — an `xarray` 2-D field → `Image` map + a 1-D `da.isel` cross-section `Curve`, X-linked. |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -55,6 +59,13 @@ uv sync --extra holoviews --extra hvplot --extra dev
 ```
 
 Example 25 needs the `datashader` extra.
+
+Examples 26–29 are larger "real-world" scenarios. 26 and 27 use pandas (already present
+via the data extras); 28 needs `datashader`; 29 needs `xarray`:
+
+```bash
+uv sync --extra datashader --extra xarray --extra dev
+```
 
 Examples 13–20 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
 WebEngine view, plus `RawFigure` passthrough for Plotly/Bokeh/HoloViews, and a
