@@ -28,9 +28,13 @@ and reactive signals (see the as-built note below and `roadmap.md` §0).
 | Datashader — big-data raster + viewport re-aggregation  | concrete   | ✅    |
 | HoloViews adapter                                       | sketch     | ⬜    |
 | Reactive `Signal` binding (View-root, S-style)          | concrete   | ✅    |
+| **webengine backend** — Plotly · RawFigure · offline · base64 transport | concrete¹ | ✅²   |
 | Data sources — Parquet / DuckDB / SQL                   | sketch     | ⬜    |
-| webengine backend rehome                                | sketch     | ⬜    |
 | Release `0.1`                                           | scaffold   | ⬜    |
+
+¹ Specced in `webengine-rehome.md` (rehome stages W0–W5) + `webengine-arrow-transport.md`
+(W5 transport); §4.3 below is a high-level summary. ² Built through W4 + offline + W5.1a
+(base64 typed-array transport); the W5.2 true-binary `qtviz://` transport is deferred.
 
 **As-built deviations from this spec** (each ratified in `discussion-items.md`):
 
@@ -1272,44 +1276,32 @@ expect GUI-thread delivery (matplotlib events already fire on the
 GUI thread when using the Qt5Agg backend, but the marshaling guards
 against future backend changes and keeps the contract clean).
 
-### 4.3 webengine backend (optional extra; rehome)
+### 4.3 webengine backend (optional extra) — as built
+
+Built W0–W4 + offline + W5.1a. Full design/stages in `webengine-rehome.md`; the
+W5 transport in `webengine-arrow-transport.md`. As-built layout:
 
 ```
 qtviz/backends/webengine/
-├── __init__.py
-├── render.py
-├── view.py                  # current WebBridgeView (carryover)
-├── bridge.py                # current Bridge (carryover)
-├── _runtime.py / _inject.py # carryover
-├── _events.py
-├── _theme.py
-└── elements/
-    ├── scatter.py           # routes through Plotly or Bokeh JS
-    └── ...                  # one per Element type we expose
+├── render.py            # WebEngineBackend + WebEngineRenderHandle (registered)
+├── _figure.py           # Element → Plotly figure dict (the 8 trace builders)
+├── _translate.py        # bridge messages (plotly.*/bokeh.*) → qtviz typed Events
+├── view.py              # PlotView (host widget) ── lazy-imported (no Chromium at import)
+├── core/                # the rehomed Qt↔JS bridge: web_bridge_view, bridge, _runtime, _inject
+└── ext/{plotly,bokeh,holoviews}/   # legacy PlotBackend hosts (Plotly is the renderer; Bokeh/HV host RawFigure)
 ```
 
-**Capabilities**:
+**As-built capabilities** (`render.py::_CAPS`): `dimensions={2,3}`, `opengl=True`
+(scattergl), `picking="native"`, `brush="native"`, `range_events`, `streaming`,
+`max_recommended_points=1_000_000`, `animation=True`, `exports={"png"}` (svg/pdf
+deferred), `threading_model="gui_only"`. `can_host=False` — mixed panes compose via
+the LayoutHost.
 
-```python
-Capabilities(
-    dimensions=frozenset({2, 3}),
-    opengl=True,                         # via Plotly's WebGL traces
-    picking="native",
-    brush="native",
-    range_events=True,
-    streaming=True,                      # extendTraces / patch / stream
-    max_recommended_points=500_000,
-    animation=True,
-    exports=frozenset({"png", "html"}),
-    threading_model="gui_only",
-)
-```
-
-The current `PlotlyBackend` / `BokehBackend` / `HoloViewsBackend`
-classes are repurposed as **JS-routing strategies** inside the
-webengine backend's element renderers. The user-facing Element API
-doesn't expose this; it picks the right JS library per Element type
-internally. Rehoming detail in Phase 5; this section is a sketch.
+The native 8 Elements render as **Plotly** traces (`_figure`); **`RawFigure`** (D26)
+hosts an existing Plotly/Bokeh/HoloViews figure via the legacy `PlotlyBackend` /
+`BokehBackend` / `HoloViewsBackend` hosts; bridge events become qtviz typed Events
+(`_translate`). The backend **registers without importing QtWebEngine** — the widgets
+load only on first render (keeps `import qtviz` Chromium-free).
 
 **Offline (hard requirement, §0.1).** The JS renderer libraries are bundled from the
 installed `plotly` / `bokeh` packages (inline now; served via the local `qtviz://`

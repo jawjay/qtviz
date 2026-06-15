@@ -27,10 +27,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from qtwebplot import PlotView
 from qtwebplot.ext.bokeh import BokehTapEvent
 from qtwebplot.ext.holoviews import HoloViewsBackend
+
+from qtwebplot import PlotView
 
 hv.extension("bokeh")
 

@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 
-
 _HEAD_CLOSE = re.compile(r"</head\s*>", re.IGNORECASE)
 _BODY_OPEN = re.compile(r"<body\b[^>]*>", re.IGNORECASE)
 _BODY_CLOSE = re.compile(r"</body\s*>", re.IGNORECASE)

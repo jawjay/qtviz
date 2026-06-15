@@ -99,7 +99,10 @@ _LOAD_PROBE = textwrap.dedent(
 
 
 def test_inline_offline_page_actually_loads():
-    pytest.importorskip("PySide6.QtWebEngineWidgets")
+    import importlib.util  # noqa: PLC0415
+
+    if importlib.util.find_spec("PySide6.QtWebEngineWidgets") is None:
+        pytest.skip("PySide6 QtWebEngine not installed")  # find_spec doesn't import it
     result = subprocess.run(
         [sys.executable, "-c", _LOAD_PROBE],
         capture_output=True, text=True,

@@ -11,7 +11,7 @@ plots match the host app's light/dark mode by default.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -42,7 +42,7 @@ class Theme:
 
     # ── factories ────────────────────────────────────────────────────────
     @classmethod
-    def light(cls) -> "Theme":
+    def light(cls) -> Theme:
         return cls(
             background="#ffffff",
             foreground="#222222",
@@ -52,7 +52,7 @@ class Theme:
         )
 
     @classmethod
-    def dark(cls) -> "Theme":
+    def dark(cls) -> Theme:
         return cls(
             background="#1e1e1e",
             foreground="#e6e6e6",
@@ -64,10 +64,10 @@ class Theme:
     @classmethod
     def from_qt_palette(
         cls,
-        palette: "QPalette",
+        palette: QPalette,
         *,
         font_family: str = "sans-serif",
-    ) -> "Theme":
+    ) -> Theme:
         """Derive a Theme from a Qt palette.
 
         Uses `Window` for background, `WindowText` for foreground, and picks
@@ -100,7 +100,7 @@ class Theme:
         )
 
     @classmethod
-    def from_qt_app(cls, app=None) -> "Theme":
+    def from_qt_app(cls, app=None) -> Theme:
         """Convenience: derive from `QApplication.palette()` and `font()`.
 
         Raises if no `QApplication` exists yet.

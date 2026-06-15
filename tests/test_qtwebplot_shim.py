@@ -19,11 +19,11 @@ def test_shim_redirects_top_level_and_submodules_to_same_objects() -> None:
     from qtviz.backends.webengine.core._inject import (
         inject_head_scripts as new_inject,
     )
-    from qtwebplot import WebBridgeView
+    from qtwebplot import PlotBackend  # light symbol — avoids loading QtWebEngine here
 
     # The old top-level name IS the new package object.
     assert qtwebplot is new_pkg
-    assert WebBridgeView is new_pkg.WebBridgeView
+    assert PlotBackend is new_pkg.PlotBackend
     # Submodule imports through the old path resolve to the identical module.
     assert inject_head_scripts is new_inject
     # Deep submodules (not re-exported at top level) still import through the shim.

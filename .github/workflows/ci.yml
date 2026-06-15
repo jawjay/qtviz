@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.11", "3.12", "3.13"]
+    env:
+      # The default suite runs headless. Thanks to the lazy WebEngine import it
+      # never loads Chromium, so the base Qt offscreen plugin is all we need —
+      # no libnss3/libasound2/… Chromium runtime deps.
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Qt offscreen system libs (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Install (all extras)
+        run: >-
+          uv sync --frozen --python ${{ matrix.python }}
+          --extra matplotlib --extra webengine
+          --extra datashader --extra dask --extra xarray
+          --extra dev
+
+      - name: Lint (ruff)
+        run: uv run ruff check src tests examples
+
+      - name: Test (default suite — benchmarks deselected)
+        run: uv run pytest -q

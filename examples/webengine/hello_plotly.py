@@ -28,13 +28,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-
-from qtwebplot import PlotView
 from qtwebplot.ext.plotly import (
     PlotlyBackend,
     PlotlyClickEvent,
     PlotlyHoverEvent,
 )
+
+from qtwebplot import PlotView
 
 
 def make_figure(seed: int = 0) -> go.Figure:

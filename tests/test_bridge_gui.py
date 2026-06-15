@@ -12,16 +12,20 @@ import os
 import pytest
 
 pytest.importorskip("pytestqt")
-pytest.importorskip("PySide6.QtWebEngineWidgets")
 
-# The QWebEngine `ready` handshake is unreliable under the offscreen Qt platform
-# (no GPU/compositor), so these GUI tests time out in headless CI/local. Skip
-# there; set QTVIZ_WEBENGINE_GUI=1 to force them on a host where it works.
-pytestmark = pytest.mark.skipif(
+# Skip at COLLECTION when offscreen — before importing QtWebEngine — so the default
+# suite never loads Chromium (the `ready` handshake is unreliable offscreen anyway).
+# Set QTVIZ_WEBENGINE_GUI=1 to force on a real display.
+if (
     os.environ.get("QT_QPA_PLATFORM") == "offscreen"
-    and os.environ.get("QTVIZ_WEBENGINE_GUI") != "1",
-    reason="QWebEngine ready handshake unreliable offscreen; set QTVIZ_WEBENGINE_GUI=1 to force",
-)
+    and os.environ.get("QTVIZ_WEBENGINE_GUI") != "1"
+):
+    pytest.skip(
+        "QWebEngine ready handshake unreliable offscreen; set QTVIZ_WEBENGINE_GUI=1 to force",
+        allow_module_level=True,
+    )
+
+pytest.importorskip("PySide6.QtWebEngineWidgets")
 
 from qtwebplot import WebBridgeView  # noqa: E402
 

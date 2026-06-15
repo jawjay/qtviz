@@ -16,9 +16,7 @@ except PackageNotFoundError:
     __version__ = "0.0.0+local"
 
 from qtviz.backends.webengine.backend import PlotBackend
-from qtviz.backends.webengine.core import Bridge, WebBridgeView
 from qtviz.backends.webengine.theme import Theme
-from qtviz.backends.webengine.view import PlotView
 
 __all__ = [
     "Bridge",
@@ -28,3 +26,20 @@ __all__ = [
     "WebBridgeView",
     "__version__",
 ]
+
+
+def __getattr__(name):
+    # Bridge / WebBridgeView / PlotView pull in PySide6 QtWebEngine (Chromium).
+    # Importing this package — and registering the `webengine` backend — stays
+    # WebEngine-free; the widgets load on first access. Keeps the default test
+    # suite Chromium-free and avoids the offscreen-init flake.
+    if name == "Bridge":
+        from qtviz.backends.webengine.core.bridge import Bridge
+        return Bridge
+    if name == "WebBridgeView":
+        from qtviz.backends.webengine.core.web_bridge_view import WebBridgeView
+        return WebBridgeView
+    if name == "PlotView":
+        from qtviz.backends.webengine.view import PlotView
+        return PlotView
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

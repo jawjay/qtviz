@@ -31,7 +31,8 @@ def test_theme_light_dark_distinguishable():
 
 def test_theme_immutable():
     t = Theme.light()
-    with pytest.raises(Exception):  # FrozenInstanceError or AttributeError
+    # FrozenInstanceError subclasses AttributeError, so this covers both
+    with pytest.raises(AttributeError):
         t.background = "#000000"  # type: ignore[misc]
 
 

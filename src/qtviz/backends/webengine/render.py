@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import uuid
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ...core.backend import RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
@@ -21,7 +22,12 @@ from ...core.threading import require_gui_thread
 from ...elements import RawFigure
 from . import _figure, _translate
 from .ext.plotly.backend import PlotlyBackend
-from .view import PlotView
+
+# NB: `.view` (PlotView) pulls in PySide6 QtWebEngine — imported lazily inside
+# render()/_render_raw so registering this backend at `import qtviz` stays
+# WebEngine-free (de-flake; the default suite never loads Chromium).
+if TYPE_CHECKING:
+    from .view import PlotView
 
 _CAPS = Capabilities(
     dimensions=frozenset({2, 3}),
@@ -137,6 +143,8 @@ class WebEngineBackend:
 
     @require_gui_thread
     def render(self, node, *, theme, parent=None) -> WebEngineRenderHandle:
+        from .view import PlotView  # noqa: PLC0415 — lazy: defers the QtWebEngine load
+
         if isinstance(node, RawFigure):
             return self._render_raw(node, parent, theme)
         # native-element path: build one Plotly figure from the traces. A RawFigure
@@ -151,6 +159,8 @@ class WebEngineBackend:
         """Host an existing Plotly/Bokeh/HoloViews figure unchanged (D31). The
         whole figure is one event source (its own id). Bokeh/HoloViews figures
         render in W3a but emit typed events only once W3b adds the Bokeh map."""
+        from .view import PlotView  # noqa: PLC0415 — lazy: defers the QtWebEngine load
+
         host = _make_host(node.kind, node.figure)
         view = PlotView(host, parent=parent)
         bus = EventBus()

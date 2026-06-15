@@ -13,17 +13,22 @@ import os
 import pytest
 
 qv = pytest.importorskip("qtviz")
+
+# Skip the whole module at COLLECTION when offscreen — before importing QtWebEngine —
+# so the default suite never loads Chromium (de-flake). Forced runs proceed.
+if (
+    os.environ.get("QT_QPA_PLATFORM") == "offscreen"
+    and os.environ.get("QTVIZ_WEBENGINE_GUI") != "1"
+):
+    pytest.skip(
+        "QWebEngine render/teardown unreliable offscreen; QTVIZ_WEBENGINE_GUI=1 forces",
+        allow_module_level=True,
+    )
+
 pytest.importorskip("PySide6.QtWebEngineWidgets")
 pytest.importorskip("plotly")
 
-pytestmark = [
-    pytest.mark.tier2,
-    pytest.mark.skipif(
-        os.environ.get("QT_QPA_PLATFORM") == "offscreen"
-        and os.environ.get("QTVIZ_WEBENGINE_GUI") != "1",
-        reason="QWebEngine render/teardown unreliable offscreen; QTVIZ_WEBENGINE_GUI=1 forces",
-    ),
-]
+pytestmark = pytest.mark.tier2
 
 import qtviz.backends as B  # noqa: E402
 
