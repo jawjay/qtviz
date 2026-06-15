@@ -432,6 +432,25 @@ wheels = [
 ]
 
 [[package]]
+name = "hvplot"
+version = "0.12.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "bokeh" },
+    { name = "colorcet" },
+    { name = "holoviews" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "panel" },
+    { name = "param" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/b4/ce73a568fc263efe84cab8de04673949c8f6596f6aeb1531ca2b75b80903/hvplot-0.12.2.tar.gz", hash = "sha256:9e29bbe65f94937d4eeaeccf33566540df936c8f9aeadfa12ea9f306d5237938", size = 7084556, upload-time = "2025-12-18T11:15:37.736Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/cd/ec193e471780dfad60e44ded5526c123695c1354910edd537d7aa1d22094/hvplot-0.12.2-py3-none-any.whl", hash = "sha256:0687e2e4d2eeb035c437af0011922abff856054299c121914d903a02b1bb1b22", size = 180626, upload-time = "2025-12-18T11:15:35.091Z" },
+]
+
+[[package]]
 name = "idna"
 version = "3.18"
 source = { registry = "https://pypi.org/simple" }
@@ -1494,7 +1513,7 @@ wheels = [
 
 [[package]]
 name = "qtviz"
-version = "0.0.1"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },
@@ -1508,6 +1527,7 @@ all = [
     { name = "dask", extra = ["dataframe"] },
     { name = "datashader" },
     { name = "holoviews" },
+    { name = "hvplot" },
     { name = "matplotlib" },
     { name = "plotly" },
     { name = "xarray" },
@@ -1530,6 +1550,9 @@ dev = [
 ]
 holoviews = [
     { name = "holoviews" },
+]
+hvplot = [
+    { name = "hvplot" },
 ]
 matplotlib = [
     { name = "matplotlib" },
@@ -1560,6 +1583,8 @@ requires-dist = [
     { name = "holoviews", marker = "extra == 'all'", specifier = ">=1.18" },
     { name = "holoviews", marker = "extra == 'holoviews'", specifier = ">=1.18" },
     { name = "holoviews", marker = "extra == 'webengine'", specifier = ">=1.18" },
+    { name = "hvplot", marker = "extra == 'all'", specifier = ">=0.10" },
+    { name = "hvplot", marker = "extra == 'hvplot'", specifier = ">=0.10" },
     { name = "matplotlib", marker = "extra == 'all'", specifier = ">=3.11.0" },
     { name = "matplotlib", marker = "extra == 'matplotlib'", specifier = ">=3.11.0" },
     { name = "numpy", specifier = ">=1.24" },
@@ -1576,7 +1601,7 @@ requires-dist = [
     { name = "zarr", marker = "extra == 'all'", specifier = ">=3.1.6" },
     { name = "zarr", marker = "extra == 'xarray'", specifier = ">=3.1.6" },
 ]
-provides-extras = ["plotly", "bokeh", "holoviews", "webengine", "all", "dev", "matplotlib", "dask", "xarray", "datashader"]
+provides-extras = ["plotly", "bokeh", "holoviews", "hvplot", "webengine", "all", "dev", "matplotlib", "dask", "xarray", "datashader"]
 
 [[package]]
 name = "requests"

@@ -41,7 +41,7 @@ jobs:
       - name: Install (all extras)
         run: >-
           uv sync --frozen --python ${{ matrix.python }}
-          --extra matplotlib --extra webengine
+          --extra matplotlib --extra webengine --extra hvplot
           --extra datashader --extra dask --extra xarray
           --extra dev
 
