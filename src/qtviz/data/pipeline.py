@@ -72,11 +72,13 @@ def _rasterize(node):
     from ..ext.datashader import rasterize_element  # noqa: PLC0415
 
     width, height = _RASTER_SIZE
-    rgba, bounds = rasterize_element(node, width=width, height=height)
-    image = Image(rgba, bounds=bounds, id=node.id)  # carry the source id for events
-    # Stash the (lazy) source element so a backend can re-aggregate to the
-    # viewport on pan/zoom (4b, D21). Private → excluded from value identity.
+    result = rasterize_element(node, width=width, height=height)
+    image = Image(result.rgba, bounds=result.bounds, id=node.id)  # carry source id for events
+    # Stash the (lazy) source element so a backend can re-aggregate to the viewport
+    # on pan/zoom (4b, D21), and the pre-shade aggregate for hover reverse-lookup
+    # ([D46]). Private → excluded from value identity.
     object.__setattr__(image, "_raster_source", node)
+    object.__setattr__(image, "_raster_aggregate", result.aggregate)
     return image
 
 

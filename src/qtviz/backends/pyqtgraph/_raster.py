@@ -40,6 +40,27 @@ class PgRasterTarget:
         return Disposable(lambda: _safe_disconnect(self._vb.sigRangeChanged, slot))
 
 
+def wire_raster_hover(vb, source_id: str, bus, holder) -> Disposable:
+    """Emit a `HoverEvent` carrying the aggregated value under the cursor for a
+    datashaded raster ([D46]). `holder.aggregate` is the *current* `RasterAggregate`
+    (refreshed by the controller on pan/zoom); `value_at` is O(1) and delivery rides
+    the HoverEvent throttle, so per-move cost is negligible."""
+    from ...core.event import HoverEvent  # noqa: PLC0415
+
+    scene = vb.scene()
+
+    def on_move(scene_pos) -> None:
+        agg = getattr(holder, "aggregate", None)
+        if agg is None or not vb.sceneBoundingRect().contains(scene_pos):
+            return  # outside this view's panel — not our raster
+        p = vb.mapSceneToView(scene_pos)
+        x, y = float(p.x()), float(p.y())
+        bus.emit(HoverEvent(source_id, None, x, y, agg.value_at(x, y)))
+
+    scene.sigMouseMoved.connect(on_move)
+    return Disposable(lambda: _safe_disconnect(scene.sigMouseMoved, on_move))
+
+
 def _safe_disconnect(signal, slot) -> None:
     with contextlib.suppress(TypeError, RuntimeError):  # already gone (ViewBox deleted)
         signal.disconnect(slot)

@@ -24,7 +24,7 @@ What the big-data path does today, and where it stops.
 | **Aggregation surface** (`sum`/`max`/`min`/`std`, `by(mean)`, multi-agg `summary`) | ⬜ | only `count`/`mean`/`by(count)` are wired. **Blocks** "max value per pixel" style views. |
 | **Line width / antialiasing / categorical lines** | ⬜ | `Curve.line_width`/`line_style`/`color` ignored under datashader; no per-category line color. |
 | **Gridded regrid** (`canvas.raster` for huge `Image`/`Heatmap`) | ⬜ | only point/line glyphs; large 2-D arrays aren't downsampled to screen res. |
-| **Reverse lookup / inspect** (pixel → aggregated value or source rows) | ⬜ | hover/pick/brush don't resolve through a raster (no per-point identity). **Blocks** linked brushing on datashaded views — see §2 *Interaction*. |
+| **Reverse lookup / inspect** (pixel → aggregated value or source rows) | ◑ hover→value ✅ ([D46]) | `HoverEvent.value` reports `count`/`mean` under the cursor (retained `RasterAggregate`, fresh through the 4b controller), both native backends; pixel→**source rows** (for brushing) still ⬜ — see §2 *Interaction*. |
 | **`spread`/`dynspread`** for sparse zoomed-in pixels | ⬜ | single-pixel points can disappear when zoomed in. |
 | **Log / datetime axes** (datashader `logx`/`logy`) | ⬜ | no axis-transform routing — see §2 *Rendering semantics*. |
 | Static `color` under datashader | ⬜ (by design) | `Scatter.color` is ignored when rasterizing; single-hue tinting could be added. |

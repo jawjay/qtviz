@@ -128,24 +128,29 @@ def render_image(element: Image, ctx):
 
 
 def _wire_dynamic_raster(element, artist, ctx) -> None:
-    """If this Image came from a datashaded Scatter, re-aggregate the source to
-    the viewport on pan/zoom (4b). Controllers are parked on the Axes so the
-    RenderHandle can dispose them."""
+    """If this Image came from a datashaded Scatter/Curve, re-aggregate the source
+    to the viewport on pan/zoom (4b) and emit the aggregated value under the cursor
+    on hover ([D46]). Both are parked on the Axes so the RenderHandle disposes them."""
     source = getattr(element, "_raster_source", None)
     if source is None:
         return
+    from types import SimpleNamespace  # noqa: PLC0415
+
     from ...core.raster import RasterController  # noqa: PLC0415
     from ...ext.datashader import rasterize_element  # noqa: PLC0415
-    from ._raster import MplRasterTarget  # noqa: PLC0415
+    from ._raster import MplRasterTarget, wire_raster_hover  # noqa: PLC0415
 
     ax = ctx.parent_axes
+    holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
     target = MplRasterTarget(artist, ax)
     controller = RasterController(
-        source=source, target=target, rasterize=rasterize_element, parent=ax.figure.canvas
+        source=source, target=target, rasterize=rasterize_element, parent=ax.figure.canvas,
+        on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
     )
     if not hasattr(ax, "_qtviz_rasters"):
         ax._qtviz_rasters = []
     ax._qtviz_rasters.append(controller)
+    ax._qtviz_rasters.append(wire_raster_hover(ax, element.id, ctx.event_bus, holder))
 
 
 def render_heatmap(element: Heatmap, ctx):

@@ -1107,6 +1107,40 @@ offscreen suite ran green **3× consecutively** — the earlier teardown fault d
 reproduce. Keep (3) (process isolation) in reserve and watch CI on Linux/Windows,
 where numba/Qt teardown ordering may differ.
 
+---
+
+## [D46] Raster reverse-lookup — hover/inspect value on a datashaded view
+
+**Context.** A datashaded `Scatter`/`Curve` renders as a bare RGBA `Image`; hover/pick
+resolve through points, so a raster (no per-point identity) can't be inspected. The
+datashader path already computes a per-pixel aggregate (`count`/`mean`) but discards
+it — only `(rgba, bounds)` is returned. Reverse-lookup retains that aggregate and maps
+a cursor coord → pixel → value. First step toward selection/brushing on rasters.
+
+**Decisions (recommended; confirm at review).**
+1. **Event shape** — extend `HoverEvent` with `value: float | None = None` (general,
+   back-compatible) rather than a new `InspectEvent`. Native hover keeps `value=None`;
+   raster hover sets `point_index=None, value=<agg>`.
+2. **Retain + thread** — rasterizers return a `RasterResult(rgba, bounds, aggregate)`;
+   `RasterAggregate` is a pure (Qt-free) value object with `value_at(x, y)`. Attached to
+   the static `Image` (`_raster_aggregate`) **and** refreshed through the 4b
+   `RasterController` via an injected `on_aggregate` callback + a shared holder, so
+   hover values stay fresh after pan/zoom. `RasterTarget` stays unchanged.
+3. **Categorical** — first cut returns total count per pixel (`kind="category"`);
+   per-category breakdown deferred.
+4. **Auto, not opt-in** — wired for datashaded Images only; throttled (33 ms),
+   `value_at` is O(1).
+
+**Scope.** Hover/inspect only — selection/brush on rasters, per-category value, and
+webengine raster hover are out of scope (`capabilities-gaps.md` §2 Interaction).
+
+**Status:** ✅ implemented — `HoverEvent.value` + `RasterResult`/`RasterAggregate`
+(`ext/datashader.py`), controller `on_aggregate` freshness hook (`core/raster.py`),
+pyqtgraph + matplotlib hover wiring; tests in `test_raster_inspect.py`. Spec +
+offscreen-teardown hygiene note in `milestone-raster-inspect.md`.
+
+---
+
 **Context.** The bridge serializes payloads with `json.dumps` (`_send_now`). Big
 figures / live data could overwhelm JSON; Arrow IPC is the faster binary path.
 
@@ -1200,3 +1234,4 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D43 | `hvplot` integration mechanism | Phase 3 (3b) | ✅ decided — Path A (thin `from_hvplot` + docs; optional `[hvplot]` extra); B deferred; C rejected |
 | D44 | `DynamicMap`/stream scope for 0.1 | Phase 3 (3b) | ✅ decided — L1 one-way (DynamicMap→`Signal[Node]`, kdims as Signals); L2 deferred; stream-only → warn-and-static |
 | D45 | HoloViews import crashes offscreen-Qt teardown | Phase 3 / test infra | open — mitigated (importorskip order); lazy hv import at impl |
+| D46 | Raster reverse-lookup — hover/inspect value on a datashaded view | Phase 4 (datashader) | ✅ implemented — `HoverEvent.value` + `RasterResult`/`RasterAggregate`, fresh through 4b controller; pyqtgraph + mpl hover wiring |

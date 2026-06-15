@@ -15,6 +15,7 @@ qv = pytest.importorskip("qtviz")
 
 from qtviz.core.disposable import Disposable  # noqa: E402
 from qtviz.core.raster import RasterController  # noqa: E402
+from qtviz.ext.datashader import RasterAggregate, RasterResult  # noqa: E402
 
 pytestmark = pytest.mark.tier2
 
@@ -51,7 +52,8 @@ def _recorder(calls):
         calls.append((width, height, x_range, y_range))
         rgba = np.zeros((height, width, 4), dtype=np.uint8)
         bounds = (x_range[0], y_range[0], x_range[1], y_range[1])
-        return rgba, bounds
+        agg = RasterAggregate(np.zeros((height, width)), bounds, "count")
+        return RasterResult(rgba, bounds, agg)
 
     return rasterize
 
@@ -97,7 +99,9 @@ def test_drops_stale_results(qtbot):
     qtbot.waitUntil(lambda: bool(target.writes), timeout=2000)
     before = len(target.writes)
     # a result tagged with a superseded build-id must not paint
-    c._on_done(c._build_id - 1, (np.zeros((1, 1, 4), np.uint8), (0, 0, 1, 1)), None)
+    stale = RasterResult(np.zeros((1, 1, 4), np.uint8), (0, 0, 1, 1),
+                         RasterAggregate(np.zeros((1, 1)), (0, 0, 1, 1), "count"))
+    c._on_done(c._build_id - 1, stale, None)
     assert len(target.writes) == before
     c.dispose()
 

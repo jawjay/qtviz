@@ -125,24 +125,31 @@ def render_image(element: Image, ctx):
 
 
 def _wire_dynamic_raster(element, item, ctx) -> None:
-    """If this Image came from a datashaded Scatter, attach a controller that
-    re-aggregates the source to the viewport on pan/zoom (4b). Controllers are
-    parked on the ViewBox so the RenderHandle can dispose them."""
+    """If this Image came from a datashaded Scatter/Curve, attach a controller that
+    re-aggregates the source to the viewport on pan/zoom (4b) and a hover handler
+    that reports the aggregated value under the cursor ([D46]). Both are parked on
+    the ViewBox so the RenderHandle disposes them (Disposable + controller both
+    expose `.dispose()`)."""
     source = getattr(element, "_raster_source", None)
     if source is None:
         return
+    from types import SimpleNamespace  # noqa: PLC0415
+
     from ...core.raster import RasterController  # noqa: PLC0415
     from ...ext.datashader import rasterize_element  # noqa: PLC0415
-    from ._raster import PgRasterTarget  # noqa: PLC0415
+    from ._raster import PgRasterTarget, wire_raster_hover  # noqa: PLC0415
 
     vb = ctx.parent_axes.getViewBox()
+    holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
     target = PgRasterTarget(item, vb)
     controller = RasterController(
-        source=source, target=target, rasterize=rasterize_element, parent=vb
+        source=source, target=target, rasterize=rasterize_element, parent=vb,
+        on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
     )
     if not hasattr(vb, "_qtviz_rasters"):
         vb._qtviz_rasters = []
     vb._qtviz_rasters.append(controller)
+    vb._qtviz_rasters.append(wire_raster_hover(vb, element.id, ctx.event_bus, holder))
 
 
 def render_heatmap(element: Heatmap, ctx):

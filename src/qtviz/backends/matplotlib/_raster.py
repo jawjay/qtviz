@@ -11,6 +11,25 @@ from __future__ import annotations
 from ...core.disposable import Disposable
 
 
+def wire_raster_hover(ax, source_id: str, bus, holder) -> Disposable:
+    """Emit a `HoverEvent` with the aggregated value under the cursor for a
+    datashaded raster ([D46]). `holder.aggregate` is refreshed by the controller on
+    pan/zoom; delivery rides the HoverEvent throttle."""
+    from ...core.event import HoverEvent  # noqa: PLC0415
+
+    canvas = ax.figure.canvas
+
+    def on_move(event) -> None:
+        agg = getattr(holder, "aggregate", None)
+        if agg is None or event.inaxes is not ax or event.xdata is None:
+            return
+        x, y = float(event.xdata), float(event.ydata)
+        bus.emit(HoverEvent(source_id, None, x, y, agg.value_at(x, y)))
+
+    cid = canvas.mpl_connect("motion_notify_event", on_move)
+    return Disposable(lambda: canvas.mpl_disconnect(cid))
+
+
 class MplRasterTarget:
     def __init__(self, image, ax) -> None:
         self._image = image

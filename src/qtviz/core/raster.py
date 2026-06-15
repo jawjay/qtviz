@@ -60,21 +60,23 @@ class RasterController(QObject):
     that supersedes an in-flight aggregation never paints an out-of-date raster.
     """
 
-    _done = Signal(int, object, object)  # build_id, (rgba, bounds) | None, exc | None
+    _done = Signal(int, object, object)  # build_id, RasterResult | None, exc | None
 
     def __init__(
         self,
         *,
         source,
         target: RasterTarget,
-        rasterize: Callable,  # (source, *, width, height, x_range, y_range) -> (rgba, bounds)
+        rasterize: Callable,  # (source, *, width, height, x_range, y_range) -> RasterResult
         parent: QObject | None = None,
         debounce_ms: int = 100,
+        on_aggregate: Callable | None = None,  # called (GUI thread) with each fresh aggregate
     ) -> None:
         super().__init__(parent)
         self._source = source
         self._target = target
         self._rasterize = rasterize
+        self._on_aggregate = on_aggregate
         self._build_id = 0
         self._disposed = False
         self._timer = QTimer(self)
@@ -119,8 +121,9 @@ class RasterController(QObject):
             return  # torn down, or a newer pan superseded this aggregation
         if exc is not None:
             return  # keep the current raster on failure
-        rgba, bounds = result
-        self._target.set_raster(rgba, bounds)
+        self._target.set_raster(result.rgba, result.bounds)
+        if self._on_aggregate is not None:
+            self._on_aggregate(result.aggregate)  # keep hover/inspect values fresh ([D46])
 
     def dispose(self) -> None:
         if self._disposed:

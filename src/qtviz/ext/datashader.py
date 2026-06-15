@@ -24,6 +24,8 @@ lives in `core/raster.py` (4b) and calls `rasterize_element` here.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from ..core.palette import _CATEGORY10, _VIRIDIS
@@ -31,6 +33,46 @@ from ..data.accessor import resolve_expr
 
 _FRAME_MODULES = ("dask.dataframe", "dask_expr", "pandas")
 _DASK_MODULES = ("dask.dataframe", "dask_expr")
+
+
+# ── reverse-lookup value objects ([D46], milestone-raster-inspect.md) ──────────
+@dataclass(frozen=True)
+class RasterAggregate:
+    """The pre-shade per-pixel aggregate behind a datashaded raster, plus the
+    data-space extent — enough to map a cursor coord back to its value. Pure
+    (numpy only), so hover/inspect logic is Tier-1 testable with no Qt."""
+
+    values: np.ndarray  # (rows=y, cols=x) scalar agg; row 0 == ymin (origin lower-left)
+    bounds: tuple[float, float, float, float]  # (xmin, ymin, xmax, ymax)
+    kind: str  # "count" | "mean" | "category" — what the value means
+
+    def value_at(self, x: float, y: float) -> float | None:
+        """Data coords → pixel → value. `None` outside `bounds` or on an empty
+        pixel (NaN, or count/category == 0)."""
+        xmin, ymin, xmax, ymax = self.bounds
+        if xmax <= xmin or ymax <= ymin:
+            return None
+        if not (xmin <= x <= xmax and ymin <= y <= ymax):
+            return None
+        h, w = self.values.shape[:2]
+        col = min(int((x - xmin) / (xmax - xmin) * w), w - 1)
+        row = min(int((y - ymin) / (ymax - ymin) * h), h - 1)
+        v = float(self.values[row, col])
+        if np.isnan(v):
+            return None
+        if self.kind in ("count", "category") and v == 0.0:
+            return None
+        return v
+
+
+@dataclass(frozen=True)
+class RasterResult:
+    """A rasterizer's full output: the RGBA image, its data-space bounds, and the
+    aggregate the image was shaded from (for reverse-lookup / inspect)."""
+
+    rgba: np.ndarray
+    bounds: tuple[float, float, float, float]
+    aggregate: RasterAggregate
 
 
 def channel_frame(ref, channels: dict):
@@ -63,30 +105,35 @@ def _aggregate_and_shade(
     if color_by is None:  # density
         agg = glyph_fn(frame, x, y, agg=ds.count())
         img = tf.shade(agg, cmap=list(cmap) if cmap else list(_VIRIDIS), how=how)
+        values, kind = np.asarray(agg.values, dtype=float), "count"
     elif _is_categorical(frame[color_by]):  # per-category blend
         frame = _categorize(frame, color_by)
         agg = glyph_fn(frame, x, y, agg=ds.by(color_by, ds.count()))
         key = color_key or _color_key(_categories(frame, color_by))
         img = tf.shade(agg, color_key=key, how=how)
+        # categorical agg is (y, x, cat); collapse to total count per pixel
+        values, kind = np.asarray(agg.values, dtype=float).sum(axis=-1), "category"
     else:  # continuous value
         agg = glyph_fn(frame, x, y, agg=ds.mean(color_by))
         img = tf.shade(agg, cmap=list(cmap) if cmap else list(_VIRIDIS), how=how)
+        values, kind = np.asarray(agg.values, dtype=float), "mean"
 
     rgba = img.data.view(np.uint8).reshape(img.shape + (4,)).copy()  # (y, x, 4)
     xs = np.asarray(agg.coords[x].values)
     ys = np.asarray(agg.coords[y].values)
     bounds = (float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max()))
-    return rgba, bounds
+    return RasterResult(rgba, bounds, RasterAggregate(values, bounds, kind))
 
 
 def rasterize_points(
     frame, x: str, y: str, *,
     width: int, height: int, x_range=None, y_range=None,
     color_by: str | None = None, cmap=None, color_key=None, how: str = "eq_hist",
-) -> tuple[np.ndarray, tuple[float, float, float, float]]:
+) -> RasterResult:
     """Aggregate point density (or `color_by` value/category) into an RGBA raster.
-    Returns `(rgba, bounds)` — rgba is `(rows=y, cols=x, 4)` uint8 (origin
-    lower-left) and bounds is `(xmin, ymin, xmax, ymax)`."""
+    Returns a `RasterResult` — `rgba` is `(rows=y, cols=x, 4)` uint8 (origin
+    lower-left), `bounds` is `(xmin, ymin, xmax, ymax)`, `aggregate` is the
+    pre-shade per-pixel values for reverse-lookup ([D46])."""
     return _aggregate_and_shade(
         frame, "points", x, y, width=width, height=height, x_range=x_range, y_range=y_range,
         color_by=color_by, cmap=cmap, color_key=color_key, how=how,
@@ -97,7 +144,7 @@ def rasterize_line(
     frame, x: str, y: str, *,
     width: int, height: int, x_range=None, y_range=None,
     cmap=None, how: str = "eq_hist",
-) -> tuple[np.ndarray, tuple[float, float, float, float]]:
+) -> RasterResult:
     """Aggregate connected line segments (a Curve) into an RGBA raster — the
     density of overlapping lines, for huge/dense series."""
     return _aggregate_and_shade(

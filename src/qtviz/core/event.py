@@ -45,6 +45,7 @@ class HoverEvent(Event):
     point_index: int | None
     x: float
     y: float
+    value: float | None = None  # aggregated value under the cursor on a raster ([D46])
 
 
 @dataclass(frozen=True)

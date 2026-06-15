@@ -41,7 +41,8 @@ def reset_threshold():
 
 # ── the rasterizer ───────────────────────────────────────────────────────────
 def test_rasterize_returns_rgba_and_bounds(data):
-    rgba, bounds = rasterize_scatter(qv.Scatter(data, x="x", y="y"), width=120, height=80)
+    r = rasterize_scatter(qv.Scatter(data, x="x", y="y"), width=120, height=80)
+    rgba, bounds = r.rgba, r.bounds
     assert rgba.shape == (80, 120, 4) and rgba.dtype == np.uint8
     assert rgba[..., 3].max() > 0  # some pixels were painted
     xmin, ymin, xmax, ymax = bounds
@@ -51,7 +52,7 @@ def test_rasterize_returns_rgba_and_bounds(data):
 def test_rasterize_density_concentrates(data):
     # all points in a tight cluster → only a few pixels carry the density
     cluster = {"x": np.full(10_000, 1.0), "y": np.full(10_000, 2.0)}
-    rgba, _ = rasterize_points(_pandas(cluster), "x", "y", width=50, height=50)
+    rgba = rasterize_points(_pandas(cluster), "x", "y", width=50, height=50).rgba
     painted = int((rgba[..., 3] > 0).sum())
     assert 0 < painted <= 25  # concentrated, not spread across the canvas
 
@@ -127,7 +128,8 @@ def test_curve_rasterizes_to_line_density():
     n = 5000
     t = np.linspace(0, 10, n)
     curve = qv.Curve({"x": t, "y": np.sin(t)}, x="x", y="y", scale="datashader")
-    rgba, bounds = rasterize_curve(curve, width=120, height=80)
+    r = rasterize_curve(curve, width=120, height=80)
+    rgba, bounds = r.rgba, r.bounds
     assert rgba.shape == (80, 120, 4) and rgba.dtype == np.uint8
     assert rgba[..., 3].max() > 0  # the line painted pixels
     assert bounds[0] < bounds[2] and bounds[1] < bounds[3]
@@ -141,7 +143,7 @@ def _distinct_painted_colors(rgba) -> int:
 
 def test_categorical_color_by_blends_distinct_colors(typed_data):
     sc = qv.Scatter(typed_data, x="x", y="y", color_by="cat", scale="datashader")
-    rgba, _ = rasterize_scatter(sc, width=100, height=80)
+    rgba = rasterize_scatter(sc, width=100, height=80).rgba
     # a per-category blend → more than one hue among the painted pixels
     assert _distinct_painted_colors(rgba) > 1
 
@@ -151,8 +153,8 @@ def test_numeric_color_by_changes_aggregation(typed_data):
     # plain count-density one over the same points.
     base = qv.Scatter(typed_data, x="x", y="y", scale="datashader")
     valued = qv.Scatter(typed_data, x="x", y="y", color_by="z", scale="datashader")
-    rgba_count, _ = rasterize_scatter(base, width=100, height=80)
-    rgba_mean, _ = rasterize_scatter(valued, width=100, height=80)
+    rgba_count = rasterize_scatter(base, width=100, height=80).rgba
+    rgba_mean = rasterize_scatter(valued, width=100, height=80).rgba
     assert rgba_mean.shape == rgba_count.shape
     assert np.any(rgba_mean != rgba_count)
 
@@ -160,10 +162,10 @@ def test_numeric_color_by_changes_aggregation(typed_data):
 def test_categorical_via_points_color_key(typed_data):
     # explicit color_key path through the points primitive
     frame = _pandas(typed_data)
-    rgba, _ = rasterize_points(
+    rgba = rasterize_points(
         frame, "x", "y", width=80, height=60,
         color_by="cat", color_key={"a": "#ff0000", "b": "#00ff00", "c": "#0000ff", "d": "#ffffff"},
-    )
+    ).rgba
     assert rgba.shape == (60, 80, 4) and _distinct_painted_colors(rgba) > 1
 
 
@@ -189,12 +191,12 @@ def test_rasterize_element_dispatches_by_glyph(typed_data):
     scatter = qv.Scatter(typed_data, x="x", y="y", scale="datashader")
     # dispatch must match the per-element rasterizers exactly
     np.testing.assert_array_equal(
-        rasterize_element(curve, width=60, height=40)[0],
-        rasterize_curve(curve, width=60, height=40)[0],
+        rasterize_element(curve, width=60, height=40).rgba,
+        rasterize_curve(curve, width=60, height=40).rgba,
     )
     np.testing.assert_array_equal(
-        rasterize_element(scatter, width=60, height=40)[0],
-        rasterize_scatter(scatter, width=60, height=40)[0],
+        rasterize_element(scatter, width=60, height=40).rgba,
+        rasterize_scatter(scatter, width=60, height=40).rgba,
     )
 
 
