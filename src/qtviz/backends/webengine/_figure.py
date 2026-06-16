@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ...core.compose import Overlay
+from ...core.compose import Overlay, surface_of
 from ...data import resolve_node
 from ...elements import (
     Bars,
@@ -227,6 +227,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
     needs to route pick/select back to the originating Element. Multi-trace
     elements repeat their id once per trace.
     """
+    surf = surface_of(node)  # before resolve — the shared-surface options (title/labels)
     node = resolve_node(node)
     traces: list[dict] = []
     source_ids: list[str] = []
@@ -243,7 +244,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
         el_traces = builder(element, theme, idx)
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))
-    return {"data": traces, "layout": plotly_layout(theme)}, source_ids
+    return {"data": traces, "layout": plotly_layout(theme, surf)}, source_ids
 
 
 def build_figure(node, theme) -> dict:
@@ -251,25 +252,38 @@ def build_figure(node, theme) -> dict:
     return build(node, theme)[0]
 
 
-def plotly_layout(theme) -> dict:
-    """A Plotly layout carrying the qtviz Theme (axes/bg/font/palette)."""
-    fg = _css(theme.foreground)
-    bg = _css(theme.background)
-    grid = _css(theme.grid)
-    axis = {
+def _axis(grid: str, fg: str, label: str | None = None) -> dict:
+    """One Plotly axis dict — its own `title` object (never shared between x/y,
+    so injecting a label on one axis can't leak onto the other)."""
+    title = {"font": {"color": fg}}
+    if label:
+        title["text"] = label
+    return {
         "gridcolor": grid,
         "linecolor": fg,
         "zerolinecolor": grid,
         "tickfont": {"color": fg},
-        "title": {"font": {"color": fg}},
+        "title": title,
     }
-    return {
+
+
+def plotly_layout(theme, surf=None) -> dict:
+    """A Plotly layout carrying the qtviz Theme (axes/bg/font/palette) and, when
+    given, the shared-surface options (`OverlayOptions` title / axis labels —
+    axis-surface seam, Phase A)."""
+    fg = _css(theme.foreground)
+    bg = _css(theme.background)
+    grid = _css(theme.grid)
+    layout = {
         "paper_bgcolor": bg,
         "plot_bgcolor": bg,
         "font": {"color": fg, "family": theme.font_family, "size": theme.font_size},
         "colorway": [_css(c) for c in theme.palette],
-        "xaxis": dict(axis),
-        "yaxis": dict(axis),
+        "xaxis": _axis(grid, fg, surf.x_label if surf else None),
+        "yaxis": _axis(grid, fg, surf.y_label if surf else None),
         "margin": {"l": 50, "r": 20, "t": 30, "b": 40},
         "showlegend": False,
     }
+    if surf is not None and surf.title:
+        layout["title"] = {"text": surf.title, "font": {"color": fg}}
+    return layout

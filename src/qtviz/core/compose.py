@@ -79,6 +79,15 @@ class Layout(Immutable):
         return cls(children, kind="splitter", **kw)
 
 
+def surface_of(node: Node) -> OverlayOptions:
+    """The shared-surface options for any renderable node (the axis-surface seam,
+    Phase A). An `Overlay` carries its own `OverlayOptions`; a bare `Element` (or
+    anything else a backend renders as one surface) gets defaults. This lets every
+    backend apply title/axis-labels uniformly without special-casing bare elements.
+    See `design/axis-surface-feasibility.md`."""
+    return node.options if isinstance(node, Overlay) else OverlayOptions()
+
+
 def _elements_of(node: Node) -> Iterator[Element]:
     if isinstance(node, Element):
         yield node

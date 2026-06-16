@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
-from ...core.compose import Layout, Overlay
+from ...core.compose import Layout, Overlay, surface_of
 from ...core.element import Element
 from ...core.event import EventBus, SelectEvent
 from ...core.threading import require_gui_thread
@@ -23,6 +23,7 @@ from ...data import resolve_node
 from ...errors import RendererMissingError
 from . import _events
 from ._renderers import RENDERERS
+from ._surface import apply_surface
 from ._theme import apply_theme_ax, apply_theme_fig
 
 _CAPS = Capabilities(
@@ -142,6 +143,7 @@ class MatplotlibBackend:
 
     def _render_cell(self, node, ax, theme, bus, surfaces) -> None:
         apply_theme_ax(ax, theme)
+        apply_surface(ax, surface_of(node), theme)
         surface_id = uuid.uuid4().hex
         selectables: list = []
         surfaces.append({"ax": ax, "surface_id": surface_id, "selectables": selectables})

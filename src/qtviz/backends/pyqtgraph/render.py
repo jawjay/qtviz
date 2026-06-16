@@ -9,7 +9,7 @@ import pyqtgraph as pg
 
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
-from ...core.compose import Layout, Overlay
+from ...core.compose import Layout, Overlay, surface_of
 from ...core.element import Element
 from ...core.event import EventBus
 from ...core.threading import require_gui_thread
@@ -19,6 +19,7 @@ from . import _events
 from ._axes import link_axes
 from ._interaction import QtvizViewBox
 from ._renderers import RENDERERS
+from ._surface import apply_surface
 from ._theme import apply_theme, style_plot
 
 _CAPS = Capabilities(
@@ -147,6 +148,7 @@ class PyQtGraphBackend:
         vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex)
         plot = widget.addPlot(row=row, col=col, viewBox=vb)
         style_plot(plot, theme)
+        apply_surface(plot, surface_of(node), theme)
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
         for element in children:
