@@ -31,6 +31,7 @@ data core had to come first. Net effect:
 
 **Recommended next order** (detail in `development-plan.md` §8): finish the 0.1 release
 (publish to PyPI · deploy the docs site) → data sources (Parquet/DuckDB) → axis transforms
+(axis-surface seam — **Phase A ✅**; **Phase B / log scale under investigation**, see §8.3)
 → raster selection (pixel→rows) → remaining Datashader coverage (raster legends · theme
 colors · aggregation surface). The phase tables below are retained as the original
 estimate/acceptance reference, with status annotated inline.
@@ -395,8 +396,25 @@ being cut. The remaining critical path is Phase 5's data sources, then the 0.1 r
    and deploy the mkdocs site to GitHub Pages (enable Pages → run the Docs workflow).
 2. **Data sources (Phase 5)** — `DataSource` for Parquet/DuckDB/SQL behind the lazy
    `DataRef` contract; background queries; versioned result cache.
-3. **Axis transforms** — log / symlog / datetime across all backends (also unlocks
-   Datashader `logx`/`logy`).
+3. **Axis transforms (the axis-surface seam)** — title/labels, log / symlog / datetime,
+   limits, and tick formatting across all backends, built on one shared per-surface
+   config step (`surface_of` + `apply_surface`). Design + cross-backend feasibility in
+   [`axis-surface-feasibility.md`](axis-surface-feasibility.md). Phased:
+   - **Phase A ✅ (shipped)** — `surface_of` + `apply_surface` wire the previously-dead
+     `OverlayOptions` title / `x_label` / `y_label` on pyqtgraph, matplotlib, and
+     webengine; `tests/qtviz/test_surface.py`. (Value review: feasibility report §9 —
+     low direct value, high strategic value as the enabling seam.)
+   - **Phase B ⬜ — log scale (needs more investigation).** Blocked on a pyqtgraph
+     finding that contradicts the feasibility report: `setLogMode` does **not** transform
+     qtviz's bare render items (`ScatterPlotItem`/`PlotCurveItem`/…), so log renders
+     correctly on matplotlib/Plotly but breaks on the default backend. Two paths open —
+     (a) log-transform the data inside the pyqtgraph renderers + normalize events back to
+     data space (preserves "renders identically"; larger, real edge cases), vs. (b)
+     capability-gate pyqtgraph to linear and ship log on mpl/web first. **Decision pending
+     — needs a focused spike before committing.**
+   - **Phases C–D** — declarative limits / invert / aspect, then a backend-agnostic
+     tick-format vocabulary (`si | percent | datetime | fixed:N`).
+   - Also unlocks Datashader `logx` / `logy`.
 4. **Raster selection** — pixel → source rows for brush/linked-select on datashaded views
    (builds on the [D46] hover reverse-lookup).
 5. **Remaining Datashader coverage** — raster legends/colorbars, theme-driven colors, a
