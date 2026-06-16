@@ -45,6 +45,7 @@ uv sync --extra matplotlib --extra dev
 | 28 | [`28_event_density_map.py`](28_event_density_map.py) | **Real-world: big-data map** — 2M categorized events → Datashaded categorical density; hover for the event count under the cursor. |
 | 29 | [`29_climate_field.py`](29_climate_field.py) | **Real-world: gridded science** — an `xarray` 2-D field → `Image` map + a 1-D `da.isel` cross-section `Curve`, X-linked. |
 | 30 | [`30_xarray_sensor_lines.py`](30_xarray_sensor_lines.py) | **Real-world: xarray cube** — a 3-D `10_000 × 4 × 250` `(time, sensor, instance)` `DataArray`; `.sel` one sensor, overlay all 250 instances (~2.5M line points) as faint `Curve`s + a bold `.mean` envelope. |
+| 31 | [`31_axis_labels.py`](31_axis_labels.py) | **Axis labels & titles** — `OverlayOptions(title, x_label, y_label)` on each surface; per-pane labels in a `Layout`; renders identically on every backend. |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
