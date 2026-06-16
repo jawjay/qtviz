@@ -404,14 +404,18 @@ being cut. The remaining critical path is Phase 5's data sources, then the 0.1 r
      `OverlayOptions` title / `x_label` / `y_label` on pyqtgraph, matplotlib, and
      webengine; `tests/qtviz/test_surface.py`. (Value review: feasibility report §9 —
      low direct value, high strategic value as the enabling seam.)
-   - **Phase B ⬜ — log scale (needs more investigation).** Blocked on a pyqtgraph
-     finding that contradicts the feasibility report: `setLogMode` does **not** transform
-     qtviz's bare render items (`ScatterPlotItem`/`PlotCurveItem`/…), so log renders
-     correctly on matplotlib/Plotly but breaks on the default backend. Two paths open —
-     (a) log-transform the data inside the pyqtgraph renderers + normalize events back to
-     data space (preserves "renders identically"; larger, real edge cases), vs. (b)
-     capability-gate pyqtgraph to linear and ship log on mpl/web first. **Decision pending
-     — needs a focused spike before committing.**
+   - **Phase B ⬜ — log scale (spike done ✅, ready to implement).** The blocker —
+     pyqtgraph's `setLogMode` doesn't transform our bare render items — is resolved:
+     the spike proved **Approach A** (pre-`log10` the data in the renderers +
+     `AxisItem.setLogMode` for ticks; one consistent `10**` de-log at each event
+     boundary). Findings, the R1 normalization map, edge-case policy, and effort are in
+     [`axis-surface-feasibility.md`](axis-surface-feasibility.md) §10. matplotlib needs
+     **no** coordinate work (`get_xlim` stays data-space under log); webengine needs R1
+     only in its relayout/restore path; pyqtgraph is the bulk (~120–150 LOC, bounded).
+     Remaining choice is rollout shape — **all-at-once** (log on all 3 backends, keeps
+     "renders identically") vs **staged B1→B2** (mpl/web first, pyqtgraph gated to
+     linear, then Approach A). Sub-decisions: non-positive policy (drop+warn), include
+     `symlog` (mpl-only, exercises gating), datashader gate.
    - **Phases C–D** — declarative limits / invert / aspect, then a backend-agnostic
      tick-format vocabulary (`si | percent | datetime | fixed:N`).
    - Also unlocks Datashader `logx` / `logy`.

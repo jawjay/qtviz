@@ -158,7 +158,7 @@ primitive per backend, or the degradation if not.
 |---|---|---|---|---|
 | **title** | `plot.setTitle(t)` | `ax.set_title(t)` | `layout.title.text` | ✅ all |
 | **x/y label** | `plot.setLabel('bottom'/'left', t)` | `ax.set_xlabel/ylabel` | `layout.xaxis/yaxis.title.text` | ✅ all |
-| **scale: log** | `plot.setLogMode(x,y)` | `ax.set_xscale('log')` | `xaxis.type='log'` | ✅ all (⚠ coords §4) |
+| **scale: log** | ⚠ `setLogMode` does **not** transform qtviz's bare items — needs data pre-transform (§10) | `ax.set_xscale('log')` | `xaxis.type='log'` | ◑ mpl/web native; pyqtgraph via §10 |
 | **scale: symlog** | ❌ no native symlog | `set_xscale('symlog')` | ❌ (log only) | ◑ mpl only → gate |
 | **scale: logit** | ❌ | `set_xscale('logit')` | ❌ | ◑ mpl only → gate |
 | **scale: time** | `DateAxisItem` on axis | native date units | `xaxis.type='date'` | ✅ representable; needs data-layer dtype (item #4) |
@@ -386,6 +386,104 @@ user-facing win is weak in isolation. In rough leverage order, what realizes the
    `Overlay`-wrapping (§2.2 option 2).
 3. **Finish the dead fields** — `legend`, `background`, and `LayoutOptions.title` — so
    the surface contract is no longer partial.
+
+---
+
+## 10. Phase B spike — log scale (findings)
+
+A focused spike (run against the installed pyqtgraph / matplotlib) to resolve the
+pivotal unknown before committing to Phase B. **Outcome: log scale is feasible on
+all three backends; the work is bounded and concentrated in pyqtgraph.**
+
+### 10.1 Correction to the §3 matrix
+
+The §3 row claiming pyqtgraph log is `plot.setLogMode(x,y)` ✅ is **wrong** and has
+been struck. Verified empirically: `setLogMode` only transforms items that
+implement `setLogMode`, and qtviz's renderers use **bare** `ScatterPlotItem` /
+`PlotCurveItem` / `BarGraphItem` / `ImageItem` — none of which do. The axis switches
+to log ticks but the data stays linear → broken render on the default backend.
+
+### 10.2 Per-backend findings
+
+- **matplotlib — trivial, no R1.** `ax.set_xscale("log")` transforms the data, and
+  `ax.get_xlim()` returns **data-space** limits under log (spike: `~0.7..1412` for
+  data `1..1000`). So `connect_range` (reads `get_xlim`) and the data-space
+  `selectables` are already correct — **matplotlib needs no coordinate
+  normalization.** It also gets `symlog` / `logit` for free.
+- **webengine (Plotly) — small, R1 in one place.** `xaxis.type="log"` renders
+  correctly, but `xaxis.range` in `relayout`/`restore` is **log₁₀**. R1 lives in
+  `_translate.parse_relayout` (incoming) and `restore_state` (outgoing). Test is
+  display-gated (offscreen QWebEngine is skipped), so the figure-dict (`type=='log'`)
+  is unit-testable but the range round-trip is not headless.
+- **pyqtgraph — the bulk, but proven.** `setLogMode` is out (10.1). **Approach A
+  works** (spike-verified): pre-`log10` the plotted data in the renderers **and** set
+  `AxisItem.setLogMode(True)` for tick labels only. Result was correct — view range
+  in exponent space (`~0..3`) and tick labels `1 / 10¹ / 10² / 10³`. Because the data
+  is now in exponent space, *everything downstream* (viewRange, range/tap events,
+  picks, brush) is in exponent space too, so a single consistent `10**v` de-log at
+  each emit boundary restores data space.
+
+### 10.3 The R1 normalization map (pyqtgraph only)
+
+Every boundary where a (possibly-log) coordinate crosses the seam, with the fix:
+
+| Boundary | Site | Normalization |
+|---|---|---|
+| capture_state | `pyqtgraph/render.py:54-59` | `viewRange` → `10**` for log axes |
+| restore_state | `pyqtgraph/render.py:61-68` | `log10(range)` before `setXRange/YRange` |
+| RangeEvent | `_interaction.py:53` (`_on_range`) | `viewRange` → `10**` |
+| brush / SelectEvent | `_interaction.py:43,64` | store selectables as `log10` so the mask runs in exponent space; de-log the emitted `bounds` |
+| TapEvent | `_interaction.py:75` | `mapSceneToView` → `10**` |
+| pick / hover | `_events.py:20-32` (`wire_scatter`) | `sp.pos()` → `10**` |
+
+All keyed off per-axis `x_log` / `y_log` flags parked on the `QtvizViewBox` (+ read
+by the handle). matplotlib and the webengine native path need **none** of this row.
+
+### 10.4 Threading the scale to the renderers
+
+`RenderContext` gains `x_scale` / `y_scale` (resolved once in `_render_cell` from
+`surface_of(node)` + a capability check). The renderers that plot x/y data —
+`scatter`, `curve`, `bars`, `errorbars`, `spread` — apply a `_logify(arr, is_log)`
+helper. `Image` / `Heatmap` under a log axis is unusual; **defer + gate** rather than
+transform a raster.
+
+### 10.5 Edge cases & policy
+
+- **Non-positive values under log** → `log10` yields `nan`/`-inf` (spike confirmed).
+  **Policy: drop non-finite points with a one-time `warnings.warn`,** matching
+  matplotlib's masking behavior. Maskable cleanly (`np.isfinite`).
+- **Datashader + non-linear scale** — out of scope (roadmap item #2). **Gate:** warn
+  and render linear when `scale != "linear"` and `scale == "datashader"`.
+- **symlog / logit** — matplotlib-only (verified: pyqtgraph #1035 open, Plotly
+  log-only). Capability-gate via `Capabilities.scales`; including `symlog` now is
+  cheap and *exercises the degradation path* (mpl renders it; pyqtgraph/web warn →
+  linear). No R1 impact (mpl limits stay data-space).
+
+### 10.6 Effort & risk
+
+| Backend | Effort | R1 | Risk |
+|---|---|---|---|
+| matplotlib | ~1-liner + capability + test | none | low |
+| webengine | small (`type='log'` + relayout/restore) | one path, display-gated test | low–med (untestable headless) |
+| pyqtgraph | bulk: 5 renderers + `RenderContext` + ViewBox/events/handle R1 + masking (~120–150 LOC) | full §10.3 map | medium — bounded, **feasibility now proven** |
+
+### 10.7 Recommendation
+
+Two viable rollouts; the spike makes either safe:
+
+- **All-at-once Phase B (recommended).** Log on all three backends in one phase —
+  matplotlib (easy), webengine (small), pyqtgraph (Approach A). Preserves "renders
+  identically"; the risk is concentrated in the pyqtgraph R1 map but its feasibility
+  is now proven, and TDD against the §10.3 boundaries makes it tractable.
+- **Staged B1 → B2 (lower-risk increments).** B1: log on matplotlib + webengine with
+  `Capabilities.scales` + warn-fallback, **pyqtgraph temporarily gated to
+  `{"linear"}`** (warns). B2: pyqtgraph Approach A, restoring consistency. Smaller
+  PRs, but the *default* backend is temporarily linear — a visible (warned) "describe
+  once" gap until B2.
+
+**Open sub-decisions for whoever implements:** (1) non-positive policy — *drop + warn*
+recommended; (2) include `symlog` now — cheap, exercises gating; (3) datashader gate —
+yes. None blocks starting.
 
 ---
 
