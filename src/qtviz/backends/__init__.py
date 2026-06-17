@@ -49,13 +49,25 @@ def registered() -> list[Any]:
 
 
 def set_default_backend(name: str) -> None:
-    """Set the backend used when a `View` is created with `backend="auto"` and no hint."""
+    """Set the backend used when a `View` is created with `backend="auto"` and no hint.
+
+    Validated eagerly: an unregistered name raises here rather than surfacing
+    later, deep inside negotiation, far from this call.
+    """
+    if name not in _REGISTRY:
+        raise BackendNotAvailableError(
+            f"cannot set default backend to {name!r}; registered: {list(_REGISTRY)}"
+        )
     global _DEFAULT
     _DEFAULT = name
 
 
 def set_backend_priority(names) -> None:
-    """Set the preference order `auto_negotiate` tries when several backends qualify."""
+    """Set the preference order `auto_negotiate` tries when several backends qualify.
+
+    Lenient by design: a name need not be registered (an optional backend may
+    be installed later) — unregistered names simply sort last in `auto_negotiate`.
+    """
     _PRIORITY[:] = list(names)
 
 
@@ -89,14 +101,14 @@ def _autoregister() -> None:
 
         register(_mpl)
     except ImportError:
-        log.info("matplotlib backend unavailable; install qtviz[matplotlib]")
+        log.info("matplotlib backend unavailable; install with: uv sync --extra matplotlib")
 
     try:
         from .webengine.render import backend as _web  # noqa: PLC0415
 
         register(_web)
     except ImportError:
-        log.info("webengine backend unavailable; install qtviz[webengine]")
+        log.info("webengine backend unavailable; install with: uv sync --extra webengine")
 
 
 _autoregister()

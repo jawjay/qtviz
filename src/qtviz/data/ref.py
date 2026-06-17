@@ -16,6 +16,7 @@ from typing import Any
 import numpy as np
 
 from ..core.disposable import NOOP, Disposable
+from ..errors import ValidationError
 
 GridData = namedtuple("GridData", "values x y")
 
@@ -108,7 +109,7 @@ class EagerTabularRef(TabularRef):
         }
         lengths = {len(a) for a in out.values()}
         if len(lengths) > 1:
-            raise ValueError(
+            raise ValidationError(
                 f"channels resolved to mismatched lengths: "
                 f"{ {r: len(a) for r, a in out.items()} }"
             )

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core.element import Element
-from ..data import Accessor, as_data_ref
+from ..data import Accessor, DataLike, as_data_ref
 
 
 class Heatmap(Element):
@@ -17,7 +17,7 @@ class Heatmap(Element):
 
     def __init__(
         self,
-        data,
+        data: DataLike,
         *,
         x: Accessor,
         y: Accessor,

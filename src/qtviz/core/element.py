@@ -12,6 +12,7 @@ from __future__ import annotations
 import uuid
 
 from ..data import GriddedRef, TabularRef, accessor_columns
+from ..errors import ValidationError
 from ._immutable import Immutable
 
 ElementId = str
@@ -38,7 +39,7 @@ def validate_channels(data, channels: dict, *, who: str) -> None:
             continue
         missing = [c for c in cols if c not in have]
         if missing:
-            raise ValueError(
+            raise ValidationError(
                 f"{who}: column(s) {sorted(missing)} not in data; available: {sorted(have)}"
             )
 

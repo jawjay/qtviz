@@ -12,6 +12,7 @@ The library is auto-detected from the figure's type; pass `kind=` to override.
 from __future__ import annotations
 
 from ..core.element import Element
+from ..errors import ValidationError
 
 _KINDS = ("plotly", "bokeh", "holoviews")
 
@@ -35,5 +36,5 @@ class RawFigure(Element):
         self.figure = figure
         self.kind = kind or _detect_kind(figure)
         if self.kind not in _KINDS:
-            raise ValueError(f"RawFigure kind must be one of {_KINDS}, got {self.kind!r}")
+            raise ValidationError(f"RawFigure kind must be one of {_KINDS}, got {self.kind!r}")
         self._freeze()

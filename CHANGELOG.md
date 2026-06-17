@@ -37,6 +37,14 @@ backends, a lazy-first data layer, and a big-data path — all 100% offline.
 - **Offline guarantee** — no network at render time; the webengine backend bundles
   its JavaScript from the installed packages, never a CDN.
 - **Export** — PNG (pyqtgraph), PNG / SVG / PDF (matplotlib), PNG (webengine).
+- **Validation contract** — bad constructor input (out-of-range opacity,
+  mutually-exclusive channel pairs, unknown column) raises
+  `qtviz.errors.ValidationError`, which subclasses **both** `QtvizError` and the
+  stdlib `ValueError`; `except QtvizError` now catches every deliberate rejection,
+  including construction errors, while `except ValueError` keeps working. Mutable
+  setters validate eagerly: `set_default_backend` rejects an unregistered name,
+  and `set_raster_threshold` / `set_raster_size` reject non-positive values. Every
+  `data=` parameter is annotated `DataLike`.
 - `qtviz.__version__`.
 
 ### Notes
