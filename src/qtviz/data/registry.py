@@ -12,6 +12,13 @@ from typing import Any, Protocol, runtime_checkable
 from ..errors import AdapterError
 from .ref import DataRef
 
+# Any object a registered `DataAdapter` can wrap — a dict of columns, a numpy
+# ndarray, a pandas/Arrow table, an xarray/zarr/dask object, or an already-built
+# `DataRef`. Deliberately `Any` (the accepted set is open and extends with every
+# registered adapter); it documents intent at every `data=` parameter without
+# pinning the contract to optional dependencies.
+DataLike = Any
+
 
 @runtime_checkable
 class DataAdapter(Protocol):

@@ -83,7 +83,10 @@ def from_hvplot(data: Any, kind: str, **kwargs: Any):
     `data.hvplot(kind=kind, **kwargs)` returns a HoloViews object (Element /
     Overlay / often a `DynamicMap`), which `from_holoviews` already consumes — so
     this is a thin convenience. `hvplot` is an optional extra (`qtviz[hvplot]`),
-    imported lazily here."""
+    imported lazily here.
+
+    `kind` and `**kwargs` are forwarded verbatim to hvplot; they are *hvplot's*
+    contract, not qtviz's stable surface, and are not validated here."""
     return from_holoviews(_hvplot_call(data, kind, **kwargs))
 
 
@@ -99,7 +102,7 @@ def _hvplot_call(data: Any, kind: str, **kwargs: Any) -> Any:
     if accessor is None:
         raise AdapterError(
             "from_hvplot needs the hvplot accessor on the data object; install the "
-            "optional extra with `pip install 'qtviz[hvplot]'`."
+            "optional extra with: uv sync --extra hvplot"
         )
     return accessor(kind=kind, **kwargs)
 

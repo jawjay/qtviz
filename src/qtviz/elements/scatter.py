@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Literal
 
+from ..core._validate import check_alpha, check_exclusive
 from ..core.color import ColorSpec
 from ..core.element import Element
-from ..data import Accessor, as_data_ref
+from ..data import Accessor, DataLike, as_data_ref
 
 
 class Scatter(Element):
@@ -18,7 +19,7 @@ class Scatter(Element):
 
     def __init__(
         self,
-        data,
+        data: DataLike,
         *,
         x: Accessor,
         y: Accessor,
@@ -35,12 +36,9 @@ class Scatter(Element):
         matplotlib_rasterized: bool = False,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        if color is not None and color_by is not None:
-            raise ValueError("Scatter: pass color (static) or color_by (column), not both")
-        if size is not None and size_by is not None:
-            raise ValueError("Scatter: pass size (static) or size_by (column), not both")
-        if not (0.0 <= alpha <= 1.0):
-            raise ValueError(f"alpha must be in [0, 1], got {alpha}")
+        check_exclusive(color, color_by, names=("color", "color_by"), who="Scatter")
+        check_exclusive(size, size_by, names=("size", "size_by"), who="Scatter")
+        check_alpha(alpha, who="Scatter")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color, self.color_by = color, color_by

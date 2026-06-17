@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core.element import Element, require_gridded
-from ..data import as_data_ref
+from ..data import DataLike, as_data_ref
 
 
 class Image(Element):
@@ -16,7 +16,7 @@ class Image(Element):
 
     def __init__(
         self,
-        data,
+        data: DataLike,
         *,
         bounds: tuple[float, float, float, float],
         colormap: str = "viridis",

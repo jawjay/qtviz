@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Literal
 
+from ..core._validate import check_alpha
 from ..core.color import ColorSpec
 from ..core.element import Element
-from ..data import Accessor, as_data_ref
+from ..data import Accessor, DataLike, as_data_ref
 
 
 class Curve(Element):
@@ -18,7 +19,7 @@ class Curve(Element):
 
     def __init__(
         self,
-        data,
+        data: DataLike,
         *,
         x: Accessor,
         y: Accessor,
@@ -31,8 +32,7 @@ class Curve(Element):
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        if not (0.0 <= alpha <= 1.0):
-            raise ValueError(f"alpha must be in [0, 1], got {alpha}")
+        check_alpha(alpha, who="Curve")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color = color

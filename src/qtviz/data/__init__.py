@@ -10,6 +10,7 @@ from .pipeline import node_is_lazy, resolve_node, set_raster_size, set_raster_th
 from .ref import DataRef, EagerGriddedRef, EagerTabularRef, GridData, GriddedRef, Schema, TabularRef
 from .registry import (
     DataAdapter,
+    DataLike,
     as_data_ref,
     gridded,
     list_data_adapters,
@@ -26,6 +27,7 @@ __all__ = [
     "Schema",
     "GridData",
     "DataAdapter",
+    "DataLike",
     "as_data_ref",
     "tabular",
     "gridded",

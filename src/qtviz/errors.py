@@ -11,6 +11,19 @@ class QtvizError(Exception):
     """Base for every error qtviz raises on purpose."""
 
 
+class ValidationError(QtvizError, ValueError):
+    """Invalid arguments to an Element / Options / data constructor: an
+    out-of-range value, a mutually-exclusive pair, an unknown column name, or
+    accessors that resolve to mismatched lengths.
+
+    Subclasses both `QtvizError` — so ``except QtvizError`` catches every
+    deliberate qtviz rejection, *including* bad construction input — and the
+    stdlib `ValueError`, so existing ``except ValueError`` handlers keep
+    working unchanged. Genuine *type* mismatches (e.g. tabular data where a
+    gridded array is required) still raise `TypeError`, not this.
+    """
+
+
 class NegotiationError(QtvizError):
     """A backend could not be resolved for a node tree."""
 

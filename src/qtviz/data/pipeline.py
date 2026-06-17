@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import importlib.util
 
+from ..errors import ValidationError
 from .ref import EagerTabularRef
 
 # Auto-route to datashader above this many points; configurable via
@@ -29,14 +30,20 @@ _RASTER_SIZE = (800, 600)
 
 def set_raster_threshold(n: int) -> None:
     """scale='auto' rasterizes a Scatter once its point count exceeds `n`."""
+    n = int(n)
+    if n < 1:
+        raise ValidationError(f"raster threshold must be a positive count, got {n}")
     global _RASTER_THRESHOLD
-    _RASTER_THRESHOLD = int(n)
+    _RASTER_THRESHOLD = n
 
 
 def set_raster_size(width: int, height: int) -> None:
     """Default datashader canvas resolution for static rasterization."""
+    width, height = int(width), int(height)
+    if width < 1 or height < 1:
+        raise ValidationError(f"raster size must be positive, got {width}x{height}")
     global _RASTER_SIZE
-    _RASTER_SIZE = (int(width), int(height))
+    _RASTER_SIZE = (width, height)
 
 
 def _datashader_available() -> bool:

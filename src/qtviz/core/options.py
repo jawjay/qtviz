@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 
 from ._immutable import Immutable
+from ._validate import check_alpha
 from .color import ColorSpec
 from .palette import Palette
 
@@ -29,8 +30,7 @@ class Options(Immutable):
         self.alpha = alpha
         self.palette = palette
         self.label = label
-        if alpha is not None and not (0.0 <= alpha <= 1.0):
-            raise ValueError(f"alpha must be in [0, 1], got {alpha}")
+        check_alpha(alpha, who="Options")
         self._freeze()
 
 
