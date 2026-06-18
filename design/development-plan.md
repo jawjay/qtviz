@@ -445,12 +445,29 @@ hover reverse-lookup), reactive `Signal` binding (Phase 4), the HoloViews/hvplot
 adapter (Phase 3, 3a + 3b), the webengine rehome (W0–W5.1a + offline), and the CI
 matrix (macOS/Linux/Windows × 3.11–3.13).
 
-**In progress — release `0.1` (Phase 6):** docs/code cohesiveness pass, a
-lightweight mkdocs site, packaging/metadata for PyPI, and the `qtwebplot` import
-shim (already in place). This is the current focus.
+**✅ Released — `0.1` (Phase 6):** `v0.1.0` tag + GitHub prerelease; docs/CHANGELOG,
+mkdocs site, API docstrings, `qtwebplot` import shim. (No PyPI — not a goal. Pages docs
+deploy deferred: private repo / plan blocks Pages — `RELEASING.md`.)
 
-**Remaining / planned** (each opened with its own spec-first benchmark suite, per
-cadence):
+**Next — staged post-0.1 plan (root causes R1–R6).** From
+`developer-perspective-weaknesses.md` + `weakness-root-causes.md`; decisions
+[D51]–[D58]; full sequence in `roadmap.md` §8:
+
+- **0.2 — Hardening + escape valve** (R4, R1) — enforce §3.4 honor-or-warn ([D51]) +
+  capability honesty ([D52]) + `handle.native()` accessor ([D53]); no new chart
+  features. Detailed spec: `milestone-0.2-hardening.md` (TDD + benchmarks per cadence).
+- **0.3 — First-class concepts** (R5) — axes (`AxisSpec` + transform stage, [D56] = the
+  axis-transforms item below) + legends ([D55]).
+- **0.4 — Vocabulary + edges** (R3 partial, R6) — grow built-in elements ([D54]; registry
+  parked) + composite raster export ([D57]).
+
+The **0.2** invariant decision worth flagging against the §3 invariants above:
+`handle.native()` ([D53]) is the *purity-preserving* escape valve — the live backend
+object is returned **through the handle**, never stored on the immutable Element, so
+invariants 1 and 6 hold. Documented non-goals: [D58].
+
+**Remaining / planned — data layer & long tail** (each opened with its own spec-first
+benchmark suite, per cadence; interleaves with the staged plan):
 
 1. **Data sources** (roadmap Phase 5) — a `DataSource` for Parquet/DuckDB/SQL behind
    the existing adapter contract; lazy + background queries. The lazy `DataRef`

@@ -533,6 +533,15 @@ uses them to:
   `len(table) > backend.capabilities.max_recommended_points`.
 - Power the "What backend should I use?" doc page.
 
+**Honesty rule (post-0.1, [D52]).** A declared capability **must** be backed by a real
+code path — negotiation assumes capabilities don't lie. (0.1 shipped two aspirational
+flags: `dimensions={2,3}` on matplotlib/webengine with no 3-D renderer, and
+`animation=True` with no animation API. Both are corrected to `{2}` / `False` until an
+implementing path exists; a capability-honesty conformance test guards against
+recurrence. 3-D and animation are non-goals for now, §12.) Under-claiming is safe
+(pyqtgraph declares `exports={png}` though an SVG exporter exists); over-claiming is the
+bug.
+
 ### 2.6 RendererRegistry
 
 ```python
@@ -600,6 +609,19 @@ class RenderHandle:
 
     def export(self, fmt: str, path: Path) -> Path:
         """If the backend declares this export in capabilities."""
+
+    def native(self, element_id: ElementId) -> "BackendPrimitive | None":
+        """The live backend object for an element — a pg PlotItem, an mpl
+        Artist/Axes, or the webengine figure handle — or None if unknown /
+        not yet rendered. The escape valve (post-0.1, [D53]) for reaching
+        backend-native power (ROIs, crosshairs, native signals) the typed
+        event/element vocabularies don't expose. **Non-portable by design:**
+        the returned type is backend-specific, and code using it opts out of
+        "swap the backend, same behavior." The live object is returned
+        *through the handle*, never stored on the immutable Element — so the
+        purity/value-hash invariant (§2.1) is untouched. Backends retain an
+        `element_id → primitive` map at render; the map rebuilds on update()/
+        set_backend(). See `milestone-0.2-hardening.md` §2."""
 ```
 
 This is what `View` holds onto. Backend-switching at View level
@@ -617,7 +639,8 @@ above doesn't cover it. Such a Layout renders as a
   `QMainWindow`-with-docks / a `QGridLayout` host) built by the generic
   Qt-level host (§3.7), not by any single backend.
 - it owns one child `RenderHandle` per pane (each from that pane's backend)
-  and fans `update` / `dispose` / `export` out to them.
+  and fans `update` / `dispose` / `export` out to them. `native(element_id)`
+  fans out too (first non-None wins; ids are unique).
 - `event_bus` is a *merged* bus: each child bus re-publishes onto it, so
   `View.on(...)` sees one event stream regardless of how many panes or
   backends sit underneath. `source_id` on each `Event` (§2.10)
@@ -1092,6 +1115,20 @@ Each backend's renderer logs unsupported recommended options once,
 then silences. This is the contract that lets backends differ in
 detail without breaking the abstraction. **Most flexibility lives in
 classes 2 and 3.**
+
+**Enforcement status (post-0.1, [D51]).** 0.1 declared the
+`REQUIRED`/`RECOMMENDED_OPTIONS` on every element but **never read them at render
+time** — so unsupported recommended options were dropped *silently*, the exact
+failure this section forbids (`Scatter.marker`, pyqtgraph `alpha`/`line_style`,
+`Heatmap.aggregator`, `Bars.group`, `Image.interpolation`; root cause R4 in
+`weakness-root-causes.md`). 0.2 makes this real as **honor-or-warn, never raise**: a
+general `core/_degrade.check_recommended` seam compares each element's set recommended
+options against a per-backend `honored_options` declaration and warns **once** per
+`(backend, element_type, option)`; trivial drops are wired so they're honored not
+warned; genuinely-unbuilt features (`aggregator`, `group`) warn-and-degrade until they
+ship (0.4). A **conformance test** asserts every element×option×backend is
+honored-or-warned — the anti-drift guard that makes "never silent" enforced by tests,
+not convention. See `milestone-0.2-hardening.md` §1.
 
 ### 3.5 Runtime switching
 
@@ -1783,6 +1820,29 @@ To keep Phase 1–6 tight, the following are explicitly deferred:
 - Off-GUI-thread rendering (Capabilities field exists, no impl)
 
 These can be added later without rework if Phase 1 abstractions hold.
+
+#### Accepted limits / non-goals (post-0.1, [D58])
+
+Distinct from the deferred list above, these are **intrinsic to invariants qtviz is
+keeping** (`weakness-root-causes.md` §7) — documented so they aren't re-litigated, and
+so users know where to reach for `RenderHandle.native()` (§2.8) instead. Each is
+revisitable with evidence, but none is on the near roadmap:
+
+- **A live native item on an Element** (e.g. a `RawFigure` wrapping a live
+  `pg.PlotItem`/mpl `Axes`). Forbidden by the purity/value-hash invariant (§2.1) — the
+  same reasons [D38] kept `Signal` off Elements. The supported path is the render-time
+  accessor `handle.native(element_id)` ([D53]), which never puts the live object on the
+  Element.
+- **Cross-backend Overlay** (one composited overlay across backends) — already listed
+  above; restated here as a standing edge.
+- **A single *vector* export across a mixed-backend layout** — composition is N
+  independent backend widgets with no unified scene (R6); raster composite export is
+  the supported form ([D57]).
+- **3-D rendering** and an **animation API** — no renderer/API exists; `Capabilities`
+  reflects this honestly ([D52]).
+- **Pixel→source-rows through a datashaded raster** — aggregation discards row
+  identity; recovering selections needs the Phase-5 `DataSource`/predicate-pushdown
+  layer, so it is sequenced there, not as a rendering feature.
 
 ## 13. Spec → implementation correspondence
 

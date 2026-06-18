@@ -27,14 +27,16 @@ data core had to come first. Net effect:
 | 3 | HoloViews adapter | ✅ Spike-P2 [D41]; **3a static `from_holoviews` ✅** (8 elements + Points/Area, containers, RawFigure fallback); **3b ✅** — `DynamicMap`→`Signal[Node]` one-way ([D44] L1) + `from_hvplot` ([D43] Path A); L2 bidirectional streams + `.qtviz` accessor deferred — see `milestone-holoviews-adapter.md` §7 |
 | 4 | reactive + Datashader | **Datashader ✅**; **reactive `Signal` ✅** (View-root, S-style; crossfilter) |
 | 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0–W4 ✅ · W5.1a base64 transport ✅ · W5-offline (no-CDN) ✅**; W5.2 binary-fetch tail ⬜ deferred — see `webengine-arrow-transport.md` §10) |
-| 6 | release `0.1` | ◑ release-prep done (0.1.0 metadata · docs/CHANGELOG · mkdocs site · API docstrings); **Pages deploy remains** (PyPI publish is **not a goal** — source/GitHub install only) |
+| 6 | release `0.1` | ✅ **released** — `v0.1.0` tag + GitHub prerelease (0.1.0 metadata · docs/CHANGELOG · mkdocs site · API docstrings); **Pages deploy deferred** (private repo / plan blocks Pages — see `RELEASING.md`). PyPI publish **not a goal** |
+| 0.2+ | post-0.1 (R1–R6) | ⬜ staged **0.2** hardening+escape-valve · **0.3** first-class axes+legends · **0.4** vocabulary+composite — see §8 + `weakness-root-causes.md` |
 
-**Recommended next order** (detail in `development-plan.md` §8): finish the 0.1 release
-(tag on GitHub · deploy the docs site) → data sources (Parquet/DuckDB) → axis transforms
-(axis-surface seam — **Phase A ✅**; **Phase B / log scale under investigation**, see §8.3)
-→ raster selection (pixel→rows) → remaining Datashader coverage (raster legends · theme
-colors · aggregation surface). The phase tables below are retained as the original
-estimate/acceptance reference, with status annotated inline.
+**Recommended next order** (detail in §8 + `weakness-root-causes.md`): 0.1 is **released**
+(tag + GitHub prerelease; Pages deploy deferred). Next is the **staged post-0.1 plan**
+driven by root causes R1–R6 — **0.2** hardening + escape valve (enforce §3.4 honor-or-warn,
+capability honesty, `handle.native`), **0.3** first-class axes (the axis-surface Phase B,
+already spiked) + legends, **0.4** grow built-in elements + composite export — with the
+**Phase-5 data layer** (Parquet/DuckDB, then raster selection) interleaving. The phase
+tables below are retained as the original estimate/acceptance reference.
 
 ## 1. Architecture
 
@@ -392,14 +394,52 @@ being cut. The remaining critical path is Phase 5's data sources, then the 0.1 r
 > The original Phase-0 startup steps (confirm decisions §7, run the spikes, rename, set up
 > CI) are all complete. This section now tracks the remaining work toward and beyond 0.1.
 
-1. **Finish the 0.1 release** — tag `0.1.0` on GitHub (source/`pip install git+…`-installable;
-   PyPI publish is **not a goal**) and deploy the mkdocs site to GitHub Pages (enable Pages →
-   run the Docs workflow).
+### Post-0.1 plan — staged 0.2 → 0.3 → 0.4 (root causes R1–R6)
+
+`developer-perspective-weaknesses.md` + `weakness-root-causes.md` decomposed the
+abstraction tax into six root causes (R1 purity invariant · R2 LCD vocabulary · R3
+extensibility asymmetry · R4 unenforced contracts · R5 axes/legends modeled late · R6
+no unified scene). The response is **staged**, each release coherent and reviewable
+(decisions [D51]–[D58]):
+
+- **0.2 — Hardening + escape valve (R4, R1).** Make the existing surface *honest* and
+  give an escape hatch — no new chart features. `milestone-0.2-hardening.md`.
+  - **DP1** — enforce §3.4 as **honor-or-warn** ([D51]): wire the trivial silent drops
+    (`marker`, pyqtgraph `alpha`/`line_style`, `interpolation`), warn-and-degrade the
+    unbuilt (`aggregator`, `group`), guard with a conformance test; **capability
+    honesty** ([D52], `dimensions={2}`/`animation=False`); **deprecate** dead `Options`.
+  - **DP3** — `handle.native(element_id)` ([D53]): the purity-preserving accessor to the
+    live backend object (ROIs, crosshairs, native signals) — relieves the interaction
+    *and* escape-hatch ceilings without widening the portable contract.
+- **0.3 — First-class concepts (R5).** Promote the two afterthoughts to real models.
+  - **DP4** — axes: `AxisSpec` + a coordinate-transform stage ([D56]) — log / symlog /
+    datetime / limits / invert / tick-format. **This is the existing axis-surface item
+    below (Phase B, already spiked)**; also unlocks datashader `logx`/`logy`.
+  - **DP5** — legends: a per-element `legend_entry()` contract + overlay aggregation +
+    webengine legends + a true gradient colorbar ([D55]).
+- **0.4 — Vocabulary + edges (R3 partial, R6).**
+  - **[D54]** — grow built-in elements where demand is clear (`BoxPlot`/`Violin`,
+    grouped/stacked `Bars`, a real `Heatmap.aggregator`). The element vocabulary stays
+    **curated**; a public element registry + `qtviz.elements` entry-point is parked.
+  - **DP6** — composite raster export + cross-pane chrome coordinator ([D57]).
+- **Interleaved — data layer (existing Phase 5).** `DataSource` (Parquet/DuckDB/SQL)
+  proceeds alongside; it also unblocks **raster selection** (pixel→source-rows, [D58])
+  which is sequenced *after* the source/pushdown layer, not as a rendering feature.
+- **Non-goals ([D58]).** live-item-on-Element (use `native()`), cross-backend Overlay,
+  single vector export across backends, 3-D, animation — documented edges, revisitable.
+
+The remaining items below are retained for detail and slot into the stages as noted.
+
+1. **0.1 release** — ✅ tagged `v0.1.0` + GitHub prerelease created (source/`pip install
+   git+…`-installable; PyPI publish is **not a goal**). **Docs-site Pages deploy
+   deferred** — the repo is private and the plan blocks Pages; revisit by making the
+   repo public or upgrading the plan, then `gh workflow run docs.yml` (see `RELEASING.md`).
 2. **Data sources (Phase 5)** — `DataSource` for Parquet/DuckDB/SQL behind the lazy
    `DataRef` contract; background queries; versioned result cache.
-3. **Axis transforms (the axis-surface seam)** — title/labels, log / symlog / datetime,
-   limits, and tick formatting across all backends, built on one shared per-surface
-   config step (`surface_of` + `apply_surface`). Design + cross-backend feasibility in
+3. **Axis transforms (the axis-surface seam)** — **(→ 0.3 / DP4 / [D56])** — title/labels,
+   log / symlog / datetime, limits, and tick formatting across all backends, built on one
+   shared per-surface config step (`surface_of` + `apply_surface`). Design + cross-backend
+   feasibility in
    [`axis-surface-feasibility.md`](axis-surface-feasibility.md). Phased:
    - **Phase A ✅ (shipped)** — `surface_of` + `apply_surface` wire the previously-dead
      `OverlayOptions` title / `x_label` / `y_label` on pyqtgraph, matplotlib, and

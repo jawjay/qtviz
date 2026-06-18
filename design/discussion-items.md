@@ -1257,6 +1257,151 @@ no legends for any element yet).
 
 ---
 
+> **Decisions [D51]–[D58] (post-0.1)** flow from `weakness-root-causes.md` (root causes
+> R1–R6) and the staged 0.2→0.3→0.4 plan in `roadmap.md` §8. Each names the root cause
+> it addresses and the milestone it lands in.
+
+## [D51] Contract enforcement — honor-or-warn (make §3.4 real)
+
+**Context.** R4: §3.4's honor-or-warn degradation was declared as data
+(`REQUIRED/RECOMMENDED_OPTIONS`) but read by no code path, so accepted options were
+silently dropped (`marker`, pyqtgraph `alpha`/`line_style`, `Heatmap.aggregator`,
+`Bars.group`, `Image.interpolation`). The conformance suite only checked "doesn't
+crash."
+
+**Decision (0.2, planned).** Implement §3.4 as **honor-or-warn, never raise** (chosen
+over fail-fast): a general `core/_degrade.check_recommended` seam at dispatch warns
+**once** per `(backend, element_type, option)` for any non-default recommended option a
+backend doesn't honor, via a per-backend `honored_options` declaration. **Honor the
+trivial drops** so the warning stays truthful (wire `marker`/pyqtgraph
+`alpha`/`line_style`/`interpolation`); **warn-and-degrade** the genuinely-unbuilt
+(`aggregator`, `group`) until their features ship (0.4). A **conformance test** asserts
+every element×option×backend is honored-or-warned — the anti-drift guard. Spec §3.4
+updated; `milestone-0.2-hardening.md` §1.
+
+**Alternatives weighed.** (a) *Implement-cheap + reject-rest + delete dead surface* —
+fail-fast and honest, but breaks running code; rejected for the non-breaking
+honor-or-warn. (b) *Reject all unhonored* — loudest, adds no features; rejected.
+
+**Status:** planned (0.2).
+
+## [D52] Capability honesty
+
+**Context.** R4: `Capabilities` declares fields with no implementing path — `dimensions
+= {2,3}` on matplotlib/webengine with no 3-D renderer (and `dimensions` is read by
+nothing), `animation = True` with no animation API (§12 lists it out of scope).
+Negotiation assumes capabilities don't lie.
+
+**Decision (0.2, planned).** A declared capability must be backed by real code. Set
+`dimensions={2}` and `animation=False` everywhere until an implementing path exists;
+keep pyqtgraph's `exports` under-claim (safe). Add a capability-honesty conformance
+test. 3-D recorded as a non-goal for now ([D58]). Spec §2.5 gets the honesty rule.
+
+**Status:** planned (0.2).
+
+## [D53] Native escape valve — `handle.native(element_id)`
+
+**Context.** R1: the purity/value-hash invariant (Qt-free, immutable, hashable
+Elements) structurally forbids putting a live `PlotItem`/`Axes` on an Element — the
+same three reasons [D38] kept `Signal` off Elements — so the only escape hatch is
+`RawFigure` (web-only, non-composable). Developers who hit the 8-element/5-event
+ceiling have no way to reach backend-native power (ROIs, crosshairs, native signals).
+
+**Decision (0.2, planned).** Add a **post-render accessor**
+`RenderHandle.native(element_id) -> BackendPrimitive | None` (+ `View.native`
+convenience; `CompositeRenderHandle` fans out). The live object is returned *through the
+handle at render time*, **never stored on the Element**, so purity is untouched
+(elements stay Qt-free/hashable; caches unaffected). Documented as **non-portable**.
+Chosen over construction-time `.with_hooks` (keeps the Element model fully pure).
+Backends retain an `element_id → primitive` map at render. Spec §2.8; `milestone-0.2-
+hardening.md` §2.
+
+**Alternatives weighed.** (a) construction-time hooks (HoloViews `.opts(hooks=)` style)
+— declarative but adds an identity-keyed field to the Element; deferred. (b) live-item
+RawFigure — violates purity; a non-goal ([D58]).
+
+**Status:** planned (0.2).
+
+## [D54] Element axis stays curated — registry deferred
+
+**Context.** R3: backends and data-adapters are pluggable (registry + entry-point);
+elements/events are closed sets. Adding one element ≈ 9 files across 3 renderers.
+
+**Decision.** Keep the element vocabulary **curated/first-party** for now. **Grow
+built-ins** through the normal process where there's clear demand — candidates:
+`BoxPlot`/`Violin`, grouped/stacked `Bars`, a real `Heatmap.aggregator` reduction
+(0.4). A public `register_element` + `qtviz.elements` entry-point + partial-support
+(declared-degradation) tier is **explicitly deferred** (revisitable once third-party
+demand is proven) — chosen over opening it now to preserve coherence and avoid a
+negotiation-contract change. A declared-degradation tier may still be needed if a new
+built-in lands on only some backends; scope it then.
+
+**Status:** decided (curate now); registry parked.
+
+## [D55] Legends become first-class
+
+**Context.** R5: `Legend` is the return value of `map_colors` (a side-effect of the
+color-mapping path), not an element — so only `color_by`-Scatter and rasters get one;
+Curve/Bars/…/multi-series overlays get nothing; webengine renders none; stub fields
+`OverlayOptions.legend`/`Options.label` are unwired.
+
+**Decision (0.3, planned).** Introduce a per-element `legend_entry()` contribution
+contract aggregated across an `Overlay`'s children; wire `OverlayOptions.legend` (+ a
+position field) through the surface seam; enable webengine legends (`showlegend` +
+per-trace `name`, emit colorbar from the currently-discarded `_legend`); swap
+pyqtgraph's stepped swatch for a true `ColorBarItem` gradient. Single-surface only
+(cross-pane legend depends on R6 → [D57]). Detailed milestone at 0.3 start.
+
+**Status:** planned (0.3).
+
+## [D56] Axes become first-class — `AxisSpec` + transform stage
+
+**Context.** R5: axes were modeled as a cosmetic "surface" (title/labels); the resolve
+pipeline produces concrete data-space arrays with no transform stage; `OverlayOptions`
+has no scale/limit/tick concept. This is the roadmap's **Phase B** (already spiked).
+
+**Decision (0.3, planned).** Add an `AxisSpec` (`scale: linear|log|symlog|time`, `lim`,
+`invert`, `tick_format`) + `aspect` to `OverlayOptions`; thread `x_scale`/`y_scale`
+through `RenderContext`; renderers apply a `_logify` helper; concentrate the cross-
+backend coordinate reconciliation (risk R1 in `axis-surface-feasibility.md` §10 — the
+`10**`/`log10` normalization at every event/state boundary) in pyqtgraph (~120–150
+LOC); matplotlib ~1 line; webengine small. `time` accepted in the seam but gated on the
+data layer carrying datetime dtype. Supersedes the original spec §3/§4 log-axis claim
+struck by the Phase-B spike. Also unlocks datashader `logx`/`logy`.
+
+**Status:** planned (0.3); spike done (`axis-surface-feasibility.md`).
+
+## [D57] Composite export — raster composite; single vector cross-backend a non-goal
+
+**Context.** R6: a layout is N independent backend widgets with a merged event bus and
+**no unified scene**, so `CompositeRenderHandle.export` raises ([D11]) and there is no
+cross-pane legend surface.
+
+**Decision (0.4, planned).** Add a composite-level coordinator: composite **raster**
+export via the container `widget.grab()` (one PNG) plus an opt-in per-pane export list;
+the coordinator is also the future home for cross-pane chrome (legend). A single
+**vector** surface across heterogeneous backends is **intrinsic and a non-goal**
+([D58]) — accept it.
+
+**Status:** planned (0.4).
+
+## [D58] Accepted limits / non-goals (the abstraction's documented edges)
+
+**Context.** R1/R6: some weaknesses are intrinsic to invariants we are keeping
+(`weakness-root-causes.md` §7). Documenting the edges prevents re-litigation and tells
+users where to reach for `native()`.
+
+**Decision (documented, revisitable).** Current non-goals: (1) a **live native item on
+an Element** — use `handle.native()` ([D53]) instead; (2) **cross-backend Overlay**
+(single composited overlay across backends, already §12); (3) a **single vector export
+across mixed-backend layouts** (raster composite only, [D57]); (4) **3-D rendering**
+([D52], §12); (5) **pixel→source-rows through a datashaded raster** — blocked on the
+Phase-5 `DataSource`/predicate-pushdown layer, sequence there. Spec §12 updated.
+
+**Status:** documented; each revisitable with evidence.
+
+---
+
 ## Index
 
 | ID | Topic | Blocks | Status |
@@ -1311,3 +1456,11 @@ no legends for any element yet).
 | D48 | Legend honesty — eq_hist density vs linear value bar | §8.5 datashader | ✅ implemented — `Legend.linear`; density endpoints-only, value aggs linear `how` |
 | D49 | Aggregation-surface API — `Scatter.agg` | §8.5 datashader | ✅ implemented — `auto/count/sum/mean/max/min/std/any/by`; `check_agg` triple-validates |
 | D50 | Theme palette source for the raster | §8.5 datashader | ✅ implemented — `category_swatches` shared native↔raster; all 3 backends theme colors |
+| D51 | **Contract enforcement — honor-or-warn (make §3.4 real)** | 0.2 / R4 | planned — wire trivial honors; warn-once for gaps; conformance guard; never raise |
+| D52 | Capability honesty (no aspirational flags) | 0.2 / R4 | planned — `dimensions={2}`, `animation=False` until real; honesty test |
+| D53 | **Native escape valve — `handle.native(element_id)`** | 0.2 / R1 | planned — post-render accessor; live object off the Element (purity intact); non-portable |
+| D54 | Element axis stays curated; registry deferred | R3 | decided — grow built-ins (Box/Violin/grouped bars, 0.4); `register_element` parked |
+| D55 | Legends become first-class | 0.3 / R5 | planned — `legend_entry()` + overlay aggregation + webengine + gradient bar |
+| D56 | Axes first-class — `AxisSpec` + transform stage | 0.3 / R5 (= Phase B) | planned — scale/lim/invert/tick; R1 normalization in pyqtgraph; spike done |
+| D57 | Composite export — raster composite; vector cross-backend non-goal | 0.4 / R6 | planned — container `grab()` + per-pane list; cross-pane chrome coordinator |
+| D58 | Accepted limits / non-goals (documented edges) | R1/R6 | documented — live-item-on-Element, cross-backend overlay, cross-backend vector export, 3-D, raster→rows |
