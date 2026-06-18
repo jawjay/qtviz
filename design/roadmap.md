@@ -402,8 +402,9 @@ extensibility asymmetry · R4 unenforced contracts · R5 axes/legends modeled la
 no unified scene). The response is **staged**, each release coherent and reviewable
 (decisions [D51]–[D58]):
 
-- **0.2 — Hardening + escape valve (R4, R1).** Make the existing surface *honest* and
-  give an escape hatch — no new chart features. `milestone-0.2-hardening.md`.
+- **0.2 — Hardening + escape valve (R4, R1).** ✅ **released (`v0.2.0`).** Made the
+  existing surface *honest* + a native escape hatch — no new chart features.
+  `milestone-0.2-hardening.md` ([D51]–[D53]).
   - **DP1** — enforce §3.4 as **honor-or-warn** ([D51]): wire the trivial silent drops
     (`marker`, pyqtgraph `alpha`/`line_style`, `interpolation`), warn-and-degrade the
     unbuilt (`aggregator`, `group`), guard with a conformance test; **capability
@@ -411,7 +412,8 @@ no unified scene). The response is **staged**, each release coherent and reviewa
   - **DP3** — `handle.native(element_id)` ([D53]): the purity-preserving accessor to the
     live backend object (ROIs, crosshairs, native signals) — relieves the interaction
     *and* escape-hatch ceilings without widening the portable contract.
-- **0.3 — First-class concepts (R5).** Promote the two afterthoughts to real models.
+- **0.3 — First-class concepts (R5).** ◑ **in progress** — spec:
+  `milestone-0.3-firstclass.md` ([D59]/[D60]). Promote the two afterthoughts to real models.
   - **DP4** — axes: `AxisSpec` + a coordinate-transform stage ([D56]) — log / symlog /
     datetime / limits / invert / tick-format. **This is the existing axis-surface item
     below (Phase B, already spiked)**; also unlocks datashader `logx`/`logy`.

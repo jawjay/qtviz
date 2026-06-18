@@ -1402,6 +1402,51 @@ Phase-5 `DataSource`/predicate-pushdown layer, sequence there. Spec §12 updated
 
 ---
 
+## [D59] Axes 0.3 scope, rollout & edge policy
+
+**Context.** DP4/[D56] makes axes first-class (R5). The full design is in
+`axis-surface-feasibility.md`; the open sub-decisions were scope, rollout shape, and
+edge policy.
+
+**Decision (0.3, planned).** Scope = feasibility **Phases B + C**: `AxisSpec` with
+`scale ∈ {linear, log, symlog}`, `lim`, `invert`, plus `aspect`; `Capabilities.scales`
++ warn-fallback. **Defer** the tick-format vocabulary (Phase D) and `time`/datetime
+(blocked on the data layer). **Rollout = all-at-once** — log on all three backends in
+one increment (mpl easy, webengine small, pyqtgraph Approach A: pre-`log10` data +
+`AxisItem.setLogMode`), preserving "renders identically." Build the **R1 coordinate
+normalization** (§10.3) *with* log, never after. Edge policy: non-positive-under-log →
+**drop + warn**; datashader + non-linear → **warn + render linear**; `AxisSpec.lim`
+sets initial range, a live `ViewState` wins after rebuild; `symlog` included to
+exercise the gate. `milestone-0.3-firstclass.md` §1.
+
+**Alternatives weighed.** Staged B1→B2 (smaller PRs, but the default backend goes
+temporarily linear — rejected for the "describe once" cost); per-element axis field
+(rejected — bloats Element, feasibility §2.2).
+
+**Status:** planned (0.3).
+
+## [D60] Legend as a per-element contract (realizes [D23]'s deferral)
+
+**Context.** R5: `Legend` is only the return value of `map_colors`, so only
+`color_by`-Scatter and rasters get one; multi-series overlays get nothing;
+`OverlayOptions.legend`/`Options.label` are unwired; webengine draws no legend.
+
+**Decision (0.3, planned).** Add `Element.legend_entry(theme) -> LegendEntry | None`
+(returns swatch+label for a single-color element; `None` for a `color_by` Scatter that
+emits its own) + an optional `label` field on the styling elements + Overlay
+aggregation into one legend via the existing `add_legend` path. Wire the dead
+`OverlayOptions.legend` (+ a small `legend_position` vocabulary). webengine: flip
+`showlegend`, emit a colorbar from the discarded `_legend`. pyqtgraph: a true
+`ColorBarItem` gradient (replacing the 5-stop swatch). A placeable `Legend` *element*
+is deferred — the contract covers 0.3. `milestone-0.3-firstclass.md` §2.
+
+**Alternatives weighed.** Keep legends a side-effect (status quo — no multi-series
+legends); full `Legend` element now (deferred — more than 0.3 needs).
+
+**Status:** planned (0.3).
+
+---
+
 ## Index
 
 | ID | Topic | Blocks | Status |
@@ -1464,3 +1509,5 @@ Phase-5 `DataSource`/predicate-pushdown layer, sequence there. Spec §12 updated
 | D56 | Axes first-class — `AxisSpec` + transform stage | 0.3 / R5 (= Phase B) | planned — scale/lim/invert/tick; R1 normalization in pyqtgraph; spike done |
 | D57 | Composite export — raster composite; vector cross-backend non-goal | 0.4 / R6 | planned — container `grab()` + per-pane list; cross-pane chrome coordinator |
 | D58 | Accepted limits / non-goals (documented edges) | R1/R6 | documented — live-item-on-Element, cross-backend overlay, cross-backend vector export, 3-D, raster→rows |
+| D59 | **Axes 0.3 scope/rollout/edge policy** | 0.3 / R5 (= Phase B+C) | planned — log/symlog/lim/invert/aspect; all-at-once log + R1 normalization; drop+warn non-positive; defer tick-format/datetime |
+| D60 | **Legend as a per-element contract** | 0.3 / R5 | planned — `legend_entry()` + `label` field + Overlay aggregation; wire `OverlayOptions.legend`; webengine legends; pyqtgraph gradient colorbar |
