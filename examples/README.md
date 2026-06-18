@@ -47,6 +47,7 @@ uv sync --extra matplotlib --extra dev
 | 30 | [`30_xarray_sensor_lines.py`](30_xarray_sensor_lines.py) | **Real-world: xarray cube** — a 3-D `10_000 × 4 × 250` `(time, sensor, instance)` `DataArray`; `.sel` one sensor, overlay all 250 instances (~2.5M line points) as faint `Curve`s + a bold `.mean` envelope. |
 | 31 | [`31_axis_labels.py`](31_axis_labels.py) | **Axis labels & titles** — `OverlayOptions(title, x_label, y_label)` on each surface; per-pane labels in a `Layout`; renders identically on every backend. |
 | 32 | [`32_datashader_legends.py`](32_datashader_legends.py) | **Datashader legends & aggregation** — themed category-blend raster **with a legend** beside a `agg="max"` raster **with a colorbar**; colors come from the `Theme`, the colorbar tracks the viewport ([D47]–[D50]). |
+| 33 | [`33_native_escape_hatch.py`](33_native_escape_hatch.py) | **Native escape hatch** — `view.native(element.id)` returns the live pyqtgraph `ScatterPlotItem`; wire a native crosshair (`InfiniteLine` + `sigMouseMoved`) the typed events don't model. Non-portable by design; the live object never touches the immutable Element ([D53]). |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):

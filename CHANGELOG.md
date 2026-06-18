@@ -27,6 +27,13 @@ Hardening pass from the post-0.1 weakness investigation (root causes R1–R6;
 
 ### Added
 
+- **`View.native(element_id)` / `RenderHandle.native(element_id)`** — the escape
+  valve ([D53]) to the live backend primitive (pyqtgraph `PlotItem`, matplotlib
+  `Artist`/`Axes`, or the webengine figure host) for backend-native interaction the
+  typed events don't expose: ROIs, crosshairs, region selectors, native signals.
+  Non-portable by design; the live object is returned *through the handle*, never
+  stored on the immutable Element, so the purity invariant holds. Rebuilds on
+  `update()`. Composite (mixed-backend) handles fan out across panes.
 - `qtviz.errors.QtvizWarning` — a filterable category for non-fatal degradation notices.
 
 ### Deprecated

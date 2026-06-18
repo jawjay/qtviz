@@ -85,6 +85,12 @@ class WebEngineRenderHandle(RenderHandle):
         if self._x_range is not None and self._y_range is not None:
             self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
 
+    def native(self, element_id: str):
+        """The live Plotly host (verbs: react/relayout/…) for any element this
+        figure drew — webengine has no per-element primitive (it's one JS figure),
+        so the host is the reachable native object ([D53])."""
+        return self._host if element_id in self._traces else None
+
     def capture_state(self) -> ViewState:
         return ViewState(x_range=self._x_range, y_range=self._y_range)
 

@@ -42,12 +42,13 @@ _CAPS = Capabilities(
 
 
 class MplRenderHandle(RenderHandle):
-    def __init__(self, canvas, fig, bus, surfaces, root, backend) -> None:
+    def __init__(self, canvas, fig, bus, surfaces, root, backend, natives) -> None:
         super().__init__(canvas, bus, "matplotlib")
         self._fig = fig
         self._surfaces = surfaces  # [{"ax", "surface_id", "selectables"}]
         self._root = root
         self._backend = backend
+        self._natives = natives  # element id → mpl Artist ([D53])
 
     @property
     def axes(self):
@@ -124,12 +125,13 @@ class MatplotlibBackend:
         apply_theme_fig(fig, theme)
         bus = EventBus()
         surfaces: list = []
-        self._render_into(node, fig, theme, bus, surfaces)
+        natives: dict = {}
+        self._render_into(node, fig, theme, bus, surfaces, natives)
         canvas.draw_idle()
-        return MplRenderHandle(canvas, fig, bus, surfaces, node, self)
+        return MplRenderHandle(canvas, fig, bus, surfaces, node, self, natives)
 
     # ── internal ──
-    def _render_into(self, node, fig, theme, bus, surfaces) -> None:
+    def _render_into(self, node, fig, theme, bus, surfaces, natives) -> None:
         if isinstance(node, Layout):
             n = len(node.children)
             ncols = node.options.cols or n
@@ -142,11 +144,11 @@ class MatplotlibBackend:
                     sharex=base if opts.link_x else None,
                     sharey=base if opts.link_y else None,
                 )
-                self._render_cell(child, ax, theme, bus, surfaces)
+                self._render_cell(child, ax, theme, bus, surfaces, natives)
         else:
-            self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces)
+            self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces, natives)
 
-    def _render_cell(self, node, ax, theme, bus, surfaces) -> None:
+    def _render_cell(self, node, ax, theme, bus, surfaces, natives) -> None:
         apply_theme_ax(ax, theme)
         apply_surface(ax, surface_of(node), theme)
         surface_id = uuid.uuid4().hex
@@ -155,9 +157,9 @@ class MatplotlibBackend:
         _events.connect_range(ax, surface_id, bus)
         children = node.children if isinstance(node, Overlay) else (node,)
         for element in children:
-            self._render_element(element, ax, theme, bus, selectables)
+            self._render_element(element, ax, theme, bus, selectables, natives)
 
-    def _render_element(self, element: Element, ax, theme, bus, selectables) -> None:
+    def _render_element(self, element: Element, ax, theme, bus, selectables, natives) -> None:
         fn = self.renderers.get(type(element))
         if fn is None:
             raise RendererMissingError(
@@ -168,4 +170,5 @@ class MatplotlibBackend:
         )
         ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self, parent_axes=ax)
         artist = fn(element, ctx)
+        natives[element.id] = artist
         _events.attach(element, artist, ctx, selectables)

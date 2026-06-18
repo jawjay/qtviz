@@ -64,6 +64,22 @@ class RenderHandle:
         self.widget = widget
         self.event_bus = event_bus
         self.backend_name = backend_name
+        # element id → live backend primitive, populated at render (see native()).
+        self._natives: dict[str, Any] = {}
+
+    def native(self, element_id: str) -> Any:
+        """The live backend primitive for an element — a pg `PlotItem`, an mpl
+        `Artist`/`Axes`, or the webengine figure host — or `None` if unknown / not
+        yet rendered. The post-0.1 escape valve ([D53]) for reaching backend-native
+        power (ROIs, crosshairs, native signals) the typed event/element
+        vocabularies don't expose.
+
+        **Non-portable by design:** the returned type is backend-specific and code
+        using it opts out of "swap the backend, same behavior." The live object is
+        returned *through the handle*, never stored on the immutable Element, so the
+        purity/value-hash invariant (§2.1) is untouched. The map rebuilds on
+        `update()` / a backend switch, so this always reflects the current render."""
+        return self._natives.get(element_id)
 
     def update(self, new_root) -> None:
         raise NotImplementedError
@@ -137,6 +153,14 @@ class CompositeRenderHandle(RenderHandle):
     @property
     def children(self) -> list[RenderHandle]:
         return self._children
+
+    def native(self, element_id: str) -> Any:
+        """Fan out to the per-pane child handles (ids are unique; first hit wins)."""
+        for h in self._children:
+            item = h.native(element_id)
+            if item is not None:
+                return item
+        return None
 
     def dispose(self) -> None:
         for h in self._children:

@@ -40,11 +40,12 @@ _CAPS = Capabilities(
 
 
 class PgRenderHandle(RenderHandle):
-    def __init__(self, widget, event_bus, plots, root, backend) -> None:
+    def __init__(self, widget, event_bus, plots, root, backend, natives) -> None:
         super().__init__(widget, event_bus, "pyqtgraph")
         self._plots = plots
         self._root = root
         self._backend = backend
+        self._natives = natives  # element id → ScatterPlotItem / PlotCurveItem / … ([D53])
 
     @property
     def plots(self):
@@ -87,8 +88,9 @@ class PgRenderHandle(RenderHandle):
         for plot in self._plots:
             plot.clear()
         self._plots.clear()
+        self._natives.clear()  # rebuilt below so native() reflects the new render
         self._backend._render_into(
-            new_root, self.widget, self._theme_ref(), self.event_bus, self._plots
+            new_root, self.widget, self._theme_ref(), self.event_bus, self._plots, self._natives
         )
         self._root = new_root
 
@@ -133,23 +135,24 @@ class PyQtGraphBackend:
         apply_theme(widget, theme)
         bus = EventBus()
         plots: list = []
-        self._render_into(node, widget, theme, bus, plots)
-        return PgRenderHandle(widget, bus, plots, node, self)
+        natives: dict = {}
+        self._render_into(node, widget, theme, bus, plots, natives)
+        return PgRenderHandle(widget, bus, plots, node, self, natives)
 
     # ── internal ──
-    def _render_into(self, node, widget, theme, bus, plots) -> None:
+    def _render_into(self, node, widget, theme, bus, plots, natives) -> None:
         if isinstance(node, Layout):
             ncols = node.options.cols or len(node.children)
             for i, child in enumerate(node.children):
                 r, c = divmod(i, ncols)
-                self._render_cell(child, widget, theme, bus, plots, r, c)
+                self._render_cell(child, widget, theme, bus, plots, natives, r, c)
             opts = node.options
             if opts.link_x or opts.link_y:
                 link_axes(plots, link_x=opts.link_x, link_y=opts.link_y)
         else:
-            self._render_cell(node, widget, theme, bus, plots, 0, 0)
+            self._render_cell(node, widget, theme, bus, plots, natives, 0, 0)
 
-    def _render_cell(self, node, widget, theme, bus, plots, row, col) -> None:
+    def _render_cell(self, node, widget, theme, bus, plots, natives, row, col) -> None:
         vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex)
         plot = widget.addPlot(row=row, col=col, viewBox=vb)
         style_plot(plot, theme)
@@ -157,9 +160,9 @@ class PyQtGraphBackend:
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
         for element in children:
-            self._render_element(element, plot, theme, bus)
+            self._render_element(element, plot, theme, bus, natives)
 
-    def _render_element(self, element: Element, plot, theme, bus) -> None:
+    def _render_element(self, element: Element, plot, theme, bus, natives) -> None:
         fn = self.renderers.get(type(element))
         if fn is None:
             raise RendererMissingError(
@@ -170,4 +173,5 @@ class PyQtGraphBackend:
         )
         ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self, parent_axes=plot)
         item = fn(element, ctx)
+        natives[element.id] = item
         _events.attach(element, item, ctx)

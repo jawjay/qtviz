@@ -227,6 +227,12 @@ class View(QWidget):
     def handle(self):
         return self._handle
 
+    def native(self, element_id: str):
+        """The live backend primitive for an element (`handle.native`, [D53]) — the
+        escape valve for backend-native work (ROIs, crosshairs, native signals) the
+        typed events don't expose. `None` if not rendered. Non-portable by design."""
+        return self._handle.native(element_id) if self._handle is not None else None
+
     @property
     def loading(self) -> bool:
         return self._placeholder is not None or self._superseded is not None
