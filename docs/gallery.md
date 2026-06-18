@@ -1,7 +1,7 @@
 # Gallery
 
 Every example is a self-contained, runnable script in the repo's
-[`examples/`](https://github.com/markjajeh/qtviz/tree/main/examples) directory. Each
+[`examples/`](https://github.com/jawjay/qtviz/tree/main/examples) directory. Each
 exposes a `build()` (returns the widget, handy for embedding/testing) and a `main()`
 (shows a window):
 
@@ -63,4 +63,4 @@ Larger examples that combine several features around a realistic dataset and dat
 | `20_mixed_native_web` | A native pane beside a webengine pane, one event stream. |
 
 The full index with per-example notes lives in
-[`examples/README.md`](https://github.com/markjajeh/qtviz/blob/main/examples/README.md).
+[`examples/README.md`](https://github.com/jawjay/qtviz/blob/main/examples/README.md).

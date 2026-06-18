@@ -4,7 +4,7 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — unreleased
+## [0.1.0] — 2026-06-18
 
 First public pre-release. One immutable `Element` API rendered across three
 backends, a lazy-first data layer, and a big-data path — all 100% offline.

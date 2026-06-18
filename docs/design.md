@@ -2,18 +2,18 @@
 
 qtviz is designed in the open. The full specification, development plan, milestone
 notes, and a decision log live in the repo's
-[`design/`](https://github.com/markjajeh/qtviz/tree/main/design) directory.
+[`design/`](https://github.com/jawjay/qtviz/tree/main/design) directory.
 
 Good starting points:
 
-- **[`spec.md`](https://github.com/markjajeh/qtviz/blob/main/design/spec.md)** — the
+- **[`spec.md`](https://github.com/jawjay/qtviz/blob/main/design/spec.md)** — the
   concrete specification: the `Element` model, the data layer, backends, events.
-- **[`roadmap.md`](https://github.com/markjajeh/qtviz/blob/main/design/roadmap.md)** —
+- **[`roadmap.md`](https://github.com/jawjay/qtviz/blob/main/design/roadmap.md)** —
   phases, architecture, and what ships in `0.1`.
-- **[`development-plan.md`](https://github.com/markjajeh/qtviz/blob/main/design/development-plan.md)**
+- **[`development-plan.md`](https://github.com/jawjay/qtviz/blob/main/design/development-plan.md)**
   — design invariants, the build sequence, and the verification strategy (tiered tests
   + a backend/adapter conformance suite).
-- **[`discussion-items.md`](https://github.com/markjajeh/qtviz/blob/main/design/discussion-items.md)**
+- **[`discussion-items.md`](https://github.com/jawjay/qtviz/blob/main/design/discussion-items.md)**
   — the decision log (`[D#]`): every non-obvious choice, its options, and the rationale.
 
 ## Core ideas

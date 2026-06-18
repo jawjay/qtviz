@@ -1,7 +1,7 @@
 site_name: qtviz
 site_description: Native-Qt declarative plotting — one immutable API across pyqtgraph, matplotlib, and webengine.
-repo_url: https://github.com/markjajeh/qtviz
-repo_name: markjajeh/qtviz
+repo_url: https://github.com/jawjay/qtviz
+repo_name: jawjay/qtviz
 docs_dir: docs
 
 theme:

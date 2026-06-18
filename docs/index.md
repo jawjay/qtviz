@@ -43,7 +43,7 @@ zoom out of the box. Change one keyword — `backend="matplotlib"` or
 ## Install
 
 ```bash
-git clone https://github.com/markjajeh/qtviz && cd qtviz
+git clone https://github.com/jawjay/qtviz && cd qtviz
 uv sync --extra matplotlib --extra dev        # add backends/data extras as needed
 ```
 
