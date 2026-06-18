@@ -28,14 +28,14 @@ from ._surface import apply_surface
 from ._theme import apply_theme_ax, apply_theme_fig
 
 _CAPS = Capabilities(
-    dimensions=frozenset({2, 3}),
+    dimensions=frozenset({2}),  # honest: no 3-D renderer exists ([D52]); was aspirational {2,3}
     opengl=False,
     picking="native",
     brush="approximate",
     range_events=True,
     streaming=False,
     max_recommended_points=100_000,
-    animation=True,
+    animation=False,  # honest: no animation API ([D52], §12 out of scope)
     exports=frozenset({"png", "svg", "pdf"}),
     threading_model="gui_only",
 )

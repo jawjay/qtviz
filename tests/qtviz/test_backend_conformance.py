@@ -48,6 +48,16 @@ def test_capabilities_internally_consistent(backend):
     assert caps.max_recommended_points > 0
 
 
+def test_no_aspirational_capabilities(backend):
+    """Capability honesty ([D52]): a backend must not declare a capability with no
+    code path behind it. No backend renders 3-D or animates yet, so neither may be
+    claimed — update this assertion together with the implementing renderer when one
+    lands. (0.1 shipped `dimensions={2,3}`/`animation=True` aspirationally.)"""
+    caps = backend.capabilities
+    assert 3 not in caps.dimensions, f"{backend.name} claims 3-D with no 3-D renderer"
+    assert caps.animation is False, f"{backend.name} claims animation with no animation API"
+
+
 def test_supports_matches_registered_renderers(backend):
     for element_type in backend.renderers.types():
         assert backend.supports(element_type)

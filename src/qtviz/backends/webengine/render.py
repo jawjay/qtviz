@@ -30,14 +30,14 @@ if TYPE_CHECKING:
     from .view import PlotView
 
 _CAPS = Capabilities(
-    dimensions=frozenset({2, 3}),
+    dimensions=frozenset({2}),   # honest: no 3-D renderer exists ([D52]); was aspirational {2,3}
     opengl=True,                 # Plotly scattergl
     picking="native",
     brush="native",              # box / lasso select
     range_events=True,
     streaming=True,
     max_recommended_points=1_000_000,
-    animation=True,
+    animation=False,  # honest: no animation API ([D52], §12 out of scope)
     # png via QWebEngineView.grab (a rendered page); svg/pdf would need kaleido — later.
     exports=frozenset({"png"}),
     threading_model="gui_only",

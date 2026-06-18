@@ -7,6 +7,7 @@ shared-surface concerns for the two composition operators.
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping, Sequence
 
 from ._immutable import Immutable
@@ -16,7 +17,13 @@ from .palette import Palette
 
 
 class Options(Immutable):
-    """Universal per-Element style options: `color`, `alpha`, `palette`, `label`."""
+    """Deprecated, unused universal style options ([D51] / weakness-root-causes R4).
+
+    Specified in §2.2 but never wired: no Element accepts an `options=` argument and
+    no renderer reads it — per-element styling lives on the Element subclass instead
+    (`Scatter(color=..., alpha=...)`). Kept importable through 1.0 with a
+    `DeprecationWarning` (non-breaking, honor-or-warn), removed thereafter.
+    `OverlayOptions` / `LayoutOptions` are live and unaffected."""
 
     def __init__(
         self,
@@ -26,6 +33,12 @@ class Options(Immutable):
         palette: Palette | None = None,
         label: str | None = None,
     ) -> None:
+        warnings.warn(
+            "qtviz.Options is unused and deprecated; set styling via per-element "
+            "fields (e.g. Scatter(color=..., alpha=...)). It will be removed after 1.0.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.color = color
         self.alpha = alpha
         self.palette = palette

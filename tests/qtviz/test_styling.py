@@ -65,13 +65,15 @@ def test_builtin_palettes_register_without_matplotlib():
     assert qv.palettes.get("viridis") is not None
 
 
-# ── Options ──────────────────────────────────────────────────────────────────
+# ── Options (deprecated [D51]; these guard it still behaves until removal) ─────
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_options_alpha_validation():
     qv.Options(alpha=0.5)  # ok
     with pytest.raises(ValueError):
         qv.Options(alpha=2.0)
 
 
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_options_immutable_and_value_equal():
     o = qv.Options(color="red", alpha=0.5)
     assert o == qv.Options(color="red", alpha=0.5)
