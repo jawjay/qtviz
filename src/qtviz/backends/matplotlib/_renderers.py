@@ -21,6 +21,8 @@ from ...elements import (
 )
 
 _LINE_STYLE = {"solid": "-", "dashed": "--", "dotted": ":", "dashdot": "-."}
+# qtviz marker vocabulary → matplotlib marker codes ([D51]).
+_MARKER = {"circle": "o", "square": "s", "triangle": "^", "diamond": "D", "cross": "X"}
 
 
 def _color(spec, theme, idx: int = 0) -> Color:
@@ -53,16 +55,17 @@ def _color_mapping(element, d, theme):
 def render_scatter(element: Scatter, ctx):
     d = element.data
     s = _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6) ** 2
+    marker = _MARKER[element.marker]
     if element.color_by is not None:
         rgba, legend = _color_mapping(element, d, ctx.theme)
         artist = ctx.parent_axes.scatter(
-            _col(d, "x"), _col(d, "y"), c=rgba, s=s, alpha=element.alpha,
+            _col(d, "x"), _col(d, "y"), c=rgba, s=s, alpha=element.alpha, marker=marker,
         )
         _add_legend(ctx.parent_axes, legend, ctx.theme)
         return artist
     return ctx.parent_axes.scatter(
         _col(d, "x"), _col(d, "y"),
-        color=_color(element.color, ctx.theme).mpl(), s=s, alpha=element.alpha,
+        color=_color(element.color, ctx.theme).mpl(), s=s, alpha=element.alpha, marker=marker,
     )
 
 
@@ -137,13 +140,15 @@ def render_image(element: Image, ctx):
     values = np.asarray(element.data.grid().values)
     if values.ndim == 3:  # RGBA raster (e.g. a user-built image)
         artist = ctx.parent_axes.imshow(
-            values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto"
+            values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+            interpolation=element.interpolation,
         )
         _wire_dynamic_raster(element, artist, ctx)
         return artist
     return ctx.parent_axes.imshow(
         np.asarray(values, dtype="float64"),
         extent=(x0, x1, y0, y1), origin="lower", aspect="auto", cmap=element.colormap,
+        interpolation=element.interpolation,
     )
 
 
@@ -241,11 +246,11 @@ RENDERERS = {
 # Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha"}),  # not marker
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
     Bars: frozenset({"color"}),                                  # not group/orient
     Histogram: frozenset({"bins", "density", "color"}),
-    Image: frozenset({"colormap"}),                              # not interpolation
+    Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap"}),                            # not aggregator
     ErrorBars: frozenset({"direction", "color"}),
     Spread: frozenset({"color", "alpha"}),

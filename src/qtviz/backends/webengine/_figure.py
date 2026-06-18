@@ -35,6 +35,9 @@ from ...errors import IncompatibleOverlayError, RendererMissingError
 
 _SIZE_LO, _SIZE_HI = 5.0, 18.0
 _DASH = {"solid": "solid", "dashed": "dash", "dotted": "dot", "dashdot": "dashdot"}
+# qtviz marker vocabulary → Plotly marker symbols ([D51]).
+_SYMBOL = {"circle": "circle", "square": "square", "triangle": "triangle-up",
+           "diamond": "diamond", "cross": "x"}
 
 
 def _css(color) -> str:
@@ -92,6 +95,7 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
             _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6)
         ),
         "opacity": element.alpha,
+        "symbol": _SYMBOL[element.marker],
     }
     if element.color_by is not None:
         marker["color"] = _color_by_list(element, d, theme)
@@ -218,7 +222,7 @@ _TRACE_BUILDERS = {
 # Recommended options each trace builder above actually consumes (spec §3.4 /
 # [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha"}),  # not marker
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
     Bars: frozenset({"color", "orient"}),                        # not group
     Histogram: frozenset({"bins", "density", "color"}),

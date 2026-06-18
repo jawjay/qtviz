@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 import pyqtgraph as pg
+from PySide6.QtCore import Qt
 
 from ...core.color import Color
 from ...elements import (
@@ -22,6 +23,13 @@ from ...elements import (
     Scatter,
     Spread,
 )
+
+# qtviz marker vocabulary → pyqtgraph symbol codes / Qt pen styles ([D51]).
+_MARKER = {"circle": "o", "square": "s", "triangle": "t", "diamond": "d", "cross": "x"}
+_PEN_STYLE = {
+    "solid": Qt.SolidLine, "dashed": Qt.DashLine,
+    "dotted": Qt.DotLine, "dashdot": Qt.DashDotLine,
+}
 
 
 def _color(spec, theme, idx: int = 0) -> Color:
@@ -57,16 +65,22 @@ def _color_mapping(element, d, theme):
 
 def render_scatter(element: Scatter, ctx):
     d = element.data
-    kwargs = {"pen": None, "useCache": True, "hoverable": True}
+    kwargs = {"pen": None, "useCache": True, "hoverable": True,
+              "symbol": _MARKER[element.marker]}
     kwargs["size"] = (
         _scaled_sizes(d.series("size")) if element.size_by is not None else (element.size or 6)
     )
     legend = None
+    alpha = element.alpha
     if element.color_by is not None:
         rgba, legend = _color_mapping(element, d, ctx.theme)
-        kwargs["brush"] = [pg.mkBrush(*_u8(c)) for c in rgba]
+        kwargs["brush"] = [
+            pg.mkBrush(r, g, b, int(round(a * alpha))) for r, g, b, a in (_u8(c) for c in rgba)
+        ]
     else:
-        kwargs["brush"] = pg.mkBrush(_color(element.color, ctx.theme).qt())
+        color = _color(element.color, ctx.theme).qt()
+        color.setAlphaF(alpha)
+        kwargs["brush"] = pg.mkBrush(color)
     item = pg.ScatterPlotItem(x=_col(d, "x"), y=_col(d, "y"), **kwargs)
     ctx.parent_axes.addItem(item)
     if legend is not None:
@@ -78,7 +92,9 @@ def render_scatter(element: Scatter, ctx):
 
 def render_curve(element: Curve, ctx):
     d = element.data
-    pen = pg.mkPen(_color(element.color, ctx.theme).qt(), width=element.line_width)
+    color = _color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
     item = pg.PlotCurveItem(x=_col(d, "x"), y=_col(d, "y"), pen=pen)
     ctx.parent_axes.addItem(item)
     return item
@@ -238,8 +254,8 @@ RENDERERS = {
 # Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by"}),  # not alpha/marker
-    Curve: frozenset({"color", "line_width"}),                     # not line_style/alpha
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker"}),
+    Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
     Bars: frozenset({"color"}),                                    # not group/orient
     Histogram: frozenset({"bins", "density", "color"}),
     Image: frozenset(),                                            # colormap/interpolation unwired
