@@ -199,14 +199,25 @@ reflects the current handle.
 
 ## 4. Benchmarks (establish before/after, per cadence)
 
-The mechanism runs on every render; prove it's free:
+The mechanism runs on every render; prove it's free. `benchmark`-marked
+(`tests/qtviz/benchmarks/test_bench_degrade.py`; opt-in via `-m benchmark`).
 
-- **`check_recommended` overhead** — render-time delta for a 50-element Overlay with
-  the check on vs off; target **< 1% / sub-ms** (it's a set-diff per element, warn-once
-  guarded). `benchmark`-marked.
-- **`native` map memory/time** — the `element_id → primitive` map is O(elements) of
-  references already held by the widget tree; measure it adds no measurable allocation
-  beyond the dict itself for a 1k-element tree.
+- **`check_recommended` overhead** — the §3.4 check per element (all-honored steady
+  state: the `opt in honored` short-circuit, no warn). Target **microsecond-scale**.
+- **`native` map build + lookup** — the `element_id → primitive` map is O(elements)
+  of references already held by the widget tree; `native()` is a dict get.
+
+**Measured** (offscreen, dev machine):
+
+| What | Result |
+|------|--------|
+| `check_recommended`, all-honored path | **~0.16 µs / element** |
+| `native()` lookup | **~0.06 µs / call** (dict get) |
+| render a **200-element** overlay (context) | ~172 ms |
+
+So the contract check costs **~0.16 µs × N** — for the 200-element overlay that is
+~32 µs, **≈0.02%** of render time — and the native map adds only N references + an
+O(1) lookup. The seam is free; both are far under their ceilings (20 µs / 5 µs).
 
 ---
 
