@@ -139,6 +139,14 @@ def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
 
 
 def _image_trace(element: Image, theme, idx: int) -> list[dict]:
+    agg = getattr(element, "_raster_agg", None)
+    if agg is not None:  # datashaded raster: shade with the View's Theme (C5, matches native)
+        from ...core.palette import palettes  # noqa: PLC0415
+        from ...ext.datashader import shade_aggregate  # noqa: PLC0415
+
+        rgba = shade_aggregate(agg, palette=theme.palette,
+                               continuous_palette=palettes.get("viridis")).rgba
+        return [{"type": "image", "z": rgba, "name": element.id}]
     values = np.asarray(element.data.grid().values)
     x0, y0, x1, y1 = element.bounds
     if values.ndim == 2:
@@ -149,7 +157,7 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
             "y": np.linspace(y0, y1, nrows),
             "colorscale": "Viridis", "name": element.id,
         }]
-    return [{"type": "image", "z": values, "name": element.id}]  # RGBA raster
+    return [{"type": "image", "z": values, "name": element.id}]  # RGBA raster (user-built)
 
 
 def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:

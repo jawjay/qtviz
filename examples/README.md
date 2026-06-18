@@ -46,6 +46,7 @@ uv sync --extra matplotlib --extra dev
 | 29 | [`29_climate_field.py`](29_climate_field.py) | **Real-world: gridded science** — an `xarray` 2-D field → `Image` map + a 1-D `da.isel` cross-section `Curve`, X-linked. |
 | 30 | [`30_xarray_sensor_lines.py`](30_xarray_sensor_lines.py) | **Real-world: xarray cube** — a 3-D `10_000 × 4 × 250` `(time, sensor, instance)` `DataArray`; `.sel` one sensor, overlay all 250 instances (~2.5M line points) as faint `Curve`s + a bold `.mean` envelope. |
 | 31 | [`31_axis_labels.py`](31_axis_labels.py) | **Axis labels & titles** — `OverlayOptions(title, x_label, y_label)` on each surface; per-pane labels in a `Layout`; renders identically on every backend. |
+| 32 | [`32_datashader_legends.py`](32_datashader_legends.py) | **Datashader legends & aggregation** — themed category-blend raster **with a legend** beside a `agg="max"` raster **with a colorbar**; colors come from the `Theme`, the colorbar tracks the viewport ([D47]–[D50]). |
 | — | [`dashboard_native.py`](dashboard_native.py) | 3-panel linked dashboard (shared X, brushing, dark theme). |
 
 Examples 9–11 need the datashader extra (10 also needs dask; 11 also matplotlib):
@@ -60,7 +61,7 @@ Examples 22–24 use the HoloViews adapter; 24 also needs the `hvplot` extra:
 uv sync --extra holoviews --extra hvplot --extra dev
 ```
 
-Example 25 needs the `datashader` extra.
+Examples 25 and 32 need the `datashader` extra.
 
 Examples 26–30 are larger "real-world" scenarios. 26 and 27 use pandas (already present
 via the data extras); 28 needs `datashader`; 29 and 30 need `xarray`:

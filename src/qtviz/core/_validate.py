@@ -24,3 +24,24 @@ def check_exclusive(static, by, *, names: tuple[str, str], who: str) -> None:
         raise ValidationError(
             f"{who}: pass {names[0]} (static) or {names[1]} (column), not both"
         )
+
+
+_VALUE_AGGS = ("sum", "mean", "max", "min", "std")
+
+
+def check_agg(agg: str, color_by, scale: str, *, who: str) -> None:
+    """Validate the `(agg, color_by, scale)` triple for a rasterizable element
+    ([D49]). `agg` is the per-pixel Datashader reduction, so it only applies under
+    `scale="datashader"/"auto"`; a value reduction (sum/mean/max/min/std) or a
+    categorical `by` needs a `color_by` column to reduce."""
+    if agg == "auto":
+        return
+    if scale == "native":
+        raise ValidationError(
+            f"{who}: agg={agg!r} needs scale='datashader' or 'auto' "
+            "(native rendering does not aggregate per pixel)"
+        )
+    if agg in _VALUE_AGGS and color_by is None:
+        raise ValidationError(f"{who}: agg={agg!r} needs color_by (the column to aggregate)")
+    if agg == "by" and color_by is None:
+        raise ValidationError(f"{who}: agg='by' needs a categorical color_by column")

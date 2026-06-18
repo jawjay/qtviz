@@ -27,10 +27,10 @@ data core had to come first. Net effect:
 | 3 | HoloViews adapter | ✅ Spike-P2 [D41]; **3a static `from_holoviews` ✅** (8 elements + Points/Area, containers, RawFigure fallback); **3b ✅** — `DynamicMap`→`Signal[Node]` one-way ([D44] L1) + `from_hvplot` ([D43] Path A); L2 bidirectional streams + `.qtviz` accessor deferred — see `milestone-holoviews-adapter.md` §7 |
 | 4 | reactive + Datashader | **Datashader ✅**; **reactive `Signal` ✅** (View-root, S-style; crossfilter) |
 | 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0–W4 ✅ · W5.1a base64 transport ✅ · W5-offline (no-CDN) ✅**; W5.2 binary-fetch tail ⬜ deferred — see `webengine-arrow-transport.md` §10) |
-| 6 | release `0.1` | ◑ release-prep done (0.1.0 metadata · docs/CHANGELOG · mkdocs site · API docstrings); **PyPI publish + Pages deploy remain** |
+| 6 | release `0.1` | ◑ release-prep done (0.1.0 metadata · docs/CHANGELOG · mkdocs site · API docstrings); **Pages deploy remains** (PyPI publish is **not a goal** — source/GitHub install only) |
 
 **Recommended next order** (detail in `development-plan.md` §8): finish the 0.1 release
-(publish to PyPI · deploy the docs site) → data sources (Parquet/DuckDB) → axis transforms
+(tag on GitHub · deploy the docs site) → data sources (Parquet/DuckDB) → axis transforms
 (axis-surface seam — **Phase A ✅**; **Phase B / log scale under investigation**, see §8.3)
 → raster selection (pixel→rows) → remaining Datashader coverage (raster legends · theme
 colors · aggregation surface). The phase tables below are retained as the original
@@ -160,7 +160,7 @@ estimate.
 |------------------------------------------------------------|------------------------------------------------------|
 | Rename `qtwebplot` → `qtviz`; old code moves under `backends/webengine` | Tests pass on new paths; old import path errors with hint |
 | GitHub Actions CI matrix (macOS/Lin/Win × 3.11/3.12/3.13)  | All current tests pass on all platforms              |
-| PyPI/GitHub names reserved (`qtviz`, `qtvizstudio`)         | Reservations confirmed                               |
+| GitHub repo/names reserved (`qtviz`, `qtvizstudio`)         | Reservations confirmed (PyPI publish out of scope)   |
 | Doc site (mkdocs-material) skeleton                         | Quickstart hosted                                    |
 | **Spike P1** — pyqtgraph `GraphicsLayoutWidget` with linked X axes + brush event → Qt signal | One example: scatter + curve, brush selects points, signal fires |
 | **Spike P2** — render `hv.Scatter` via prototype adapter to pyqtgraph | `qtviz.from_holoviews(hv.Scatter(df, "a", "b"))` returns a QWidget that draws |
@@ -294,12 +294,12 @@ renders via Plotly. Same Element, three backends, user picks.
 edge cases. Mitigation: define minimum viable Element API; backends
 declare unsupported options rather than silently ignoring.
 
-### Phase 6 — Library 0.1 release (1 month) · ◑ in progress — release prep done; PyPI publish + Pages deploy remain
+### Phase 6 — Library 0.1 release (1 month) · ◑ in progress — release prep done; Pages deploy remains (PyPI publish is **not a goal**)
 
 | Deliverable                                          | Acceptance                                           |
 |------------------------------------------------------|-------------------------------------------------------|
 | Doc site complete                                     | Tutorial, gallery (10 examples), API reference       |
-| `qtviz 0.1.0` on PyPI                                 | `pip install qtviz` works                            |
+| Tagged `qtviz 0.1.0` release on GitHub                | `pip install git+…` / from source works (no PyPI)    |
 | Migration guide (`qtwebplot` → `qtviz`)               | Old import shim with deprecation warning             |
 | Benchmark page                                        | pyqtgraph vs mpl vs webengine perf for representative payloads |
 | Demo videos                                           | 3 short videos                                        |
@@ -351,7 +351,7 @@ inventing on top of `WebBridgeView`.
 
 ```
 0 ✅ ─→ 1 ✅ (pyqtgraph) ─→ 2 ✅ (mpl) ─→ 3 ✅ (hv adapter) ─→ 4 ✅ (reactive+datashader)
-   ─→ 5 ◑ (data layer ✅ + webengine ✅; Parquet/DuckDB sources open) ─→ 6 ◑ (lib 0.1: prep done, publish + deploy remain)
+   ─→ 5 ◑ (data layer ✅ + webengine ✅; Parquet/DuckDB sources open) ─→ 6 ◑ (lib 0.1: prep done, docs deploy remains)
 ```
 
 The Phase-0 spike gates have all been cleared: P1 (pyqtgraph composition) and P2
@@ -392,8 +392,9 @@ being cut. The remaining critical path is Phase 5's data sources, then the 0.1 r
 > The original Phase-0 startup steps (confirm decisions §7, run the spikes, rename, set up
 > CI) are all complete. This section now tracks the remaining work toward and beyond 0.1.
 
-1. **Finish the 0.1 release** — publish `0.1.0` to PyPI (the build is `twine check`-clean)
-   and deploy the mkdocs site to GitHub Pages (enable Pages → run the Docs workflow).
+1. **Finish the 0.1 release** — tag `0.1.0` on GitHub (source/`pip install git+…`-installable;
+   PyPI publish is **not a goal**) and deploy the mkdocs site to GitHub Pages (enable Pages →
+   run the Docs workflow).
 2. **Data sources (Phase 5)** — `DataSource` for Parquet/DuckDB/SQL behind the lazy
    `DataRef` contract; background queries; versioned result cache.
 3. **Axis transforms (the axis-surface seam)** — title/labels, log / symlog / datetime,
@@ -421,8 +422,11 @@ being cut. The remaining critical path is Phase 5's data sources, then the 0.1 r
    - Also unlocks Datashader `logx` / `logy`.
 4. **Raster selection** — pixel → source rows for brush/linked-select on datashaded views
    (builds on the [D46] hover reverse-lookup).
-5. **Remaining Datashader coverage** — raster legends/colorbars, theme-driven colors, a
-   wider aggregation surface (`capabilities-gaps.md` §1).
+5. **Remaining Datashader coverage** — ✅ **shipped (native)** — raster legends/colorbars,
+   theme-driven colors, and a wider aggregation surface (`Scatter.agg`), via the
+   aggregate/shade split ([D47]–[D50], `milestone-datashader-coverage.md`). Remaining:
+   webengine raster legends (no webengine legends yet), multi-agg `summary`, line styling,
+   gridded regrid (`capabilities-gaps.md` §1).
 
 Deferred / optional: webengine W5.2 binary transport; HoloViews adapter L2 (bidirectional
 streams) + the `.qtviz` accessor; Studio (Phases 7–9, post-1.0).

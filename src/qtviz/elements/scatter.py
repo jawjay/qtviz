@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core._validate import check_alpha, check_exclusive
+from ..core._validate import check_agg, check_alpha, check_exclusive
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -30,6 +30,7 @@ class Scatter(Element):
         marker: Literal["circle", "square", "triangle", "diamond", "cross"] = "circle",
         alpha: float = 1.0,
         scale: Literal["native", "auto", "datashader"] = "native",
+        agg: Literal["auto", "count", "sum", "mean", "max", "min", "std", "any", "by"] = "auto",
         backend_hint: str | None = None,
         id=None,
         pyqtgraph_use_opengl: bool = False,
@@ -39,12 +40,14 @@ class Scatter(Element):
         check_exclusive(color, color_by, names=("color", "color_by"), who="Scatter")
         check_exclusive(size, size_by, names=("size", "size_by"), who="Scatter")
         check_alpha(alpha, who="Scatter")
+        check_agg(agg, color_by, scale, who="Scatter")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color, self.color_by = color, color_by
         self.size, self.size_by = size, size_by
         self.marker, self.alpha = marker, alpha
         self.scale = scale
+        self.agg = agg
         self.pyqtgraph_use_opengl = pyqtgraph_use_opengl
         self.matplotlib_rasterized = matplotlib_rasterized
         self._validate_tabular()

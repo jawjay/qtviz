@@ -76,15 +76,18 @@ def _rasterize(node):
             "scale='datashader' requires datashader — install: uv sync --extra datashader"
         )
     from ..elements import Image  # noqa: PLC0415
-    from ..ext.datashader import rasterize_element  # noqa: PLC0415
+    from ..ext.datashader import aggregate_element, shade_aggregate  # noqa: PLC0415
 
     width, height = _RASTER_SIZE
-    result = rasterize_element(node, width=width, height=height)
+    aggregate = aggregate_element(node, width=width, height=height)
+    result = shade_aggregate(aggregate)  # default palette; a backend re-shades with its Theme (C2)
     image = Image(result.rgba, bounds=result.bounds, id=node.id)  # carry source id for events
     # Stash the (lazy) source element so a backend can re-aggregate to the viewport
-    # on pan/zoom (4b, D21), and the pre-shade aggregate for hover reverse-lookup
-    # ([D46]). Private → excluded from value identity.
+    # on pan/zoom (4b, D21); the full (theme-free) Aggregate so a backend can re-shade
+    # the initial raster with its Theme + emit a legend (C2/C3); and the pre-shade
+    # aggregate for hover reverse-lookup ([D46]). Private → excluded from value identity.
     object.__setattr__(image, "_raster_source", node)
+    object.__setattr__(image, "_raster_agg", aggregate)
     object.__setattr__(image, "_raster_aggregate", result.aggregate)
     return image
 

@@ -112,16 +112,45 @@ def render_histogram(element: Histogram, ctx):
 def render_image(element: Image, ctx):
     from PySide6.QtCore import QRectF  # noqa: PLC0415
 
-    values = np.asarray(element.data.grid().values)
-    if values.ndim == 3:  # RGBA raster (e.g. datashaded scatter): row 0 = ymin
-        item = pg.ImageItem(values, axisOrder="row-major")
+    agg = getattr(element, "_raster_agg", None)
+    if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
+        result = _shade_raster(element, agg, ctx.theme)
+        item = pg.ImageItem(result.rgba, axisOrder="row-major")
     else:
-        item = pg.ImageItem(np.asarray(values, dtype="float64"))
+        result = None
+        values = np.asarray(element.data.grid().values)
+        if values.ndim == 3:  # RGBA raster (e.g. a user-built image): row 0 = ymin
+            item = pg.ImageItem(values, axisOrder="row-major")
+        else:
+            item = pg.ImageItem(np.asarray(values, dtype="float64"))
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
+    if result is not None and result.legend is not None:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        add_legend(ctx.parent_axes, result.legend, ctx.theme)  # category key / colorbar (C3)
     _wire_dynamic_raster(element, item, ctx)
     return item
+
+
+def _shade_raster(element, aggregate, theme):
+    """Shade a datashader `Aggregate` with the View's `Theme` into rgba + a `Legend`
+    (categorical key from `theme.palette`, continuous ramp from viridis), so a raster
+    matches a native `color_by` (C2/C3, [D50])."""
+    from ...core.palette import palettes  # noqa: PLC0415
+    from ...ext.datashader import shade_aggregate  # noqa: PLC0415
+
+    return shade_aggregate(
+        aggregate, palette=theme.palette, continuous_palette=palettes.get("viridis"),
+        title=_raster_title(element),
+    )
+
+
+def _raster_title(element) -> str | None:
+    """Legend title for a datashaded raster — the source's `color_by` column, or
+    `None` (→ `shade_aggregate` labels a bare density `count` as "density")."""
+    return getattr(getattr(element, "_raster_source", None), "color_by", None)
 
 
 def _wire_dynamic_raster(element, item, ctx) -> None:
@@ -135,16 +164,22 @@ def _wire_dynamic_raster(element, item, ctx) -> None:
         return
     from types import SimpleNamespace  # noqa: PLC0415
 
+    from ...core.palette import palettes  # noqa: PLC0415
     from ...core.raster import RasterController  # noqa: PLC0415
-    from ...ext.datashader import rasterize_element  # noqa: PLC0415
+    from ...ext.datashader import themed_rasterize  # noqa: PLC0415
+    from ._legend import add_legend  # noqa: PLC0415
     from ._raster import PgRasterTarget, wire_raster_hover  # noqa: PLC0415
 
     vb = ctx.parent_axes.getViewBox()
+    plot = ctx.parent_axes
+    theme = ctx.theme
     holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
     target = PgRasterTarget(item, vb)
     controller = RasterController(
-        source=source, target=target, rasterize=rasterize_element, parent=vb,
-        on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
+        source=source, target=target,
+        rasterize=themed_rasterize(theme.palette, palettes.get("viridis"), _raster_title(element)),
+        parent=vb, on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
+        on_legend=lambda lg: add_legend(plot, lg, theme),  # refresh on re-aggregation (C3)
     )
     if not hasattr(vb, "_qtviz_rasters"):
         vb._qtviz_rasters = []

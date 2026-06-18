@@ -1185,6 +1185,78 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 
 ---
 
+## [D47] Datashader shading — split aggregate (theme-free) from shade (theme-aware)
+
+**Context.** Shading was welded to aggregation in the theme-less pipeline (`tf.shade`
+with vendored `_VIRIDIS`/`_CATEGORY10`), returning bare rgba — so no `Theme` was in
+reach and no legend could be described ([D20] tension). This blocked all three
+roadmap-§8.5 gaps at once (legend, theme colors, agg surface).
+
+**Decision (✅ implemented).** Split `aggregate_element` (theme-free `Aggregate`
+carrying the raw xarray agg + the [D46] `RasterAggregate`) from `shade_aggregate`
+(theme-aware → rgba + `Legend`). `shade` is *injected* into `RasterController` the
+same way `rasterize` already is, so `core/raster` stays palette-free; the backend
+closes the theme over `themed_rasterize`. The raw agg is kept so re-shading runs
+`tf.shade` faithfully (no numpy re-implementation of eq_hist/blend). Pipeline still
+bakes a default-palette rgba as a safety net; themed backends re-shade from the
+carried `Aggregate`. Alternatives: numpy re-implementation of shading (deferred —
+faithful enough not worth the risk); thread theme into `resolve_node` (wrong layer).
+
+**Status:** ✅ implemented (C1/C2) — `ext/datashader.py`, `core/raster.py`,
+`milestone-datashader-coverage.md`.
+
+---
+
+## [D48] Legend honesty for eq_hist density vs value aggregations
+
+**Context.** `count` density shades with `eq_hist` (histogram equalization) — a
+non-linear color↔value map, so a linear colorbar with interior ticks would lie.
+
+**Decision (✅ implemented).** `Legend.linear` flag. Density (`count`) keeps
+`eq_hist` and renders an **endpoints-only** key (no interior linear ticks). Value
+aggregations (`mean`/`sum`/`max`/`min`/`std`) default to `how="linear"` so the
+colorbar's `vmin`/`vmax` are truthful. Categorical → a key legend, as native. The
+default `how` is therefore kind-dependent (overridable).
+
+**Status:** ✅ implemented (C3) — `core/encoding.Legend.linear`, both native legend
+renderers, `shade_aggregate`.
+
+---
+
+## [D49] Aggregation-surface API — `Scatter.agg`
+
+**Context.** Reductions were implicit (no `color_by`→count, numeric→mean,
+categorical→by); no way to ask for max/sum/etc.
+
+**Decision (✅ implemented).** `Scatter.agg: auto|count|sum|mean|max|min|std|any|by`,
+default `"auto"` (back-compatible). `core._validate.check_agg` validates the
+`(agg, color_by, scale)` triple — value aggs / `by` need `color_by`; any non-`auto`
+agg needs `scale` ≠ native. Reducer map in `ext.datashader._reducer`; the agg name
+flows into `Aggregate.kind` → legend title / hover label. Curve stays count-only (no
+value column — deferred). Multi-agg `summary` deferred (forks shading/legend).
+
+**Status:** ✅ implemented (C4) — `elements/scatter.py`, `core/_validate.py`,
+`ext/datashader.py`.
+
+---
+
+## [D50] Theme palette source for the raster
+
+**Context.** Which palette colors the key/ramp, and does a category match a native
+`color_by`?
+
+**Decision (✅ implemented).** Categorical key cycles `Theme.palette`; continuous
+ramp uses the same continuous palette the native renderers pass (`viridis`).
+Category→color is assigned by `core.encoding.category_swatches`, shared with native
+categorical, so a category gets the *same* swatch as points or as a raster blend.
+webengine re-shades with the theme too (C5); webengine *legends* deferred (it draws
+no legends for any element yet).
+
+**Status:** ✅ implemented (C2/C5) — `core/encoding.category_swatches`, backend
+`_shade_raster`, webengine `_image_trace`.
+
+---
+
 ## Index
 
 | ID | Topic | Blocks | Status |
@@ -1235,3 +1307,7 @@ keep a deprecating `qtwebplot` import shim; skip-gate the WebEngine GUI tests.
 | D44 | `DynamicMap`/stream scope for 0.1 | Phase 3 (3b) | ✅ decided — L1 one-way (DynamicMap→`Signal[Node]`, kdims as Signals); L2 deferred; stream-only → warn-and-static |
 | D45 | HoloViews import crashes offscreen-Qt teardown | Phase 3 / test infra | open — mitigated (importorskip order); lazy hv import at impl |
 | D46 | Raster reverse-lookup — hover/inspect value on a datashaded view | Phase 4 (datashader) | ✅ implemented — `HoverEvent.value` + `RasterResult`/`RasterAggregate`, fresh through 4b controller; pyqtgraph + mpl hover wiring |
+| D47 | Datashader aggregate/shade split (theme-free → theme-aware) | §8.5 datashader | ✅ implemented — `aggregate_element`/`shade_aggregate`; `shade` injected like `rasterize` |
+| D48 | Legend honesty — eq_hist density vs linear value bar | §8.5 datashader | ✅ implemented — `Legend.linear`; density endpoints-only, value aggs linear `how` |
+| D49 | Aggregation-surface API — `Scatter.agg` | §8.5 datashader | ✅ implemented — `auto/count/sum/mean/max/min/std/any/by`; `check_agg` triple-validates |
+| D50 | Theme palette source for the raster | §8.5 datashader | ✅ implemented — `category_swatches` shared native↔raster; all 3 backends theme colors |
