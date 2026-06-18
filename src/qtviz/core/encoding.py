@@ -35,6 +35,8 @@ class Legend:
     vmin: float = 0.0                              # continuous bounds
     vmax: float = 1.0
     ramp: tuple[Color, ...] = field(default_factory=tuple)  # continuous swatch stops
+    linear: bool = True  # False → color↔value is non-linear (e.g. eq_hist density):
+    #                      show endpoints only, no interior linear ticks ([D48])
 
 
 def is_categorical(values) -> bool:
@@ -65,9 +67,24 @@ def map_colors(
     return _continuous(arr, continuous_palette or palette, vmin, vmax, title)
 
 
+def continuous_ramp(palette: Palette) -> tuple[Color, ...]:
+    """The continuous ramp sampled at five stops — shared by the native colorbar and
+    the Datashader raster legend so both show the same ramp."""
+    return tuple(palette.at(t) for t in _RAMP_STOPS)
+
+
+def category_swatches(categories, palette: Palette) -> list[Color]:
+    """One color per category — `palette[i % n]` for the i-th category, in the order
+    given. Shared source of truth so a category gets the *same* swatch whether it is
+    drawn natively (`map_colors`) or as a Datashader color key (`shade_aggregate`).
+    Callers pass categories in canonical order (`np.unique` / sorted) so the two
+    paths agree."""
+    return [palette[i % len(palette)] for i in range(len(categories))]
+
+
 def _categorical(arr, palette: Palette, title) -> tuple[np.ndarray, Legend]:
     cats, codes = np.unique(arr, return_inverse=True)
-    swatches = [palette[i % len(palette)] for i in range(len(cats))]
+    swatches = category_swatches(cats, palette)
     lut = np.array([c.rgba for c in swatches], dtype="float64")
     rgba = lut[codes] if len(cats) else np.empty((0, 4))
     entries = tuple((str(c), swatches[i]) for i, c in enumerate(cats))
@@ -82,5 +99,5 @@ def _continuous(arr, palette: Palette, vmin, vmax, title) -> tuple[np.ndarray, L
     norm = np.nan_to_num(np.clip((a - lo) / span, 0.0, 1.0), nan=0.0)
     lut = np.array([palette.at(t / (_LUT_N - 1)).rgba for t in range(_LUT_N)], dtype="float64")
     rgba = lut[(norm * (_LUT_N - 1)).astype("int64")]
-    ramp = tuple(palette.at(t) for t in _RAMP_STOPS)
-    return rgba, Legend(kind="continuous", title=title, vmin=lo, vmax=hi, ramp=ramp)
+    legend = Legend(kind="continuous", title=title, vmin=lo, vmax=hi, ramp=continuous_ramp(palette))
+    return rgba, legend

@@ -71,12 +71,14 @@ class RasterController(QObject):
         parent: QObject | None = None,
         debounce_ms: int = 100,
         on_aggregate: Callable | None = None,  # called (GUI thread) with each fresh aggregate
+        on_legend: Callable | None = None,  # called (GUI thread) with each fresh Legend (C3)
     ) -> None:
         super().__init__(parent)
         self._source = source
         self._target = target
         self._rasterize = rasterize
         self._on_aggregate = on_aggregate
+        self._on_legend = on_legend
         self._build_id = 0
         self._disposed = False
         self._timer = QTimer(self)
@@ -124,6 +126,8 @@ class RasterController(QObject):
         self._target.set_raster(result.rgba, result.bounds)
         if self._on_aggregate is not None:
             self._on_aggregate(result.aggregate)  # keep hover/inspect values fresh ([D46])
+        if self._on_legend is not None and getattr(result, "legend", None) is not None:
+            self._on_legend(result.legend)  # refresh legend (vmin/vmax shifts on zoom, C3)
 
     def dispose(self) -> None:
         if self._disposed:

@@ -67,11 +67,20 @@ def render_scatter(element: Scatter, ctx):
 
 
 def _add_legend(ax, legend, theme) -> None:
-    fg = theme.foreground.mpl()
-    if legend.kind == "categorical":
-        from matplotlib.patches import Patch  # noqa: PLC0415
+    from matplotlib.patches import Patch  # noqa: PLC0415
 
+    fg = theme.foreground.mpl()
+    prev = getattr(ax, "_qtviz_cbar", None)
+    if prev is not None:  # remove a prior colorbar so re-aggregation refreshes, not stacks (C3)
+        prev.remove()
+        ax._qtviz_cbar = None
+    if legend.kind == "categorical":
         handles = [Patch(facecolor=c.mpl(), label=label) for label, c in legend.entries]
+        ax.legend(handles=handles, title=legend.title, fontsize=8, framealpha=0.85, labelcolor=fg)
+    elif not legend.linear:  # non-linear density: endpoints-only key, not a misleading bar ([D48])
+        ramp = legend.ramp
+        handles = [Patch(facecolor=ramp[-1].mpl(), label=f"{legend.vmax:.3g}"),
+                   Patch(facecolor=ramp[0].mpl(), label=f"{legend.vmin:.3g}")]
         ax.legend(handles=handles, title=legend.title, fontsize=8, framealpha=0.85, labelcolor=fg)
     else:
         from matplotlib.cm import ScalarMappable  # noqa: PLC0415
@@ -80,6 +89,7 @@ def _add_legend(ax, legend, theme) -> None:
         cmap = LinearSegmentedColormap.from_list("qtviz", [c.mpl() for c in legend.ramp])
         sm = ScalarMappable(norm=Normalize(legend.vmin, legend.vmax), cmap=cmap)
         bar = ax.figure.colorbar(sm, ax=ax)
+        ax._qtviz_cbar = bar
         if legend.title:
             bar.set_label(legend.title, color=fg)
         bar.ax.tick_params(colors=fg)
@@ -114,8 +124,18 @@ def render_histogram(element: Histogram, ctx):
 
 def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.bounds
+    agg = getattr(element, "_raster_agg", None)
+    if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
+        result = _shade_raster(element, agg, ctx.theme)
+        artist = ctx.parent_axes.imshow(
+            result.rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+        )
+        if result.legend is not None:
+            _add_legend(ctx.parent_axes, result.legend, ctx.theme)  # category key / colorbar (C3)
+        _wire_dynamic_raster(element, artist, ctx)
+        return artist
     values = np.asarray(element.data.grid().values)
-    if values.ndim == 3:  # RGBA raster (e.g. datashaded scatter)
+    if values.ndim == 3:  # RGBA raster (e.g. a user-built image)
         artist = ctx.parent_axes.imshow(
             values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto"
         )
@@ -127,6 +147,25 @@ def render_image(element: Image, ctx):
     )
 
 
+def _shade_raster(element, aggregate, theme):
+    """Shade a datashader `Aggregate` with the View's `Theme` into rgba + a `Legend`
+    (categorical key from `theme.palette`, continuous ramp from viridis) so a raster
+    matches a native `color_by` (C2/C3, [D50])."""
+    from ...core.palette import palettes  # noqa: PLC0415
+    from ...ext.datashader import shade_aggregate  # noqa: PLC0415
+
+    return shade_aggregate(
+        aggregate, palette=theme.palette, continuous_palette=palettes.get("viridis"),
+        title=_raster_title(element),
+    )
+
+
+def _raster_title(element) -> str | None:
+    """Legend title for a datashaded raster — the source's `color_by` column, or
+    `None` (→ a bare density `count` is labeled "density")."""
+    return getattr(getattr(element, "_raster_source", None), "color_by", None)
+
+
 def _wire_dynamic_raster(element, artist, ctx) -> None:
     """If this Image came from a datashaded Scatter/Curve, re-aggregate the source
     to the viewport on pan/zoom (4b) and emit the aggregated value under the cursor
@@ -136,16 +175,21 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
         return
     from types import SimpleNamespace  # noqa: PLC0415
 
+    from ...core.palette import palettes  # noqa: PLC0415
     from ...core.raster import RasterController  # noqa: PLC0415
-    from ...ext.datashader import rasterize_element  # noqa: PLC0415
+    from ...ext.datashader import themed_rasterize  # noqa: PLC0415
     from ._raster import MplRasterTarget, wire_raster_hover  # noqa: PLC0415
 
     ax = ctx.parent_axes
+    theme = ctx.theme
     holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
     target = MplRasterTarget(artist, ax)
     controller = RasterController(
-        source=source, target=target, rasterize=rasterize_element, parent=ax.figure.canvas,
+        source=source, target=target,
+        rasterize=themed_rasterize(theme.palette, palettes.get("viridis"), _raster_title(element)),
+        parent=ax.figure.canvas,
         on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
+        on_legend=lambda lg: _add_legend(ax, lg, theme),  # refresh on re-aggregation (C3)
     )
     if not hasattr(ax, "_qtviz_rasters"):
         ax._qtviz_rasters = []
