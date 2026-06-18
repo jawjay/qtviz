@@ -4,7 +4,7 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 0.2 (in progress)
+## [0.2.0] — 2026-06-18
 
 Hardening pass from the post-0.1 weakness investigation (root causes R1–R6;
 `design/weakness-root-causes.md`). No new chart types — the existing surface made
