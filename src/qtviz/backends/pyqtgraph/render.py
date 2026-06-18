@@ -156,7 +156,7 @@ class PyQtGraphBackend:
         vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex)
         plot = widget.addPlot(row=row, col=col, viewBox=vb)
         style_plot(plot, theme)
-        apply_surface(plot, surface_of(node), theme)
+        apply_surface(plot, surface_of(node), theme, self.capabilities.scales)
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
         for element in children:

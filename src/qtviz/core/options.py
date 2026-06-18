@@ -10,10 +10,16 @@ from __future__ import annotations
 import warnings
 from collections.abc import Mapping, Sequence
 
+from ..errors import ValidationError
 from ._immutable import Immutable
 from ._validate import check_alpha
 from .color import ColorSpec
 from .palette import Palette
+
+# The axis-scale vocabulary (semantic, backend-agnostic; feasibility §2.1). A backend
+# renders the subset it declares in `Capabilities.scales`; the rest warn-and-degrade
+# to linear ([D59]). `time` is reserved (gated on the data layer carrying datetime).
+_SCALES = ("linear", "log", "symlog", "time")
 
 
 class Options(Immutable):
@@ -47,8 +53,41 @@ class Options(Immutable):
         self._freeze()
 
 
+class AxisSpec(Immutable):
+    """Per-axis surface config (axis-surface seam; feasibility §2.1, [D59]).
+
+    `scale` (`linear|log|symlog|time`), declarative `lim`, and `invert` land in 0.3;
+    `tick_format` is reserved for a later phase (honored as ``"auto"`` for now). A
+    backend that can't render the requested `scale` warns and falls back to linear."""
+
+    def __init__(
+        self,
+        *,
+        label: str | None = None,
+        scale: str = "linear",
+        lim: tuple[float, float] | None = None,
+        invert: bool = False,
+        tick_format: str = "auto",
+    ) -> None:
+        if scale not in _SCALES:
+            raise ValidationError(f"scale must be one of {_SCALES}, got {scale!r}")
+        if lim is not None and len(tuple(lim)) != 2:
+            raise ValidationError(f"lim must be a (lo, hi) pair, got {lim!r}")
+        self.label = label
+        self.scale = scale
+        self.lim = (float(lim[0]), float(lim[1])) if lim is not None else None
+        self.invert = bool(invert)
+        self.tick_format = tick_format
+        self._freeze()
+
+
 class OverlayOptions(Immutable):
-    """Shared-surface options for an `Overlay`: title, axis labels, legend, background."""
+    """Shared-surface options for an `Overlay`: title, per-axis `AxisSpec` (`x`/`y`),
+    `aspect`, legend toggle, background.
+
+    `x_label`/`y_label` are conveniences that populate `x.label`/`y.label` (so the
+    canonical axis config has one home, `AxisSpec`); they remain readable as
+    properties for back-compat."""
 
     def __init__(
         self,
@@ -56,15 +95,27 @@ class OverlayOptions(Immutable):
         title: str | None = None,
         x_label: str | None = None,
         y_label: str | None = None,
+        x: AxisSpec | None = None,
+        y: AxisSpec | None = None,
+        aspect: float | None = None,
         legend: bool = True,
         background: ColorSpec | None = None,
     ) -> None:
         self.title = title
-        self.x_label = x_label
-        self.y_label = y_label
+        self.x = x if x is not None else AxisSpec(label=x_label)
+        self.y = y if y is not None else AxisSpec(label=y_label)
+        self.aspect = float(aspect) if aspect is not None else None
         self.legend = legend
         self.background = background
         self._freeze()
+
+    @property
+    def x_label(self) -> str | None:
+        return self.x.label
+
+    @property
+    def y_label(self) -> str | None:
+        return self.y.label
 
 
 def _as_pairs(m) -> tuple | None:

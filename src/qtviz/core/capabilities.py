@@ -18,3 +18,6 @@ class Capabilities:
     animation: bool
     exports: frozenset[str]
     threading_model: Literal["gui_only", "render_off_thread"] = "gui_only"
+    # Axis scales this backend can render (axis-surface seam, [D59]). A requested
+    # scale outside this set warns-and-degrades to linear. Default: linear only.
+    scales: frozenset[str] = frozenset({"linear"})

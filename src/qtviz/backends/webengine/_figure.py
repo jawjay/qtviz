@@ -18,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 
 from ...core._degrade import check_recommended
-from ...core.compose import Overlay, surface_of
+from ...core.compose import Overlay, resolve_scale, surface_of
 from ...data import resolve_node
 from ...elements import (
     Bars,
@@ -282,25 +282,40 @@ def build_figure(node, theme) -> dict:
     return build(node, theme)[0]
 
 
-def _axis(grid: str, fg: str, label: str | None = None) -> dict:
-    """One Plotly axis dict — its own `title` object (never shared between x/y,
-    so injecting a label on one axis can't leak onto the other)."""
+# Axis scales the webengine (Plotly) path renders today (axis-surface seam, [D59]).
+# Keep in sync with WebEngineBackend.capabilities.scales; expands to {linear, log}
+# when log + R1 land (0.3 increment 2).
+_SUPPORTED_SCALES = frozenset({"linear"})
+
+
+def _axis(grid: str, fg: str, axis: str, spec=None) -> dict:
+    """One Plotly axis dict — its own `title` object (never shared between x/y, so a
+    label on one axis can't leak onto the other) — carrying the surface's per-axis
+    `AxisSpec` (label / declarative range / invert; scale warn-gated, applied in
+    increment 2)."""
     title = {"font": {"color": fg}}
-    if label:
-        title["text"] = label
-    return {
+    if spec is not None and spec.label:
+        title["text"] = spec.label
+    d = {
         "gridcolor": grid,
         "linecolor": fg,
         "zerolinecolor": grid,
         "tickfont": {"color": fg},
         "title": title,
     }
+    if spec is not None:
+        resolve_scale(spec.scale, _SUPPORTED_SCALES, axis=axis, backend="webengine")
+        if spec.lim is not None:
+            d["range"] = [spec.lim[0], spec.lim[1]]
+        if spec.invert:
+            d["autorange"] = "reversed"
+    return d
 
 
 def plotly_layout(theme, surf=None) -> dict:
     """A Plotly layout carrying the qtviz Theme (axes/bg/font/palette) and, when
-    given, the shared-surface options (`OverlayOptions` title / axis labels —
-    axis-surface seam, Phase A)."""
+    given, the shared-surface options (`OverlayOptions` — title, per-axis labels /
+    limits / invert, aspect — axis-surface seam)."""
     fg = _css(theme.foreground)
     bg = _css(theme.background)
     grid = _css(theme.grid)
@@ -309,11 +324,14 @@ def plotly_layout(theme, surf=None) -> dict:
         "plot_bgcolor": bg,
         "font": {"color": fg, "family": theme.font_family, "size": theme.font_size},
         "colorway": [_css(c) for c in theme.palette],
-        "xaxis": _axis(grid, fg, surf.x_label if surf else None),
-        "yaxis": _axis(grid, fg, surf.y_label if surf else None),
+        "xaxis": _axis(grid, fg, "x", surf.x if surf else None),
+        "yaxis": _axis(grid, fg, "y", surf.y if surf else None),
         "margin": {"l": 50, "r": 20, "t": 30, "b": 40},
         "showlegend": False,
     }
     if surf is not None and surf.title:
         layout["title"] = {"text": surf.title, "font": {"color": fg}}
+    if surf is not None and surf.aspect is not None:
+        layout["yaxis"]["scaleanchor"] = "x"
+        layout["yaxis"]["scaleratio"] = surf.aspect
     return layout

@@ -28,7 +28,7 @@ from .core.event import (
     SelectEvent,
     TapEvent,
 )
-from .core.options import LayoutOptions, Options, OverlayOptions
+from .core.options import AxisSpec, LayoutOptions, Options, OverlayOptions
 from .core.palette import Palette, palettes
 from .core.theme import Theme
 from .core.view import View
@@ -68,7 +68,7 @@ __all__ = [
     "set_raster_threshold", "set_raster_size",
     # styling
     "Color", "ColorSpec", "Palette", "palettes", "Theme",
-    "Options", "OverlayOptions", "LayoutOptions",
+    "Options", "OverlayOptions", "LayoutOptions", "AxisSpec",
     # backends + capabilities
     "Capabilities", "set_default_backend", "set_backend_priority",
     # events

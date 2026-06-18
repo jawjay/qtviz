@@ -88,6 +88,27 @@ def surface_of(node: Node) -> OverlayOptions:
     return node.options if isinstance(node, Overlay) else OverlayOptions()
 
 
+def resolve_scale(requested: str, available, *, axis: str, backend: str) -> str:
+    """Effective axis scale: the requested scale if `backend` declares it in
+    `Capabilities.scales`, else **linear** with a one-time `QtvizWarning` (the
+    capability-gated warn-and-degrade contract, feasibility §2.3 / [D59]). Linear is
+    always available, so a default surface never warns."""
+    if requested in available:
+        return requested
+    if requested != "linear":
+        import warnings  # noqa: PLC0415
+
+        from ..errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(
+            f"{backend}: {axis} scale={requested!r} not supported by this backend; "
+            f"using 'linear'.",
+            QtvizWarning,
+            stacklevel=2,
+        )
+    return "linear"
+
+
 def _elements_of(node: Node) -> Iterator[Element]:
     if isinstance(node, Element):
         yield node

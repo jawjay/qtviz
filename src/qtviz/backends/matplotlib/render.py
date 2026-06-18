@@ -150,7 +150,7 @@ class MatplotlibBackend:
 
     def _render_cell(self, node, ax, theme, bus, surfaces, natives) -> None:
         apply_theme_ax(ax, theme)
-        apply_surface(ax, surface_of(node), theme)
+        apply_surface(ax, surface_of(node), theme, self.capabilities.scales)
         surface_id = uuid.uuid4().hex
         selectables: list = []
         surfaces.append({"ax": ax, "surface_id": surface_id, "selectables": selectables})
