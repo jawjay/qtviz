@@ -13,6 +13,7 @@ import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
+from ...core._degrade import check_recommended
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.compose import Layout, Overlay, surface_of
@@ -22,7 +23,7 @@ from ...core.threading import require_gui_thread
 from ...data import resolve_node
 from ...errors import RendererMissingError
 from . import _events
-from ._renderers import RENDERERS
+from ._renderers import HONORED, RENDERERS
 from ._surface import apply_surface
 from ._theme import apply_theme_ax, apply_theme_fig
 
@@ -106,6 +107,10 @@ class MatplotlibBackend:
     def supports(self, element_type: type) -> bool:
         return self.renderers.get(element_type) is not None
 
+    def honored_options(self, element_type: type) -> frozenset[str]:
+        """Recommended options this backend honors for `element_type` (spec §3.4)."""
+        return HONORED.get(element_type, frozenset())
+
     def can_host(self, kind: str) -> bool:
         return kind in ("overlay", "grid")
 
@@ -158,6 +163,9 @@ class MatplotlibBackend:
             raise RendererMissingError(
                 f"matplotlib has no renderer for {type(element).__name__}"
             )
+        check_recommended(
+            element, backend_name=self.name, honored=self.honored_options(type(element))
+        )
         ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self, parent_axes=ax)
         artist = fn(element, ctx)
         _events.attach(element, artist, ctx, selectables)

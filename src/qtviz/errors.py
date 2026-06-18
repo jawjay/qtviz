@@ -58,3 +58,12 @@ class AdapterError(QtvizError):
 class UnsupportedHoloViewsElement(QtvizError):
     """`from_holoviews` met an element it can neither translate natively nor host
     as a `RawFigure` (Phase 3, [D28]). Carries the offending type name + a hint."""
+
+
+class QtvizWarning(UserWarning):
+    """A deliberate, non-fatal qtviz degradation notice — e.g. a backend ignoring
+    a *recommended* option it does not honor (spec §3.4 honor-or-warn, [D51]).
+
+    A `UserWarning` subclass so it shows by default and can be filtered as a group
+    (``warnings.filterwarnings("ignore", category=qtviz.errors.QtvizWarning)``).
+    Degradations warn-and-proceed; they never raise."""

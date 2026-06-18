@@ -236,3 +236,17 @@ RENDERERS = {
     ErrorBars: render_errorbars,
     Spread: render_spread,
 }
+
+# Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
+# Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
+# Keep in sync with the renderers — the conformance test guards this.
+HONORED: dict[type, frozenset[str]] = {
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha"}),  # not marker
+    Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
+    Bars: frozenset({"color"}),                                  # not group/orient
+    Histogram: frozenset({"bins", "density", "color"}),
+    Image: frozenset({"colormap"}),                              # not interpolation
+    Heatmap: frozenset({"colormap"}),                            # not aggregator
+    ErrorBars: frozenset({"direction", "color"}),
+    Spread: frozenset({"color", "alpha"}),
+}

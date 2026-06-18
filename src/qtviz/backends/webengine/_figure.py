@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from ...core._degrade import check_recommended
 from ...core.compose import Overlay, surface_of
 from ...data import resolve_node
 from ...elements import (
@@ -214,6 +215,19 @@ _TRACE_BUILDERS = {
     Spread: _spread_trace,
 }
 
+# Recommended options each trace builder above actually consumes (spec §3.4 /
+# [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
+HONORED: dict[type, frozenset[str]] = {
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha"}),  # not marker
+    Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
+    Bars: frozenset({"color", "orient"}),                        # not group
+    Histogram: frozenset({"bins", "density", "color"}),
+    Image: frozenset(),                          # colorscale hardcoded Viridis
+    Heatmap: frozenset(),                        # hardcoded colorscale; no aggregator
+    ErrorBars: frozenset({"direction", "color"}),
+    Spread: frozenset({"color", "alpha"}),
+}
+
 
 def supported_types() -> set[type]:
     return set(_TRACE_BUILDERS)
@@ -249,6 +263,10 @@ def build(node, theme) -> tuple[dict, list[str]]:
             raise RendererMissingError(
                 f"webengine has no Plotly renderer for {type(element).__name__}"
             )
+        check_recommended(
+            element, backend_name="webengine",
+            honored=HONORED.get(type(element), frozenset()),
+        )
         el_traces = builder(element, theme, idx)
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))

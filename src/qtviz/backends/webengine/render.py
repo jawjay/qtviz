@@ -137,6 +137,10 @@ class WebEngineBackend:
         # RawFigure is a passthrough (D26) — no trace renderer, hosted directly.
         return element_type is RawFigure or self.renderers.get(element_type) is not None
 
+    def honored_options(self, element_type: type) -> frozenset[str]:
+        """Recommended options this backend honors for `element_type` (spec §3.4)."""
+        return _figure.HONORED.get(element_type, frozenset())
+
     def can_host(self, kind: str) -> bool:
         # No native mixed panes — the LayoutHost composes per-pane WebBridgeViews.
         return False
