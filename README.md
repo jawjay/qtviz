@@ -81,7 +81,7 @@ pyqtgraph). qtviz takes a different position:
 opt-in extra.
 
 ```bash
-git clone https://github.com/markjajeh/qtviz
+git clone https://github.com/jawjay/qtviz
 cd qtviz
 
 # core + the bits you want:
@@ -404,7 +404,7 @@ compatibility shim that transparently redirects to the new location and emits a
 ## Contributing
 
 qtviz is pre-release and evolving quickly. Issues and discussion are welcome on
-[GitHub](https://github.com/markjajeh/qtviz). Run the suite with:
+[GitHub](https://github.com/jawjay/qtviz). Run the suite with:
 
 ```bash
 uv run pytest          # Qt runs offscreen by default

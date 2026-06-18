@@ -82,11 +82,11 @@ datashader = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/markjajeh/qtviz"
-Documentation = "https://github.com/markjajeh/qtviz#readme"
-Repository = "https://github.com/markjajeh/qtviz"
-Issues = "https://github.com/markjajeh/qtviz/issues"
-Changelog = "https://github.com/markjajeh/qtviz/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/jawjay/qtviz"
+Documentation = "https://github.com/jawjay/qtviz#readme"
+Repository = "https://github.com/jawjay/qtviz"
+Issues = "https://github.com/jawjay/qtviz/issues"
+Changelog = "https://github.com/jawjay/qtviz/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 # The Qt WebEngine bridge now lives under qtviz.backends.webengine; src/qtwebplot
