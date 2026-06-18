@@ -11,6 +11,13 @@
 
 What the big-data path does today, and where it stops.
 
+> **Shipped (roadmap §8.5):** the three rows below — legend/colorbar, theme-driven
+> colors, aggregation surface — landed on the two native backends via the
+> aggregate/shade split ([D47]–[D50],
+> [`milestone-datashader-coverage.md`](milestone-datashader-coverage.md)). webengine
+> gets theme colors but **not** raster legends yet (it renders no legends for any
+> element — a broader webengine-legend gap, see §2 *Rendering semantics*).
+
 | Capability | Status | Notes |
 |------------|--------|-------|
 | Point density (`Scatter`, `count`) | ✅ | backend-agnostic raster, out-of-core, off-thread [D18] |
@@ -19,9 +26,9 @@ What the big-data path does today, and where it stops.
 | Categorical color (`color_by` category → `by(count)`) | ✅ | per-category blend; default `category10` key |
 | Viewport re-aggregation on zoom | ✅ | `RasterController` + per-backend `RasterTarget` [D21] |
 | Auto-routing by size / laziness | ✅ | `set_raster_threshold`, lazy/unknown size routes |
-| **Legend / colorbar for the raster** | ⬜ | a datashaded plot is a bare image — no key for categories, no scale for the continuous ramp. **Blocks** publishable categorical/continuous plots. |
-| **Theme-driven colors** | ⬜ | the color key/ramp is a fixed default, not the `View`'s `Theme`/`Palette`; shading happens in the (theme-less) pipeline [D20 tension]. **Blocks** consistent theming. |
-| **Aggregation surface** (`sum`/`max`/`min`/`std`, `by(mean)`, multi-agg `summary`) | ⬜ | only `count`/`mean`/`by(count)` are wired. **Blocks** "max value per pixel" style views. |
+| **Legend / colorbar for the raster** | ✅ native ([D47]/[D48]) | `shade_aggregate` emits a `core.encoding.Legend`; backends draw it via the existing `add_legend`/`_add_legend` (category key / colorbar / endpoints-only eq_hist density), refreshed on zoom. webengine raster legend still ⬜ (no webengine legends yet). |
+| **Theme-driven colors** | ✅ all 3 backends ([D47]/[D50]) | aggregate/shade split: the categorical key + continuous ramp come from the View's `Theme.palette`; `category_swatches` shared with native, so a raster matches a native `color_by`. |
+| **Aggregation surface** (`sum`/`max`/`min`/`std`, `count`/`mean`/`any`/`by`) | ✅ ([D49]) | `Scatter.agg`; reducer map in `ext.datashader._reducer`; `_validate.check_agg` guards the `(agg, color_by, scale)` triple. Multi-agg `summary` still ⬜ (deferred). |
 | **Line width / antialiasing / categorical lines** | ⬜ | `Curve.line_width`/`line_style`/`color` ignored under datashader; no per-category line color. |
 | **Gridded regrid** (`canvas.raster` for huge `Image`/`Heatmap`) | ⬜ | only point/line glyphs; large 2-D arrays aren't downsampled to screen res. |
 | **Reverse lookup / inspect** (pixel → aggregated value or source rows) | ◑ hover→value ✅ ([D46]) | `HoverEvent.value` reports `count`/`mean` under the cursor (retained `RasterAggregate`, fresh through the 4b controller), both native backends; pixel→**source rows** (for brushing) still ⬜ — see §2 *Interaction*. |

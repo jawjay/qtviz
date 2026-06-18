@@ -26,7 +26,12 @@ backends, a lazy-first data layer, and a big-data path — all 100% offline.
 - **Datashader** — `Scatter` / `Curve` with `scale="datashader" | "auto"`: density,
   `color_by` mean, categorical blend; out-of-core, backend-agnostic, re-aggregating
   to the viewport on zoom. Hover a raster for the aggregated value
-  (`HoverEvent.value`).
+  (`HoverEvent.value`). Datashaded rasters now carry a **legend / colorbar**, take
+  their **colors from the View's `Theme`** (matching a native `color_by`), and expose
+  a wider **aggregation surface** via `Scatter.agg`
+  (`count`/`sum`/`mean`/`max`/`min`/`std`/`any`/`by`) — built on an aggregate/shade
+  split ([D47]–[D50]). Density keeps an honest endpoints-only key under `eq_hist`;
+  value aggregations show a truthful linear colorbar.
 - **Reactive** — S-style `signal` / `derived` / `effect` / `batch`;
   `View(Signal[Node])` re-renders on change; crossfilter / linked brushing without
   manual wiring.
