@@ -182,3 +182,87 @@ def test_webengine_trace_name_uses_label():
 
     fig = _figure.build_figure(_labeled_overlay(), qv.Theme.light())
     assert [t["name"] for t in fig["data"]] == ["raw", "smoothed"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Increment 4 — legend parity: webengine legends on, pyqtgraph gradient colorbar
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@pytest.mark.tier1
+def test_webengine_showlegend_follows_surface():
+    from qtviz.backends.webengine import _figure
+
+    fig = _figure.build_figure(_labeled_overlay(), qv.Theme.light())
+    assert fig["layout"]["showlegend"] is True
+    assert [t["showlegend"] for t in fig["data"]] == [True, True]
+    off = _figure.build_figure(_labeled_overlay(legend=False), qv.Theme.light())
+    assert off["layout"]["showlegend"] is False
+    # an unlabeled trace contributes no legend entry (its name is an opaque id)
+    bare = _figure.build_figure(qv.Curve(_DATA, x="x", y="y"), qv.Theme.light())
+    assert bare["data"][0]["showlegend"] is False
+
+
+@pytest.mark.tier1
+def test_webengine_label_is_now_honored():
+    import warnings
+
+    from qtviz.backends.webengine import _figure
+    from qtviz.core import _degrade
+
+    _degrade.reset()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", category=qv.errors.QtvizWarning)
+        _figure.build_figure(_labeled_overlay(), qv.Theme.light())  # no label warning
+
+
+@pytest.mark.tier1
+def test_webengine_continuous_color_by_emits_colorbar():
+    from qtviz.backends.webengine import _figure
+
+    fig = _figure.build_figure(qv.Scatter(_DATA, x="x", y="y", color_by="y"),
+                               qv.Theme.light())
+    marker = fig["data"][0]["marker"]
+    assert "colorbar" in marker and "colorscale" in marker
+    assert np.allclose(np.asarray(marker["color"]), _DATA["y"])   # numeric, Plotly maps it
+    assert marker["cmin"] == float(np.min(_DATA["y"]))
+    assert marker["cmax"] == float(np.max(_DATA["y"]))
+
+
+@pytest.mark.tier1
+def test_webengine_legend_position_top():
+    from qtviz.backends.webengine import _figure
+
+    fig = _figure.build_figure(_labeled_overlay(legend_position="top"), qv.Theme.light())
+    assert fig["layout"]["legend"]["orientation"] == "h"
+
+
+@pytest.mark.tier2
+def test_pyqtgraph_continuous_colorbar_is_a_true_gradient(qtbot):
+    import pyqtgraph as pg
+
+    view = qv.View(qv.Scatter(_DATA, x="x", y="y", color_by="y"), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    plot = view.handle.plots[0]
+    bar = getattr(plot, "_qtviz_cbar", None)
+    assert isinstance(bar, pg.ColorBarItem)
+    lo, hi = bar.levels()
+    assert np.allclose((lo, hi), (float(np.min(_DATA["y"])), float(np.max(_DATA["y"]))))
+    # the ramp no longer masquerades as a stepped swatch key
+    assert getattr(plot, "_qtviz_legend", None) is None
+
+
+@pytest.mark.tier2
+def test_pyqtgraph_eq_hist_density_keeps_endpoints_key(qtbot):
+    """Legend honesty ([D48]): an eq_hist density raster's color↔value map is
+    non-linear, so it keeps the endpoints-only key — never a gradient bar that
+    would imply linear ticks."""
+    pytest.importorskip("datashader")
+    rng = np.random.default_rng(3)
+    data = {"x": rng.normal(size=5000), "y": rng.normal(size=5000)}
+    view = qv.View(qv.Scatter(data, x="x", y="y", scale="datashader"),
+                   backend="pyqtgraph")
+    qtbot.addWidget(view)
+    qtbot.waitUntil(lambda: view.handle is not None, timeout=5000)
+    plot = view.handle.plots[0]
+    assert getattr(plot, "_qtviz_cbar", None) is None
+    assert getattr(plot, "_qtviz_legend", None) is not None  # endpoints-only key

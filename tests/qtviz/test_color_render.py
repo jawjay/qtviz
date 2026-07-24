@@ -54,14 +54,22 @@ def test_pyqtgraph_categorical_colors_and_legend(qtbot, data):
     assert plot.legend is not None and len(plot.legend.items) == 3
 
 
-def test_pyqtgraph_continuous_legend_is_stepped(qtbot, data):
+def test_pyqtgraph_continuous_legend_is_a_gradient_colorbar(qtbot, data):
+    """Was a 5-stop stepped swatch key; since 0.3 ([D55] parity) a continuous
+    linear legend is a true `pg.ColorBarItem` gradient with data-space levels."""
+    import pyqtgraph as pg
+
     if "pyqtgraph" not in qv.backends.list_available():
         pytest.skip("pyqtgraph not registered")
     view = qv.View(qv.Scatter(data, x="x", y="y", color_by="z"), backend="pyqtgraph")
     qtbot.addWidget(view)
     plot, item = _pg_scatter(view)
     assert len({b.color().name() for b in item.data["brush"]}) > 3  # a ramp, not 3 buckets
-    assert plot.legend is not None and len(plot.legend.items) == 5  # 5 ramp stops
+    bar = getattr(plot, "_qtviz_cbar", None)
+    assert isinstance(bar, pg.ColorBarItem)
+    lo, hi = bar.levels()
+    z = np.asarray(data["z"], dtype="float64")
+    assert np.allclose((lo, hi), (z.min(), z.max()))
 
 
 def test_pyqtgraph_size_by_varies_point_size(qtbot, data):

@@ -88,6 +88,22 @@ def _color_by_list(element, d, theme) -> list[str]:
     ]
 
 
+def _continuous_marker_color(element, values, marker: dict) -> None:
+    """Continuous `color_by` the Plotly-native way: numeric values + the shared
+    viridis ramp as a colorscale + a real `colorbar` — the previously-discarded
+    `Legend` finally drawn on webengine ([D55] parity). Truthful linear bounds
+    (`cmin`/`cmax` = data range), matching the native colorbars ([D48])."""
+    from ...core.palette import palettes  # noqa: PLC0415
+
+    ramp = palettes.get("viridis")
+    a = np.asarray(values, dtype="float64")
+    marker["color"] = a
+    marker["colorscale"] = [[t, _css(ramp.at(t))] for t in (0.0, 0.25, 0.5, 0.75, 1.0)]
+    marker["cmin"] = float(np.nanmin(a))
+    marker["cmax"] = float(np.nanmax(a))
+    marker["colorbar"] = {"title": {"text": element.color_by}}
+
+
 # ── per-element trace builders (each returns a list of Plotly traces) ─────────
 def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
     d = element.data
@@ -99,13 +115,20 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
         "symbol": _SYMBOL[element.marker],
     }
     if element.color_by is not None:
-        marker["color"] = _color_by_list(element, d, theme)
+        from ...core.encoding import is_categorical  # noqa: PLC0415
+
+        values = np.asarray(d.series("color"))
+        if is_categorical(values):
+            marker["color"] = _color_by_list(element, d, theme)  # per-category key: later
+        else:
+            _continuous_marker_color(element, values, marker)
     else:
         marker["color"] = _css(_element_color(element, theme, idx))
     return [{
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
         "marker": marker, "name": element.label or element.color_by or element.id,
+        "showlegend": element.label is not None,
     }]
 
 
@@ -117,6 +140,7 @@ def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
         "type": "scattergl", "mode": "lines",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
         "line": line, "opacity": element.alpha, "name": element.label or element.id,
+        "showlegend": element.label is not None,
     }]
 
 
@@ -124,7 +148,7 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
     d = element.data
     x = list(np.asarray(d.series("x")))            # keep categorical labels as-is
     trace = {"type": "bar", "marker": {"color": _css(_element_color(element, theme, idx))},
-             "name": element.label or element.id}
+             "name": element.label or element.id, "showlegend": element.label is not None}
     if element.orient == "h":
         trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
     else:
@@ -136,7 +160,7 @@ def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
     trace = {
         "type": "histogram", "x": _floats(element.data.series("column")),
         "marker": {"color": _css(_element_color(element, theme, idx))},
-        "name": element.label or element.id,
+        "name": element.label or element.id, "showlegend": element.label is not None,
     }
     if isinstance(element.bins, int):
         trace["nbinsx"] = element.bins
@@ -190,6 +214,7 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
         "marker": {"color": color}, "name": element.label or element.id,
+        "showlegend": element.label is not None,
     }
     trace["error_y" if element.direction in ("y", "both") else "error_x"] = err
     return [trace]
@@ -206,7 +231,8 @@ def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
           "name": element.label or element.id}
     hi = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_hi")),
           "line": {"width": 0, "color": line_css}, "fill": "tonexty",
-          "fillcolor": _rgba_css(color, element.alpha), "name": element.label or element.id}
+          "fillcolor": _rgba_css(color, element.alpha), "name": element.label or element.id,
+          "showlegend": element.label is not None}
     return [lo, hi]
 
 
@@ -224,14 +250,14 @@ _TRACE_BUILDERS = {
 # Recommended options each trace builder above actually consumes (spec §3.4 /
 # [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker"}),
-    Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
-    Bars: frozenset({"color", "orient"}),                        # not group
-    Histogram: frozenset({"bins", "density", "color"}),
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    Bars: frozenset({"color", "orient", "label"}),               # not group
+    Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset(),                          # colorscale hardcoded Viridis
     Heatmap: frozenset(),                        # hardcoded colorscale; no aggregator
-    ErrorBars: frozenset({"direction", "color"}),
-    Spread: frozenset({"color", "alpha"}),
+    ErrorBars: frozenset({"direction", "color", "label"}),
+    Spread: frozenset({"color", "alpha", "label"}),
 }
 
 
@@ -338,8 +364,12 @@ def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "lin
         "xaxis": _axis(grid, fg, "x", surf.x if surf else None, x_scale),
         "yaxis": _axis(grid, fg, "y", surf.y if surf else None, y_scale),
         "margin": {"l": 50, "r": 20, "t": 30, "b": 40},
-        "showlegend": False,
+        # ([D55] parity) legends follow the surface switch; traces opt in per-label,
+        # so an unlabeled figure shows no opaque-id entries even when enabled.
+        "showlegend": surf.legend_enabled if surf is not None else False,
     }
+    if surf is not None and surf.legend_position == "top":
+        layout["legend"] = {"orientation": "h", "x": 0.0, "y": 1.12}
     if surf is not None and surf.title:
         layout["title"] = {"text": surf.title, "font": {"color": fg}}
     if surf is not None and surf.aspect is not None:

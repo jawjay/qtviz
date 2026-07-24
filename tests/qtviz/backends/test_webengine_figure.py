@@ -40,11 +40,17 @@ def test_overlay_builds_one_trace_per_element(table):
 
 
 def test_color_by_maps_per_point_colors(table):
-    fig = _figure.build_figure(qv.Scatter(table, x="x", y="y", color_by="z"), qv.Theme.light())
+    """Categorical color_by stays a per-point css list; continuous ([D55] parity)
+    is numeric + colorscale so Plotly draws a real colorbar."""
+    fig = _figure.build_figure(qv.Scatter(table, x="x", y="y", color_by="cat"), qv.Theme.light())
     color = fig["data"][0]["marker"]["color"]
     assert isinstance(color, list)
     assert len(color) == len(table["x"])
     assert all(c.startswith("rgb(") for c in color)
+    cont = _figure.build_figure(qv.Scatter(table, x="x", y="y", color_by="z"), qv.Theme.light())
+    marker = cont["data"][0]["marker"]
+    assert "colorbar" in marker and "colorscale" in marker
+    assert np.asarray(marker["color"]).dtype.kind == "f"  # numeric, Plotly maps it
 
 
 def test_size_by_scales_per_point_sizes(table):
