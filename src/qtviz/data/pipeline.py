@@ -107,7 +107,18 @@ def resolve_node(node):
             # `getattr(..., "data", None)` keeps data-less elements (RawFigure)
             # passing through untouched.
             if getattr(getattr(node, "data", None), "is_lazy", False):
-                return node._replace_data(node.data.materialize())
+                ref = node.data
+                # [D74]: budget a lazy grid at screen scale instead of computing
+                # it whole (4× raster size = headroom above widget resolution).
+                budget = 4 * _RASTER_SIZE[0] * _RASTER_SIZE[1]
+                resolved = node._replace_data(ref.materialize(max_cells=budget))
+                shape = ref.schema().shape or ()
+                if len(shape) == 2 and shape[0] * shape[1] > budget:
+                    # decimated → keep the lazy source reachable so the render
+                    # can wire the viewport-regrid loop ([D75]); private, like
+                    # the datashader _raster_source.
+                    object.__setattr__(resolved, "_grid_source", ref)
+                return resolved
             return node
         arrays = node.data.resolve_channels(channels)
         return node._replace_data(EagerTabularRef(arrays, arrays))

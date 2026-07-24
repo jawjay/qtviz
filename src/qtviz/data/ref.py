@@ -72,9 +72,37 @@ class TabularRef(DataRef):
         raise NotImplementedError
 
 
+def decimation_strides(shape, max_cells: int | None) -> tuple[int, int] | None:
+    """Per-axis strides that bring a 2-D grid under `max_cells` ([D74]), or
+    `None` when no decimation is needed. One uniform linear factor
+    (`ceil(√(total/budget))`) preserves aspect; when an axis is too short to
+    carry its share (a skinny array clamps its stride), the other axis
+    stretches to keep the result ≤ `max_cells`. Memory-bounded always; chunked
+    stores additionally skip chunks when a stride exceeds the chunk extent."""
+    ny, nx = int(shape[0]), int(shape[1])
+    total = ny * nx
+    if max_cells is None or total <= max_cells:
+        return None
+
+    def length(n: int, s: int) -> int:  # strided-slice length: ceil(n / s)
+        return -(-n // s)
+
+    s = int(np.ceil(np.sqrt(total / max_cells)))
+    sy, sx = min(s, ny), min(s, nx)
+    sx = max(sx, length(nx, max(1, max_cells // length(ny, sy))))
+    sy = max(sy, length(ny, max(1, max_cells // length(nx, sx))))
+    return (sy, sx)
+
+
 class GriddedRef(DataRef):
     def grid(self, value: str | None = None) -> GridData:
         raise NotImplementedError
+
+    def materialize(self, limit: int | None = None, *, max_cells: int | None = None) -> DataRef:
+        """Gridded contract ([D74]): `max_cells` asks for a decimated (strided)
+        read of at most ~`max_cells` cells — resolution management for arrays
+        bigger than any screen, chosen by the pipeline. Eager refs ignore it."""
+        return self
 
 
 def _numeric_extent(arr: np.ndarray) -> tuple[float, float] | None:

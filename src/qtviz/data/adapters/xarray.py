@@ -93,16 +93,24 @@ class XarrayGriddedRef(GriddedRef):
             return _numeric_extent(np.asarray(self._da.coords[name].values))
         return None
 
-    def _coord(self, dim, n) -> np.ndarray:
-        if dim in self._da.coords:
-            return np.asarray(self._da.coords[dim].values)
+    @staticmethod
+    def _coord(da, dim, n) -> np.ndarray:
+        if dim in da.coords:
+            return np.asarray(da.coords[dim].values)
         return np.arange(n)
 
-    def materialize(self, limit: int | None = None) -> EagerGriddedRef:
-        values = np.asarray(self._da.values)  # computes if dask-backed
-        dims, shape = self._da.dims, self._da.shape
-        y = self._coord(dims[0], shape[0])
-        x = self._coord(dims[-1], shape[-1])
+    def materialize(self, limit: int | None = None, *,
+                    max_cells: int | None = None) -> EagerGriddedRef:
+        from ..ref import decimation_strides  # noqa: PLC0415
+
+        da = self._da
+        strides = decimation_strides(da.shape, max_cells) if da.ndim >= 2 else None
+        if strides is not None:
+            da = da[:: strides[0], :: strides[1]]  # xarray slices coords with the data
+        values = np.asarray(da.values)  # computes if dask-backed
+        dims, shape = da.dims, da.shape
+        y = self._coord(da, dims[0], shape[0])
+        x = self._coord(da, dims[-1], shape[-1])
         return EagerGriddedRef(self._da, values, x, y)
 
     def grid(self, value: str | None = None):

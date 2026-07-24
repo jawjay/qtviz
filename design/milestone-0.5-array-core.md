@@ -52,11 +52,16 @@ parked with the private-repo ruling).
 ## 2. Decimated materialize ([D74])
 
 - `GriddedRef.materialize(max_cells: int | None = None)` — when the array
-  exceeds `max_cells`, slice with per-axis strides
-  (`ceil(dim / target_dim)`) before reading: `z[::sy, ::sx]` touches only the
-  needed zarr chunks / dask blocks; coords decimate with the same stride so
-  bounds stay exact. `None` (default) keeps today's full read — the *pipeline*
-  chooses the budget, the ref just obeys.
+  exceeds `max_cells`, slice with per-axis strides before reading
+  (`z[::sy, ::sx]`); coords decimate with the same stride so bounds stay
+  exact. `None` (default) keeps today's full read — the *pipeline* chooses
+  the budget, the ref just obeys.
+- **What decimation buys (spiked, honest):** the materialized result is
+  *memory-bounded* (~budget cells instead of the full array — the OOM killer),
+  and chunks are *skipped* only when the stride exceeds the chunk extent
+  (counting-store test pins both). Sub-chunk strides still decode every chunk;
+  strictly-partial I/O comes from `window()` (§3), which reads only in-window
+  chunks (spiked: 1 of 256).
 - The resolve pipeline materializes a lazy gridded element at
   `4 × _RASTER_SIZE` cells (headroom above widget resolution; `set_raster_size`
   scales it). Small arrays under budget are untouched — zero behavior change.

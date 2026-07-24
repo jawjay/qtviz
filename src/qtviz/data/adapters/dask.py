@@ -22,7 +22,14 @@ from typing import Any
 import numpy as np
 
 from ..accessor import resolve_expr
-from ..ref import EagerGriddedRef, EagerTabularRef, GriddedRef, Schema, TabularRef
+from ..ref import (
+    EagerGriddedRef,
+    EagerTabularRef,
+    GriddedRef,
+    Schema,
+    TabularRef,
+    decimation_strides,
+)
 
 
 def _checked(out: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
@@ -113,8 +120,19 @@ class DaskGriddedRef(GriddedRef):
     def native(self) -> Any:
         return self._arr
 
-    def materialize(self, limit: int | None = None) -> EagerGriddedRef:
-        return EagerGriddedRef(self._arr, np.asarray(self._arr.compute()), self._x, self._y)
+    def materialize(self, limit: int | None = None, *,
+                    max_cells: int | None = None) -> EagerGriddedRef:
+        strides = (decimation_strides(self._arr.shape, max_cells)
+                   if self._arr.ndim >= 2 else None)
+        if strides is None:
+            return EagerGriddedRef(self._arr, np.asarray(self._arr.compute()),
+                                   self._x, self._y)
+        sy, sx = strides
+        values = np.asarray(self._arr[::sy, ::sx].compute())
+        ny, nx = self._arr.shape[0], self._arr.shape[1]
+        x = self._x[::sx] if self._x is not None else np.arange(0, nx, sx)
+        y = self._y[::sy] if self._y is not None else np.arange(0, ny, sy)
+        return EagerGriddedRef(self._arr, values, x, y)
 
     def grid(self, value: str | None = None):
         return self.materialize().grid(value)

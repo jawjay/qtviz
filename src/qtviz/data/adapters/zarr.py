@@ -13,7 +13,14 @@ from typing import Any
 import numpy as np
 
 from ...errors import AdapterError
-from ..ref import EagerGriddedRef, EagerTabularRef, GriddedRef, Schema, TabularRef
+from ..ref import (
+    EagerGriddedRef,
+    EagerTabularRef,
+    GriddedRef,
+    Schema,
+    TabularRef,
+    decimation_strides,
+)
 
 
 class ZarrGriddedRef(GriddedRef):
@@ -34,8 +41,17 @@ class ZarrGriddedRef(GriddedRef):
     def native(self) -> Any:
         return self._z
 
-    def materialize(self, limit: int | None = None) -> EagerGriddedRef:
-        return EagerGriddedRef(self._z, np.asarray(self._z[:]))
+    def materialize(self, limit: int | None = None, *,
+                    max_cells: int | None = None) -> EagerGriddedRef:
+        strides = (decimation_strides(self._z.shape, max_cells)
+                   if len(self._z.shape) >= 2 else None)
+        if strides is None:
+            return EagerGriddedRef(self._z, np.asarray(self._z[:]))
+        sy, sx = strides
+        values = np.asarray(self._z[::sy, ::sx])  # trailing (e.g. RGBA) dims untouched
+        ny, nx = self._z.shape[0], self._z.shape[1]
+        return EagerGriddedRef(self._z, values,
+                               x=np.arange(0, nx, sx), y=np.arange(0, ny, sy))
 
     def grid(self, value: str | None = None):
         return self.materialize().grid(value)
