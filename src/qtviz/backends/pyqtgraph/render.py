@@ -120,12 +120,24 @@ class PgRenderHandle(RenderHandle):
     def _theme_ref(self):
         return self._backend._last_theme
 
-    def export(self, fmt: str, path) -> Path:
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
         from pyqtgraph.exporters import ImageExporter, SVGExporter  # noqa: PLC0415
 
+        if dpi is not None:  # honor-or-warn ([D72]): pyqtgraph exports at pixel size
+            import warnings  # noqa: PLC0415
+
+            from ...errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn("pyqtgraph: 'dpi' is not honored (raster exports at widget "
+                          "pixel size) and was ignored.", QtvizWarning, stacklevel=2)
         path = Path(path)
         scene = self._plots[0].scene()
         exporter = SVGExporter(scene) if fmt == "svg" else ImageExporter(scene)
+        if transparent and fmt != "svg":
+            from PySide6.QtGui import QColor  # noqa: PLC0415
+
+            exporter.parameters()["background"] = QColor(0, 0, 0, 0)
         exporter.export(str(path))
         return path
 

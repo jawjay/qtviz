@@ -92,7 +92,11 @@ def test_composite_dispose_tears_down_panes(view, table):
     assert all(c.widget is None for c in children)
 
 
-def test_composite_export_refuses(view, table):
+def test_composite_export_png_works_vector_refuses(view, table, tmp_path):
+    """Since 0.4 ([D72]) a composite exports one PNG (the grabbed container);
+    a single vector surface across backends remains a non-goal ([D58])."""
     v = view(_mixed(table, kind="splitter"))
-    with pytest.raises(NotImplementedError):
-        v.handle.export("png", "/tmp/nope.png")
+    out = v.handle.export("png", tmp_path / "composite.png")
+    assert out.exists() and out.stat().st_size > 0
+    with pytest.raises(NotImplementedError, match="per-pane"):
+        v.handle.export("svg", tmp_path / "composite.svg")

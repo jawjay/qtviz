@@ -135,7 +135,16 @@ class WebEngineRenderHandle(RenderHandle):
         self._set_log_flags(fig)  # the new root may change axis scales
         self._host.react(fig)
 
-    def export(self, fmt: str, path) -> Path:
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        if dpi is not None or transparent:  # honor-or-warn ([D72])
+            import warnings  # noqa: PLC0415
+
+            from ...errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn("webengine: export knobs (dpi/transparent) are not honored "
+                          "(the page is grabbed as rendered) and were ignored.",
+                          QtvizWarning, stacklevel=2)
         if fmt != "png":
             raise NotImplementedError(
                 f"webengine exports png (svg/pdf would need kaleido); got {fmt!r}"

@@ -184,7 +184,21 @@ class CompositeRenderHandle(RenderHandle):
         self.widget = None
 
     def export(self, fmt: str, path) -> Path:
-        raise NotImplementedError(
-            "a composite (mixed-backend) view has no single surface to export; "
-            "export each pane via its own handle (handle.children[i].export(...))"
-        )
+        """One raster of the whole layout ([D72]): the Qt container — every pane
+        plus chrome — grabbed via `QWidget.grab()`. png only: a single *vector*
+        surface across backends is intrinsic to the no-unified-scene design and
+        stays a non-goal ([D58]/R6); per-pane vector export remains available
+        through `handle.children[i].export(...)`. Note a webengine pane needs a
+        live compositor — offscreen it grabs blank."""
+        if fmt != "png":
+            raise NotImplementedError(
+                "a composite (mixed-backend) view exports png only (one raster of "
+                "the whole container, [D72]); vector export is per-pane: "
+                "handle.children[i].export(...)"
+            )
+        path = Path(path)
+        w = self.widget
+        if w.size().isEmpty():
+            w.resize(800, 600)  # grab needs a non-empty widget
+        w.grab().save(str(path), "PNG")
+        return path

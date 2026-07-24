@@ -88,9 +88,13 @@ class MplRenderHandle(RenderHandle):
             mask = (x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)
             self.event_bus.emit(SelectEvent(source_id, np.nonzero(mask)[0].tolist(), bounds))
 
-    def export(self, fmt: str, path) -> Path:
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
         path = Path(path)
-        self._fig.savefig(str(path), format=fmt)
+        kw: dict = {"format": fmt, "transparent": transparent}
+        if dpi is not None:
+            kw["dpi"] = dpi  # export knobs ([D72]); mpl honors both
+        self._fig.savefig(str(path), **kw)
         return path
 
     def dispose(self) -> None:

@@ -4,6 +4,48 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 0.4.0
+
+Vocabulary, annotation & export (R2/R3 partial + R6;
+`design/milestone-0.4-vocabulary.md`, [D67]–[D72]). Everything additive; the
+vocabulary stays curated ([D54]).
+
+### Added
+
+- **Annotation/reference elements ([D70]).** `HLine` / `VLine` / `Span` /
+  `Text` — data-less pure-data elements, composable via `*`, on all three
+  backends (webengine renders them as Plotly layout shapes/annotations).
+  Default to the theme foreground (chrome, not a palette series); a labeled
+  reference joins the legend; positions follow the axis scale (R1).
+- **Grouped / stacked Bars ([D68]).** `Bars(group=…, mode="grouped"|"stacked")`
+  — one palette-colored series per group (category order = the `color_by`
+  rule) with a group legend, identical numbers on every backend via the shared
+  `group_bars` helper. `group` is finally honored, everywhere.
+- **A real `Heatmap.aggregator` ([D69]).** `mean|sum|count|max|min|last`
+  actually reduces duplicate cells (shared `grid_reduce`); closes the
+  "last value wins" TODOs. Default is `mean` — the old implicit `last` stays
+  in the vocabulary.
+- **BoxPlot + Violin ([D67]).** One stats core (`box_stats`: linear-interp
+  quartiles, 1.5·IQR whiskers clipped to data, outliers; `kde`: Gaussian,
+  Scott's rule) shared by all three backends — webengine gets *precomputed*
+  box traces and polygon violins, never Plotly's house statistics. `by=`
+  splits per category with palette colors + legend.
+- **Log color normalization ([D71]).** `Scatter(color_by=…, color_norm="log")`
+  maps colors through log10 on every backend; the legend is an endpoints-only
+  key ([D48] honesty — never a linear gradient bar over a log mapping).
+- **Composite export ([D72]).** A mixed-backend `Layout` exports one PNG
+  (`handle.export("png", …)` grabs the whole Qt container) instead of
+  raising; vector formats stay per-pane by design ([D58]). Export knobs
+  `dpi` / `transparent` — honored by matplotlib, honored-or-warned elsewhere.
+
+### Fixed
+
+- **Native series colors now cycle the palette.** Multiple default-colored
+  series in an Overlay drew identically (all `palette[0]`) on the native
+  backends while webengine cycled — and legend swatches disagreed with the
+  drawn colors. One `series_index_map` now drives default colors and legend
+  swatches on all three backends; annotation elements don't consume slots.
+
 ## [Unreleased] — 0.3.0
 
 First-class axes + legends (root cause R5; `design/milestone-0.3-firstclass.md`,
