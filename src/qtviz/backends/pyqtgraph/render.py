@@ -178,11 +178,24 @@ class PyQtGraphBackend:
         apply_surface(plot, surf, theme, x_scale, y_scale)
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
+        ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self,
+                            parent_axes=plot, x_scale=x_scale, y_scale=y_scale,
+                            show_legend=surf.legend_enabled,
+                            legend_position=surf.legend_position)
         for element in children:
-            self._render_element(element, plot, theme, bus, natives, x_scale, y_scale)
+            self._render_element(element, ctx, natives)
+        # Overlay legend aggregation ([D60]): each child contributes its
+        # legend_entry(); merged into any color-mapping legend already drawn.
+        if surf.legend_enabled:
+            entries = [el.legend_entry(theme, i) for i, el in enumerate(children)
+                       if isinstance(el, Element)]
+            entries = [e for e in entries if e is not None]
+            if entries:
+                from ._legend import append_legend_entries  # noqa: PLC0415
 
-    def _render_element(self, element: Element, plot, theme, bus, natives,
-                        x_scale: str = "linear", y_scale: str = "linear") -> None:
+                append_legend_entries(plot, entries, theme, surf.legend_position)
+
+    def _render_element(self, element: Element, ctx, natives) -> None:
         fn = self.renderers.get(type(element))
         if fn is None:
             raise RendererMissingError(
@@ -191,8 +204,6 @@ class PyQtGraphBackend:
         check_recommended(
             element, backend_name=self.name, honored=self.honored_options(type(element))
         )
-        ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self,
-                            parent_axes=plot, x_scale=x_scale, y_scale=y_scale)
         item = fn(element, ctx)
         natives[element.id] = item
         _events.attach(element, item, ctx)

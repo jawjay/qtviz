@@ -1,0 +1,184 @@
+"""0.3 increment 3 — the legend contract ([D55]/[D60], milestone-0.3-firstclass §2).
+
+Legend stops being a color-mapping side-effect: every element can contribute a
+`legend_entry()` (a `label` + swatch), an Overlay aggregates the contributions
+into one legend, and the previously-dead `OverlayOptions.legend` (+ the new
+`legend_position`) actually control it.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+import pytest
+
+qv = pytest.importorskip("qtviz")
+
+from qtviz.errors import ValidationError  # noqa: E402
+
+_DATA = {"x": np.linspace(0.0, 10.0, 30), "y": np.linspace(0.0, 5.0, 30),
+         "cat": np.array(["a", "b", "c"] * 10)}
+
+
+def _has(name):
+    return name in {getattr(b, "name", b) for b in qv.backends.list_available()}
+
+
+def _overlay(*children, **opts):
+    return qv.Overlay(children, options=qv.OverlayOptions(**opts))
+
+
+# ── Tier-1: the contract itself (pure) ───────────────────────────────────────
+@pytest.mark.tier1
+def test_legend_entry_label_and_swatch():
+    theme = qv.Theme.light()
+    # default color → the element's palette slot (by overlay index)
+    e = qv.Curve(_DATA, x="x", y="y", label="raw").legend_entry(theme, 1)
+    assert e.label == "raw" and e.swatch == theme.palette[1]
+    # explicit color wins
+    e2 = qv.Curve(_DATA, x="x", y="y", label="raw", color="#ff0000").legend_entry(theme)
+    assert e2.swatch.hex().lower() == "#ff0000"
+
+
+@pytest.mark.tier1
+def test_legend_entry_none_without_label_and_for_color_by():
+    theme = qv.Theme.light()
+    assert qv.Curve(_DATA, x="x", y="y").legend_entry(theme) is None
+    # a color_by Scatter already emits its own categorical/continuous Legend
+    assert qv.Scatter(_DATA, x="x", y="y", color_by="cat",
+                      label="pts").legend_entry(theme) is None
+    # …but a static Scatter contributes like any styled element
+    assert qv.Scatter(_DATA, x="x", y="y", label="pts").legend_entry(theme).label == "pts"
+
+
+@pytest.mark.tier1
+def test_all_styling_elements_carry_label():
+    theme = qv.Theme.light()
+    els = [
+        qv.Scatter(_DATA, x="x", y="y", label="s"),
+        qv.Curve(_DATA, x="x", y="y", label="c"),
+        qv.Bars(_DATA, x="x", y="y", label="b"),
+        qv.Histogram(_DATA, column="y", label="h"),
+        qv.ErrorBars({"x": [1.0], "y": [2.0], "e": [0.1]}, x="x", y="y", err="e", label="e"),
+        qv.Spread({"x": [1.0], "lo": [0.0], "hi": [2.0]}, x="x", y_lo="lo", y_hi="hi",
+                  label="sp"),
+    ]
+    assert [el.legend_entry(theme).label for el in els] == ["s", "c", "b", "h", "e", "sp"]
+    assert all("label" in type(el).RECOMMENDED_OPTIONS for el in els)
+
+
+@pytest.mark.tier1
+def test_legend_position_vocabulary_validated():
+    assert qv.OverlayOptions(legend_position="top").legend_position == "top"
+    with pytest.raises(ValidationError):
+        qv.OverlayOptions(legend_position="bottom-left")
+
+
+# ── Tier-2: overlay aggregation on the native backends ───────────────────────
+def _labeled_overlay(**opts):
+    return _overlay(
+        qv.Curve(_DATA, x="x", y="y", label="raw"),
+        qv.Curve(_DATA, x="x", y=qv.col("y") * 2.0, label="smoothed"),
+        **opts,
+    )
+
+
+@pytest.mark.tier2
+def test_pyqtgraph_overlay_legend_has_both_entries(qtbot):
+    view = qv.View(_labeled_overlay(), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    lg = getattr(view.handle.plots[0], "_qtviz_legend", None)
+    assert lg is not None
+    labels = [label.text for _sample, label in lg.items]
+    assert labels == ["raw", "smoothed"]
+
+
+@pytest.mark.tier2
+def test_matplotlib_overlay_legend_has_both_entries(qtbot):
+    if not _has("matplotlib"):
+        pytest.skip("matplotlib not registered")
+    view = qv.View(_labeled_overlay(), backend="matplotlib")
+    qtbot.addWidget(view)
+    legend = view.handle.axes[0].get_legend()
+    assert legend is not None
+    assert [t.get_text() for t in legend.get_texts()] == ["raw", "smoothed"]
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("backend", ["pyqtgraph", "matplotlib"])
+def test_legend_false_suppresses_all_legends(backend, qtbot):
+    if not _has(backend):
+        pytest.skip(f"{backend} not registered")
+    # labeled curves AND a color_by scatter — legend=False silences both paths
+    node = _overlay(
+        qv.Curve(_DATA, x="x", y="y", label="raw"),
+        qv.Scatter(_DATA, x="x", y="y", color_by="cat"),
+        legend=False,
+    )
+    view = qv.View(node, backend=backend)
+    qtbot.addWidget(view)
+    if backend == "matplotlib":
+        assert view.handle.axes[0].get_legend() is None
+    else:
+        assert getattr(view.handle.plots[0], "_qtviz_legend", None) is None
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("backend", ["pyqtgraph", "matplotlib"])
+def test_no_double_legend_with_color_by(backend, qtbot):
+    """Risk #3: a color_by Scatter inside a labeled Overlay yields ONE legend —
+    the color key merged with the labeled entries, not two stacked legends."""
+    if not _has(backend):
+        pytest.skip(f"{backend} not registered")
+    node = _overlay(
+        qv.Scatter(_DATA, x="x", y="y", color_by="cat"),
+        qv.Curve(_DATA, x="x", y="y", label="trend"),
+    )
+    view = qv.View(node, backend=backend)
+    qtbot.addWidget(view)
+    if backend == "matplotlib":
+        ax = view.handle.axes[0]
+        legends = [a for a in ax.get_children() if type(a).__name__ == "Legend"]
+        assert len(legends) == 1
+        texts = [t.get_text() for t in ax.get_legend().get_texts()]
+    else:
+        plot = view.handle.plots[0]
+        lg = plot._qtviz_legend
+        assert lg is not None
+        texts = [label.text for _s, label in lg.items]
+    assert set(texts) == {"a", "b", "c", "trend"}  # color key + the labeled entry
+
+
+@pytest.mark.tier2
+def test_legend_position_none_suppresses(qtbot):
+    view = qv.View(_labeled_overlay(legend_position="none"), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    assert getattr(view.handle.plots[0], "_qtviz_legend", None) is None
+
+
+@pytest.mark.tier2
+def test_matplotlib_legend_position_top(qtbot):
+    if not _has("matplotlib"):
+        pytest.skip("matplotlib not registered")
+    view = qv.View(_labeled_overlay(legend_position="top"), backend="matplotlib")
+    qtbot.addWidget(view)
+    legend = view.handle.axes[0].get_legend()
+    assert legend._loc == 9  # mpl code for "upper center"
+
+
+@pytest.mark.tier2
+def test_bare_labeled_element_gets_a_legend(qtbot):
+    """`label` is honored even without an explicit Overlay (a bare element renders
+    as a one-child surface) — this is what makes label honor-or-warn honest."""
+    view = qv.View(qv.Curve(_DATA, x="x", y="y", label="only"), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    lg = view.handle.plots[0]._qtviz_legend
+    assert [label.text for _s, label in lg.items] == ["only"]
+
+
+# ── Tier-1: webengine carries the label as the trace name ────────────────────
+@pytest.mark.tier1
+def test_webengine_trace_name_uses_label():
+    from qtviz.backends.webengine import _figure
+
+    fig = _figure.build_figure(_labeled_overlay(), qv.Theme.light())
+    assert [t["name"] for t in fig["data"]] == ["raw", "smoothed"]

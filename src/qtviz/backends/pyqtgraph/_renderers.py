@@ -92,10 +92,10 @@ def render_scatter(element: Scatter, ctx):
     item = pg.ScatterPlotItem(x=logify(_col(d, "x"), x_log), y=logify(_col(d, "y"), y_log),
                               **kwargs)
     ctx.parent_axes.addItem(item)
-    if legend is not None:
+    if legend is not None and ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        add_legend(ctx.parent_axes, legend, ctx.theme)
+        add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     return item
 
 
@@ -161,10 +161,11 @@ def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
-    if result is not None and result.legend is not None:
+    if result is not None and result.legend is not None and ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        add_legend(ctx.parent_axes, result.legend, ctx.theme)  # category key / colorbar (C3)
+        # category key / colorbar (C3)
+        add_legend(ctx.parent_axes, result.legend, ctx.theme, ctx.legend_position)
     _wire_dynamic_raster(element, item, ctx)
     return item
 
@@ -208,13 +209,18 @@ def _wire_dynamic_raster(element, item, ctx) -> None:
     vb = ctx.parent_axes.getViewBox()
     plot = ctx.parent_axes
     theme = ctx.theme
+    position = ctx.legend_position
     holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
     target = PgRasterTarget(item, vb)
+    refresh_legend = (  # refresh on re-aggregation (C3); a suppressed legend stays off
+        (lambda lg: add_legend(plot, lg, theme, position)) if ctx.show_legend
+        else (lambda lg: None)
+    )
     controller = RasterController(
         source=source, target=target,
         rasterize=themed_rasterize(theme.palette, palettes.get("viridis"), _raster_title(element)),
         parent=vb, on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
-        on_legend=lambda lg: add_legend(plot, lg, theme),  # refresh on re-aggregation (C3)
+        on_legend=refresh_legend,
     )
     if not hasattr(vb, "_qtviz_rasters"):
         vb._qtviz_rasters = []
@@ -282,12 +288,12 @@ RENDERERS = {
 # Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker"}),
-    Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
-    Bars: frozenset({"color"}),                                    # not group/orient
-    Histogram: frozenset({"bins", "density", "color"}),
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    Bars: frozenset({"color", "label"}),                           # not group/orient
+    Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset(),                                            # colormap/interpolation unwired
     Heatmap: frozenset(),                                          # colormap/aggregator unwired
-    ErrorBars: frozenset(),                                        # color/direction unwired
-    Spread: frozenset({"color", "alpha"}),
+    ErrorBars: frozenset({"label"}),                               # color/direction unwired
+    Spread: frozenset({"color", "alpha", "label"}),
 }

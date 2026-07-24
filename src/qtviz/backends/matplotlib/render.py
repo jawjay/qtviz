@@ -161,10 +161,24 @@ class MatplotlibBackend:
         surfaces.append({"ax": ax, "surface_id": surface_id, "selectables": selectables})
         _events.connect_range(ax, surface_id, bus)
         children = node.children if isinstance(node, Overlay) else (node,)
+        ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self,
+                            parent_axes=ax, x_scale=x_scale, y_scale=y_scale,
+                            show_legend=surf.legend_enabled,
+                            legend_position=surf.legend_position)
         for element in children:
-            self._render_element(element, ax, theme, bus, selectables, natives)
+            self._render_element(element, ctx, selectables, natives)
+        # Overlay legend aggregation ([D60]): each child contributes its
+        # legend_entry(); merged into any color-mapping legend already drawn.
+        if surf.legend_enabled:
+            entries = [el.legend_entry(theme, i) for i, el in enumerate(children)
+                       if isinstance(el, Element)]
+            entries = [e for e in entries if e is not None]
+            if entries:
+                from ._renderers import append_legend_entries  # noqa: PLC0415
 
-    def _render_element(self, element: Element, ax, theme, bus, selectables, natives) -> None:
+                append_legend_entries(ax, entries, theme, surf.legend_position)
+
+    def _render_element(self, element: Element, ctx, selectables, natives) -> None:
         fn = self.renderers.get(type(element))
         if fn is None:
             raise RendererMissingError(
@@ -173,7 +187,6 @@ class MatplotlibBackend:
         check_recommended(
             element, backend_name=self.name, honored=self.honored_options(type(element))
         )
-        ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self, parent_axes=ax)
         artist = fn(element, ctx)
         natives[element.id] = artist
         _events.attach(element, artist, ctx, selectables)

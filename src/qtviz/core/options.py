@@ -81,9 +81,13 @@ class AxisSpec(Immutable):
         self._freeze()
 
 
+# Where a surface's legend goes ([D60]); translated per backend, `none` hides it.
+_LEGEND_POSITIONS = ("auto", "right", "top", "none")
+
+
 class OverlayOptions(Immutable):
     """Shared-surface options for an `Overlay`: title, per-axis `AxisSpec` (`x`/`y`),
-    `aspect`, legend toggle, background.
+    `aspect`, legend toggle + position, background.
 
     `x_label`/`y_label` are conveniences that populate `x.label`/`y.label` (so the
     canonical axis config has one home, `AxisSpec`); they remain readable as
@@ -99,15 +103,27 @@ class OverlayOptions(Immutable):
         y: AxisSpec | None = None,
         aspect: float | None = None,
         legend: bool = True,
+        legend_position: str = "auto",
         background: ColorSpec | None = None,
     ) -> None:
+        if legend_position not in _LEGEND_POSITIONS:
+            raise ValidationError(
+                f"legend_position must be one of {_LEGEND_POSITIONS}, got {legend_position!r}"
+            )
         self.title = title
         self.x = x if x is not None else AxisSpec(label=x_label)
         self.y = y if y is not None else AxisSpec(label=y_label)
         self.aspect = float(aspect) if aspect is not None else None
         self.legend = legend
+        self.legend_position = legend_position
         self.background = background
         self._freeze()
+
+    @property
+    def legend_enabled(self) -> bool:
+        """The one switch backends consult: `legend=False` or `position="none"`
+        both hide every legend on the surface (aggregated *and* color-mapping)."""
+        return self.legend and self.legend_position != "none"
 
     @property
     def x_label(self) -> str | None:

@@ -13,7 +13,7 @@ class ErrorBars(Element):
     """Error bars around `y` — `err` is symmetric, or `(lo, hi)` for asymmetric."""
 
     REQUIRED_OPTIONS = ("x", "y", "err")
-    RECOMMENDED_OPTIONS = ("direction", "color")
+    RECOMMENDED_OPTIONS = ("direction", "color", "label")
 
     def __init__(
         self,
@@ -24,6 +24,7 @@ class ErrorBars(Element):
         err: Accessor | tuple[Accessor, Accessor],
         direction: Literal["y", "x", "both"] = "y",
         color: ColorSpec | None = None,
+        label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -33,6 +34,7 @@ class ErrorBars(Element):
         self.err = err
         self.direction = direction
         self.color = color
+        self.label = label
         self._validate_tabular()
         self._freeze()
 

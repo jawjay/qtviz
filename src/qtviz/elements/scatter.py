@@ -14,7 +14,7 @@ class Scatter(Element):
     """A point cloud — x/y positions with optional `color`/`size` encoding."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker")
+    RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker", "label")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -29,6 +29,7 @@ class Scatter(Element):
         size_by: str | None = None,
         marker: Literal["circle", "square", "triangle", "diamond", "cross"] = "circle",
         alpha: float = 1.0,
+        label: str | None = None,
         scale: Literal["native", "auto", "datashader"] = "native",
         agg: Literal["auto", "count", "sum", "mean", "max", "min", "std", "any", "by"] = "auto",
         backend_hint: str | None = None,
@@ -46,12 +47,21 @@ class Scatter(Element):
         self.color, self.color_by = color, color_by
         self.size, self.size_by = size, size_by
         self.marker, self.alpha = marker, alpha
+        self.label = label
         self.scale = scale
         self.agg = agg
         self.pyqtgraph_use_opengl = pyqtgraph_use_opengl
         self.matplotlib_rasterized = matplotlib_rasterized
         self._validate_tabular()
         self._freeze()
+
+    def legend_entry(self, theme, index: int = 0):
+        """A `color_by` Scatter already emits its own categorical/continuous
+        `Legend` from the color mapping — contributing a swatch entry too would
+        double-legend ([D60] risk #3), so it opts out of the contract."""
+        if self.color_by is not None:
+            return None
+        return super().legend_entry(theme, index)
 
     def channels(self) -> dict:
         """x/y always; `color`/`size` roles when bound to a data column, so the

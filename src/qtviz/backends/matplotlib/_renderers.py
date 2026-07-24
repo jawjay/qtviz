@@ -61,7 +61,8 @@ def render_scatter(element: Scatter, ctx):
         artist = ctx.parent_axes.scatter(
             _col(d, "x"), _col(d, "y"), c=rgba, s=s, alpha=element.alpha, marker=marker,
         )
-        _add_legend(ctx.parent_axes, legend, ctx.theme)
+        if ctx.show_legend:
+            _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
         return artist
     return ctx.parent_axes.scatter(
         _col(d, "x"), _col(d, "y"),
@@ -69,7 +70,33 @@ def render_scatter(element: Scatter, ctx):
     )
 
 
-def _add_legend(ax, legend, theme) -> None:
+# `legend_position` vocabulary → mpl `loc` (None → mpl's default placement).
+_LOC = {"auto": None, "right": "upper right", "top": "upper center"}
+
+
+def _draw_key(ax, handles, title, fg, position: str) -> None:
+    """(Re)draw the axes key legend from `handles`, remembering them so the Overlay
+    aggregation ([D60]) can merge its labeled entries in rather than replacing a
+    color-mapping key."""
+    ax._qtviz_handles = handles
+    loc = _LOC.get(position)
+    kw = {"loc": loc} if loc is not None else {}
+    ax.legend(handles=handles, title=title, fontsize=8, framealpha=0.85, labelcolor=fg, **kw)
+
+
+def append_legend_entries(ax, entries, theme, position: str = "auto") -> None:
+    """Merge the Overlay-aggregated `LegendEntry` contributions into the axes
+    legend (after any color-mapping key drawn by a `color_by` renderer)."""
+    from matplotlib.patches import Patch  # noqa: PLC0415
+
+    handles = list(getattr(ax, "_qtviz_handles", []))
+    handles += [Patch(facecolor=e.swatch.mpl(), label=e.label) for e in entries]
+    prev = ax.get_legend()
+    title = prev.get_title().get_text() or None if prev is not None else None
+    _draw_key(ax, handles, title, theme.foreground.mpl(), position)
+
+
+def _add_legend(ax, legend, theme, position: str = "auto") -> None:
     from matplotlib.patches import Patch  # noqa: PLC0415
 
     fg = theme.foreground.mpl()
@@ -79,12 +106,12 @@ def _add_legend(ax, legend, theme) -> None:
         ax._qtviz_cbar = None
     if legend.kind == "categorical":
         handles = [Patch(facecolor=c.mpl(), label=label) for label, c in legend.entries]
-        ax.legend(handles=handles, title=legend.title, fontsize=8, framealpha=0.85, labelcolor=fg)
+        _draw_key(ax, handles, legend.title, fg, position)
     elif not legend.linear:  # non-linear density: endpoints-only key, not a misleading bar ([D48])
         ramp = legend.ramp
         handles = [Patch(facecolor=ramp[-1].mpl(), label=f"{legend.vmax:.3g}"),
                    Patch(facecolor=ramp[0].mpl(), label=f"{legend.vmin:.3g}")]
-        ax.legend(handles=handles, title=legend.title, fontsize=8, framealpha=0.85, labelcolor=fg)
+        _draw_key(ax, handles, legend.title, fg, position)
     else:
         from matplotlib.cm import ScalarMappable  # noqa: PLC0415
         from matplotlib.colors import LinearSegmentedColormap, Normalize  # noqa: PLC0415
@@ -133,8 +160,9 @@ def render_image(element: Image, ctx):
         artist = ctx.parent_axes.imshow(
             result.rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
         )
-        if result.legend is not None:
-            _add_legend(ctx.parent_axes, result.legend, ctx.theme)  # category key / colorbar (C3)
+        if result.legend is not None and ctx.show_legend:
+            # category key / colorbar (C3)
+            _add_legend(ctx.parent_axes, result.legend, ctx.theme, ctx.legend_position)
         _wire_dynamic_raster(element, artist, ctx)
         return artist
     values = np.asarray(element.data.grid().values)
@@ -187,14 +215,19 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
 
     ax = ctx.parent_axes
     theme = ctx.theme
+    position = ctx.legend_position
     holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
     target = MplRasterTarget(artist, ax)
+    refresh_legend = (  # refresh on re-aggregation (C3); a suppressed legend stays off
+        (lambda lg: _add_legend(ax, lg, theme, position)) if ctx.show_legend
+        else (lambda lg: None)
+    )
     controller = RasterController(
         source=source, target=target,
         rasterize=themed_rasterize(theme.palette, palettes.get("viridis"), _raster_title(element)),
         parent=ax.figure.canvas,
         on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
-        on_legend=lambda lg: _add_legend(ax, lg, theme),  # refresh on re-aggregation (C3)
+        on_legend=refresh_legend,
     )
     if not hasattr(ax, "_qtviz_rasters"):
         ax._qtviz_rasters = []
@@ -246,12 +279,12 @@ RENDERERS = {
 # Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker"}),
-    Curve: frozenset({"color", "line_width", "line_style", "alpha"}),
-    Bars: frozenset({"color"}),                                  # not group/orient
-    Histogram: frozenset({"bins", "density", "color"}),
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    Bars: frozenset({"color", "label"}),                         # not group/orient
+    Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap"}),                            # not aggregator
-    ErrorBars: frozenset({"direction", "color"}),
-    Spread: frozenset({"color", "alpha"}),
+    ErrorBars: frozenset({"direction", "color", "label"}),
+    Spread: frozenset({"color", "alpha", "label"}),
 }

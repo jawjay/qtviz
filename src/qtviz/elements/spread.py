@@ -12,7 +12,7 @@ class Spread(Element):
     """A filled band between `y_lo` and `y_hi` (e.g. a confidence interval)."""
 
     REQUIRED_OPTIONS = ("x", "y_lo", "y_hi")
-    RECOMMENDED_OPTIONS = ("color", "alpha")
+    RECOMMENDED_OPTIONS = ("color", "alpha", "label")
     CHANNELS = ("x", "y_lo", "y_hi")
 
     def __init__(
@@ -24,6 +24,7 @@ class Spread(Element):
         y_hi: Accessor,
         color: ColorSpec | None = None,
         alpha: float = 0.3,
+        label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -33,5 +34,6 @@ class Spread(Element):
         self.x, self.y_lo, self.y_hi = x, y_lo, y_hi
         self.color = color
         self.alpha = alpha
+        self.label = label
         self._validate_tabular()
         self._freeze()

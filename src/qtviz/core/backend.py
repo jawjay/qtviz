@@ -42,6 +42,11 @@ class RenderContext:
     # that must pre-transform data (pyqtgraph) read these; others may ignore them.
     x_scale: str = "linear"
     y_scale: str = "linear"
+    # Surface legend policy ([D60]): renderers that draw their own legends (a
+    # `color_by` Scatter, a datashaded raster) consult these instead of drawing
+    # unconditionally, so `OverlayOptions.legend=False` silences every path.
+    show_legend: bool = True
+    legend_position: str = "auto"
 
 
 class RendererRegistry:

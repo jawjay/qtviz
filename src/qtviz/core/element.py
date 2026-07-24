@@ -62,6 +62,22 @@ class Element(Immutable):
     def _validate_tabular(self) -> None:
         validate_channels(self.data, self.channels(), who=type(self).__name__)
 
+    def legend_entry(self, theme, index: int = 0):
+        """This element's contribution to a multi-series legend ([D60]): its
+        `label` + swatch, or `None` when it shouldn't contribute (no `label`, or —
+        per override — it already emits its own `Legend`, like a `color_by`
+        Scatter). `index` is the element's position in its Overlay, which decides
+        the default palette slot exactly as the renderers do."""
+        label = getattr(self, "label", None)
+        if label is None:
+            return None
+        from .color import Color  # noqa: PLC0415 — element stays import-light
+        from .encoding import LegendEntry  # noqa: PLC0415
+
+        spec = getattr(self, "color", None)
+        swatch = Color(spec) if spec is not None else theme.palette[index % len(theme.palette)]
+        return LegendEntry(str(label), swatch)
+
     def _replace_data(self, ref):
         """Low-level copy with `data` swapped (no re-validation) — used by the
         resolve pipeline to install the role-keyed eager ref. Marks the copy

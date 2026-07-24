@@ -105,7 +105,7 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
     return [{
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
-        "marker": marker, "name": element.color_by or element.id,
+        "marker": marker, "name": element.label or element.color_by or element.id,
     }]
 
 
@@ -116,7 +116,7 @@ def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
     return [{
         "type": "scattergl", "mode": "lines",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
-        "line": line, "opacity": element.alpha, "name": element.id,
+        "line": line, "opacity": element.alpha, "name": element.label or element.id,
     }]
 
 
@@ -124,7 +124,7 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
     d = element.data
     x = list(np.asarray(d.series("x")))            # keep categorical labels as-is
     trace = {"type": "bar", "marker": {"color": _css(_element_color(element, theme, idx))},
-             "name": element.id}
+             "name": element.label or element.id}
     if element.orient == "h":
         trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
     else:
@@ -135,7 +135,8 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
 def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
     trace = {
         "type": "histogram", "x": _floats(element.data.series("column")),
-        "marker": {"color": _css(_element_color(element, theme, idx))}, "name": element.id,
+        "marker": {"color": _css(_element_color(element, theme, idx))},
+        "name": element.label or element.id,
     }
     if isinstance(element.bins, int):
         trace["nbinsx"] = element.bins
@@ -188,7 +189,7 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
     trace = {
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
-        "marker": {"color": color}, "name": element.id,
+        "marker": {"color": color}, "name": element.label or element.id,
     }
     trace["error_y" if element.direction in ("y", "both") else "error_x"] = err
     return [trace]
@@ -202,10 +203,10 @@ def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
     # lower edge first (no fill), then upper edge filling down to it.
     lo = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_lo")),
           "line": {"width": 0, "color": line_css}, "showlegend": False, "hoverinfo": "skip",
-          "name": element.id}
+          "name": element.label or element.id}
     hi = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_hi")),
           "line": {"width": 0, "color": line_css}, "fill": "tonexty",
-          "fillcolor": _rgba_css(color, element.alpha), "name": element.id}
+          "fillcolor": _rgba_css(color, element.alpha), "name": element.label or element.id}
     return [lo, hi]
 
 

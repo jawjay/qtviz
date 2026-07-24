@@ -11,7 +11,7 @@ class Histogram(Element):
     """Binned frequency of a single raw `column`."""
 
     REQUIRED_OPTIONS = ("column",)
-    RECOMMENDED_OPTIONS = ("bins", "density", "color")
+    RECOMMENDED_OPTIONS = ("bins", "density", "color", "label")
     CHANNELS = ("column",)
 
     def __init__(
@@ -22,6 +22,7 @@ class Histogram(Element):
         bins: int | str = "auto",
         density: bool = False,
         color: ColorSpec | None = None,
+        label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -31,5 +32,6 @@ class Histogram(Element):
         self.bins = bins
         self.density = density
         self.color = color
+        self.label = label
         self._validate_tabular()
         self._freeze()

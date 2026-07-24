@@ -39,6 +39,17 @@ class Legend:
     #                      show endpoints only, no interior linear ticks ([D48])
 
 
+@dataclass(frozen=True)
+class LegendEntry:
+    """One element's contribution to a multi-series legend — its `label` text and
+    swatch color ([D60]: legend as a per-element contract, not a color-mapping
+    side-effect). Produced by `Element.legend_entry()`; an Overlay aggregates its
+    children's entries into one legend."""
+
+    label: str
+    swatch: Color
+
+
 def is_categorical(values) -> bool:
     """A column is categorical unless it is a plain numeric dtype (int/float/
     complex). Booleans and strings/objects are treated as categories."""

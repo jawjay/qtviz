@@ -13,7 +13,7 @@ class Bars(Element):
     """Bars — `x` categories (or numeric positions) with `y` heights."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("group", "color", "orient")
+    RECOMMENDED_OPTIONS = ("group", "color", "orient", "label")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -25,6 +25,7 @@ class Bars(Element):
         group: str | None = None,
         orient: Literal["v", "h"] = "v",
         color: ColorSpec | None = None,
+        label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -34,5 +35,6 @@ class Bars(Element):
         self.group = group
         self.orient = orient
         self.color = color
+        self.label = label
         self._validate_tabular()
         self._freeze()
