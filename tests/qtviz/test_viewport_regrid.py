@@ -137,6 +137,51 @@ def test_matplotlib_lazy_grid_renders_shaded_and_wired(qtbot):
 
 
 @pytest.mark.tier2
+def test_milestone_0_5_acceptance(qtbot):
+    """milestone-0.5 §9 end to end: a 16k×16k zarr (256M cells — never written,
+    so only touched chunks cost anything) renders decimated after reading a tiny
+    fraction of its chunks; zoom re-reads only the visible window and the raster
+    sharpens; a dask-backed xarray field takes the same path."""
+    zarr = pytest.importorskip("zarr")
+    from qtviz.data.adapters.zarr import ZarrGriddedRef  # noqa: PLC0415
+
+    from .test_gridded_decimation import _CountingStore  # noqa: PLC0415
+
+    store = _CountingStore()
+    z = zarr.create_array(store=store, shape=(16_384, 16_384), chunks=(512, 512),
+                          dtype="f8")                  # unwritten → fill-value reads
+    el = qv.Image(z, bounds=(0.0, 0.0, 100.0, 100.0))
+    view = qv.View(el, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    view.resize(600, 400)
+    view.show()
+    qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
+    item = view.native(el.id)
+    assert np.asarray(item.image).size <= 4 * 800 * 600 * 4  # memory-bounded (rgba)
+    vb = view.handle.plots[0].getViewBox()
+    store.gets = 0
+    vb.setXRange(0.0, 5.0, padding=0)                   # zoom to 1/20th per axis
+    vb.setYRange(0.0, 5.0, padding=0)
+    qtbot.waitUntil(
+        lambda: item.mapRectToParent(item.boundingRect()).width() < 20.0, timeout=5000
+    )
+    # the zoom re-read is strictly partial: only in-window chunks (~2×2 of 32×32)
+    assert 0 < store.gets <= 16
+    # dask-backed xarray grid takes the same loop
+    dask_array = pytest.importorskip("dask.array")
+    xr = pytest.importorskip("xarray")
+    da = xr.DataArray(dask_array.zeros((4096, 4096), chunks=512), dims=("y", "x"))
+    el2 = qv.Image(da, bounds=(0.0, 0.0, 1.0, 1.0))
+    v2 = qv.View(el2, backend="pyqtgraph")
+    qtbot.addWidget(v2)
+    v2.resize(400, 300)
+    v2.show()
+    qtbot.waitUntil(lambda: v2.handle is not None, timeout=8000)
+    assert getattr(v2.handle.plots[0].getViewBox(), "_qtviz_rasters", [])
+    assert isinstance(as_data_ref(z), ZarrGriddedRef)   # (import used)
+
+
+@pytest.mark.tier2
 def test_small_eager_grid_regression(qtbot):
     """Under-budget / eager grids render exactly as before — raw values, no loop."""
     el = qv.Image(np.arange(16.0).reshape(4, 4), bounds=(0.0, 0.0, 1.0, 1.0))

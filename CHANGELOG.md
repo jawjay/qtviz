@@ -4,6 +4,33 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 0.5.0
+
+The array data core (owner-directed scope: numpy / pandas / dask / zarr /
+xarray; `design/milestone-0.5-array-core.md`, [D73]–[D75]). Huge gridded
+arrays now render at **screen cost, not array cost**.
+
+### Added
+
+- **Decimated gridded materialize ([D74]).** A lazy grid (zarr / dask / N-D
+  xarray) over budget reads a strided, screen-scale slice instead of
+  computing whole (`ZarrGriddedRef.materialize` was literally `z[:]` — a
+  10 GB array to paint 800×600 px). Memory-bounded at ~4× the raster size;
+  coords decimate with the data so geometry stays exact; under-budget arrays
+  are untouched.
+- **Viewport regrid ([D75]).** `window()` on the lazy gridded refs
+  (strictly-partial chunk I/O — a chunk-sized window reads 1 chunk of 64) +
+  a regrid loop through the same `RasterController` as the datashader path:
+  pan/zoom re-reads only the visible window at widget resolution and the
+  image *sharpens*; the raster is shaded through the shared encoding ramp
+  with a colorbar that tracks the visible value range. Both native backends;
+  webengine renders the static decimated raster.
+- **Container ergonomics ([D73]).** The pandas index joins the columns
+  (time-indexed frames plot without `reset_index()`; a real column wins a
+  name collision with a warning); a `zarr.Group` of 1-D arrays is a table;
+  `gridded()` on a single-variable xarray `Dataset` selects the variable;
+  xarray grid extents come from the eager coord arrays without computing.
+
 ## [Unreleased] — 0.4.0
 
 Vocabulary, annotation & export (R2/R3 partial + R6;
