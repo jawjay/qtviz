@@ -96,6 +96,13 @@ class RenderHandle:
     def update(self, new_root) -> None:
         raise NotImplementedError
 
+    def set_element_data(self, element_id: str, arrays: dict) -> bool:
+        """Write new role-keyed arrays into the element's live primitive without a
+        rebuild ([D77] — the incremental path behind `streaming=True`). Returns
+        `False` when this backend/item can't (the caller falls back to
+        `update()` or a rebuild — degradation is explicit, never silent)."""
+        return False
+
     def dispose(self) -> None:
         self.event_bus.dispose()
         w = self.widget

@@ -70,6 +70,75 @@ def _is_reactive(root) -> bool:
     return callable(getattr(root, "get", None)) and callable(getattr(root, "subscribe", None))
 
 
+def _is_live_ref(ref) -> bool:
+    """A live data ref (a `qv.stream`, or any third-party ref speaking the same
+    dialect): subscribable AND versioned — the marker that its contents change
+    underneath a render ([D76])."""
+    return callable(getattr(ref, "subscribe", None)) and callable(getattr(ref, "version", None))
+
+
+class _StreamBinding(QObject):
+    """Live-data glue ([D77], resolves [D7]): one subscription per distinct live
+    ref in the *original* (unresolved) root — the resolved tree holds snapshots.
+    Appends arrive on any thread; the queued `notified` signal marshals to the
+    GUI thread, where a single-shot 0 ms timer coalesces a burst into **one
+    refresh per event-loop tick**. A refresh re-resolves the live elements and
+    writes them in place (`handle.set_element_data`); if any element can't take
+    the fast path, it degrades explicitly — `handle.update` (webengine's
+    Plotly-react diff) or a full View rebuild (matplotlib)."""
+
+    notified = Signal()
+
+    def __init__(self, view: View, root) -> None:
+        super().__init__(view)
+        from .compose import _elements_of  # noqa: PLC0415
+
+        self._view = view
+        self._elements = [el for el in _elements_of(root)
+                          if _is_live_ref(getattr(el, "data", None))]
+        refs = {id(el.data): el.data for el in self._elements}
+        self._subs = [ref.subscribe(self._on_append) for ref in refs.values()]
+        self._timer = QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self._refresh)
+        self.notified.connect(self._schedule)
+
+    @property
+    def live(self) -> bool:
+        return bool(self._elements)
+
+    def _on_append(self, _ref) -> None:
+        self.notified.emit()  # any thread → queued onto the GUI event loop
+
+    def _schedule(self) -> None:
+        self._timer.start(0)  # coalesce: one refresh per tick ([D7]/[D40])
+
+    def _refresh(self) -> None:
+        handle = self._view.handle
+        if handle is None:
+            return  # mid-rebuild; the new render reads the fresh buffer anyway
+        ok = True
+        for el in self._elements:
+            arrays = el.data.resolve_channels(el.channels())
+            if not handle.set_element_data(el.id, arrays):
+                ok = False
+                break
+        if ok:
+            return
+        try:
+            from ..data import resolve_node  # noqa: PLC0415
+
+            handle.update(resolve_node(self._view._root))
+        except NotImplementedError:
+            self._view._rebuild()  # the honest slow path (mpl: streaming=False)
+
+    def dispose(self) -> None:
+        self._timer.stop()
+        for sub in self._subs:
+            sub.dispose()
+        self._subs = []
+
+
 class View(QWidget):
     def __init__(self, root, *, backend="auto", theme: Theme | None = None, parent=None) -> None:
         super().__init__(parent)
@@ -77,6 +146,7 @@ class View(QWidget):
         self._backend_choice = backend
         self._subs: list[tuple] = []          # (event_type, cb, throttle_ms)
         self._handle = None
+        self._binding: _StreamBinding | None = None  # live-data glue ([D77])
         self._superseded = None               # prior render kept visible during async rebuild
         self._placeholder: QLabel | None = None
         self._error: QLabel | None = None
@@ -142,6 +212,13 @@ class View(QWidget):
         if self._pending_state is not None:
             handle.restore_state(self._pending_state)
             self._pending_state = None
+        if self._binding is not None:
+            self._binding.dispose()
+            self._binding = None
+        binding = _StreamBinding(self, self._root)
+        if binding.live:
+            self._binding = binding
+            self.destroyed.connect(binding.dispose)
 
     def _drop_superseded(self) -> None:
         if self._superseded is not None:

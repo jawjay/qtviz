@@ -9,7 +9,7 @@ from pathlib import Path
 import pyqtgraph as pg
 
 from ...core._degrade import check_recommended
-from ...core._scales import delog, log_lim
+from ...core._scales import delog, log_lim, logify
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.compose import (
@@ -104,6 +104,33 @@ class PgRenderHandle(RenderHandle):
     def dispose(self) -> None:
         self._dispose_rasters()
         super().dispose()
+
+    @require_gui_thread
+    def set_element_data(self, element_id: str, arrays: dict) -> bool:
+        """In-place refresh ([D77]): `setData` on the live Scatter/Curve item —
+        milliseconds at 100k points, no rebuild. Positions logify under a log
+        surface (R1) and the ViewBox selectable registry is refreshed so
+        brushing stays truthful. Per-point styling roles (color/size) and other
+        item types return False → the caller falls back."""
+        import numpy as np  # noqa: PLC0415
+
+        item = self._natives.get(element_id)
+        if not isinstance(item, (pg.ScatterPlotItem, pg.PlotCurveItem)):
+            return False
+        if set(arrays) != {"x", "y"}:  # styling channels need a real re-render
+            return False
+        x = np.asarray(arrays["x"], dtype="float64")
+        y = np.asarray(arrays["y"], dtype="float64")
+        vb = item.getViewBox()
+        x_log = getattr(vb, "x_log", False)
+        y_log = getattr(vb, "y_log", False)
+        item.setData(x=logify(x, x_log), y=logify(y, y_log))
+        selectables = getattr(vb, "_selectables", None)
+        if selectables is not None:  # brush masks run in data space
+            for i, entry in enumerate(selectables):
+                if entry[0] == element_id:
+                    selectables[i] = (element_id, x, y)
+        return True
 
     @require_gui_thread
     def update(self, new_root) -> None:
