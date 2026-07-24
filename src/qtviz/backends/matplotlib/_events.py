@@ -42,5 +42,10 @@ def attach(element, artist, ctx, selectables: list) -> None:
         x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
         y = np.asarray(element.data.series("y"), dtype="float64")
         selectables.append((element.id, x, y))
+    from ..pyqtgraph._events import raster_source_xy  # noqa: PLC0415 — shared [D78] rule
+
+    raster = raster_source_xy(element)
+    if raster is not None:
+        selectables.append(raster)  # brush a datashaded view → source rows ([D78])
     if isinstance(element, Scatter) and artist is not None and hasattr(artist, "get_offsets"):
         wire_pick(artist, element.id, ctx.event_bus)

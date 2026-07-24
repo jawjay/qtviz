@@ -85,6 +85,9 @@ class MplRenderHandle(RenderHandle):
         selectable element on the axes (element id + indices + bounds)."""
         bounds = (float(xmin), float(ymin), float(xmax), float(ymax))
         for source_id, x, y in self._surfaces[ax_index]["selectables"]:
+            if x is None:  # bounds-only ([D78]): the bounds ARE the selection
+                self.event_bus.emit(SelectEvent(source_id, [], bounds))
+                continue
             mask = (x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)
             self.event_bus.emit(SelectEvent(source_id, np.nonzero(mask)[0].tolist(), bounds))
 

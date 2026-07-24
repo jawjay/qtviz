@@ -54,8 +54,15 @@ class QtvizViewBox(pg.ViewBox):
         return delog(v, self.y_log)
 
     # ── selectable registry (populated by renderers via _events.attach) ──
-    def add_selectable(self, source_id: str, x: np.ndarray, y: np.ndarray) -> None:
-        self._selectables.append((source_id, np.asarray(x), np.asarray(y)))
+    def add_selectable(self, source_id: str, x, y) -> None:
+        """Register brushable rows. `x`/`y` of `None` registers a *bounds-only*
+        selectable ([D78]): a brush emits `SelectEvent(source_id, [], bounds)` —
+        the predicate form for sources whose row identity would force a compute
+        (a lazy datashaded raster)."""
+        if x is None or y is None:
+            self._selectables.append((source_id, None, None))
+        else:
+            self._selectables.append((source_id, np.asarray(x), np.asarray(y)))
 
     def select_bounds(self, xmin: float, ymin: float, xmax: float, ymax: float) -> None:
         """Programmatic brush — also the path the Shift-drag gesture calls.
@@ -65,6 +72,9 @@ class QtvizViewBox(pg.ViewBox):
         (element-id + indices + bounds; refines D8 for selection)."""
         bounds = (float(xmin), float(ymin), float(xmax), float(ymax))
         for source_id, x, y in self._selectables:
+            if x is None:  # bounds-only ([D78]): the bounds ARE the selection
+                self._bus.emit(SelectEvent(source_id, [], bounds))
+                continue
             mask = (x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)
             self._bus.emit(SelectEvent(source_id, np.nonzero(mask)[0].tolist(), bounds))
 

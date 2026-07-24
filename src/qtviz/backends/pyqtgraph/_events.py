@@ -10,7 +10,22 @@ from __future__ import annotations
 import numpy as np
 
 from ...core.event import HoverEvent, PickEvent
-from ...elements import Curve, Scatter
+from ...elements import Curve, Image, Scatter
+
+
+def raster_source_xy(element):
+    """The brushable rows of a datashaded Image ([D78]): the SOURCE element's
+    resolved x/y when its data is eager (they're in memory anyway), or
+    `(source_id, None, None)` for a lazy source — row identity there would
+    force a full scan per brush, so only the bounds are emitted."""
+    source = getattr(element, "_raster_source", None)
+    if not isinstance(element, Image) or source is None:
+        return None
+    ref = source.data
+    if getattr(ref, "is_lazy", False):
+        return source.id, None, None
+    arrays = ref.resolve_channels({"x": source.x, "y": source.y})
+    return source.id, arrays["x"], arrays["y"]
 
 
 def wire_scatter(item, source_id: str, bus, vb) -> None:
@@ -53,5 +68,8 @@ def attach(element, item, ctx) -> None:
         x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
         y = np.asarray(element.data.series("y"), dtype="float64")
         vb.add_selectable(element.id, x, y)
+    raster = raster_source_xy(element)
+    if raster is not None and hasattr(vb, "add_selectable"):
+        vb.add_selectable(*raster)  # brush a datashaded view → source rows ([D78])
     if isinstance(element, Scatter) and item is not None and hasattr(item, "sigClicked"):
         wire_scatter(item, element.id, ctx.event_bus, vb)
