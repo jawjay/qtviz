@@ -21,6 +21,7 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
 
+from ...core._scales import delog
 from ...core.event import RangeEvent, SelectEvent, TapEvent
 
 _SHIFT = Qt.KeyboardModifier.ShiftModifier
@@ -28,13 +29,29 @@ _LEFT = Qt.MouseButton.LeftButton
 
 
 class QtvizViewBox(pg.ViewBox):
-    def __init__(self, *, bus, surface_id: str, **kw) -> None:
+    """When an axis is log-scaled (`x_log`/`y_log`), the ViewBox — like everything
+    pyqtgraph draws — lives in *exponent* space (the renderers pre-`log10` the data,
+    Approach A). The R1 rule: every coordinate that leaves this class (events) or
+    enters its public API (`select_bounds`) is **data space**; the de-log happens
+    exactly once, here at the boundary (feasibility §10.3)."""
+
+    def __init__(self, *, bus, surface_id: str, x_log: bool = False, y_log: bool = False,
+                 **kw) -> None:
         super().__init__(**kw)
         self.setMouseMode(pg.ViewBox.PanMode)
         self._bus = bus
         self._surface_id = surface_id
+        self.x_log = x_log
+        self.y_log = y_log
         self._selectables: list[tuple[str, np.ndarray, np.ndarray]] = []
         self.sigRangeChanged.connect(self._on_range)
+
+    # ── R1: view (possibly exponent) space → data space ──
+    def _to_data_x(self, v: float) -> float:
+        return delog(v, self.x_log)
+
+    def _to_data_y(self, v: float) -> float:
+        return delog(v, self.y_log)
 
     # ── selectable registry (populated by renderers via _events.attach) ──
     def add_selectable(self, source_id: str, x: np.ndarray, y: np.ndarray) -> None:
@@ -42,17 +59,23 @@ class QtvizViewBox(pg.ViewBox):
 
     def select_bounds(self, xmin: float, ymin: float, xmax: float, ymax: float) -> None:
         """Programmatic brush — also the path the Shift-drag gesture calls.
-        Emits one SelectEvent per selectable element with the in-bounds row
-        indices (element-id + indices + bounds; refines D8 for selection)."""
+        Takes and emits **data-space** bounds regardless of axis scale (the
+        selectables are stored in data space, so the mask runs there too). Emits
+        one SelectEvent per selectable element with the in-bounds row indices
+        (element-id + indices + bounds; refines D8 for selection)."""
         bounds = (float(xmin), float(ymin), float(xmax), float(ymax))
         for source_id, x, y in self._selectables:
             mask = (x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)
             self._bus.emit(SelectEvent(source_id, np.nonzero(mask)[0].tolist(), bounds))
 
-    # ── range → RangeEvent (surface-level, D8) ──
+    # ── range → RangeEvent (surface-level, D8; R1: emitted in data space) ──
     def _on_range(self, *_args) -> None:
         (x0, x1), (y0, y1) = self.viewRange()
-        self._bus.emit(RangeEvent(self._surface_id, (x0, x1), (y0, y1)))
+        self._bus.emit(RangeEvent(
+            self._surface_id,
+            (self._to_data_x(x0), self._to_data_x(x1)),
+            (self._to_data_y(y0), self._to_data_y(y1)),
+        ))
 
     # ── mouse ownership ──
     def mouseDragEvent(self, ev, axis=None) -> None:
@@ -68,12 +91,15 @@ class QtvizViewBox(pg.ViewBox):
             self.rbScaleBox.hide()
             p1 = self.mapSceneToView(ev.buttonDownScenePos())
             p2 = self.mapSceneToView(ev.scenePos())
-            xmin, xmax = sorted((p1.x(), p2.x()))
-            ymin, ymax = sorted((p1.y(), p2.y()))
+            # view coords are exponent space under log — normalize before masking (R1)
+            xmin, xmax = sorted((self._to_data_x(p1.x()), self._to_data_x(p2.x())))
+            ymin, ymax = sorted((self._to_data_y(p1.y()), self._to_data_y(p2.y())))
             self.select_bounds(xmin, ymin, xmax, ymax)
 
     def mouseClickEvent(self, ev) -> None:
         if ev.button() == _LEFT:
             p = self.mapSceneToView(ev.scenePos())
-            self._bus.emit(TapEvent(self._surface_id, float(p.x()), float(p.y())))
+            self._bus.emit(TapEvent(
+                self._surface_id, self._to_data_x(p.x()), self._to_data_y(p.y())
+            ))
         super().mouseClickEvent(ev)

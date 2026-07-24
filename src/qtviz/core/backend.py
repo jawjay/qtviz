@@ -38,6 +38,10 @@ class RenderContext:
     event_bus: EventBus
     backend: Backend
     parent_axes: Any = None      # ViewBox / Axes for overlay children
+    # Effective (capability-gated) axis scales for this surface ([D59]). Renderers
+    # that must pre-transform data (pyqtgraph) read these; others may ignore them.
+    x_scale: str = "linear"
+    y_scale: str = "linear"
 
 
 class RendererRegistry:

@@ -12,6 +12,7 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
 
+from ...core._scales import logify
 from ...core.color import Color
 from ...elements import (
     Bars,
@@ -40,6 +41,12 @@ def _color(spec, theme, idx: int = 0) -> Color:
 
 def _col(ref, name) -> np.ndarray:
     return np.asarray(ref.series(name), dtype="float64")
+
+
+def _xy_log(ctx) -> tuple[bool, bool]:
+    """Whether this surface's axes are log — pyqtgraph pre-transforms the data
+    (Approach A), so the x/y renderers `logify` what they plot ([D59] increment 2)."""
+    return ctx.x_scale == "log", ctx.y_scale == "log"
 
 
 def _u8(rgba_row) -> tuple[int, int, int, int]:
@@ -81,7 +88,9 @@ def render_scatter(element: Scatter, ctx):
         color = _color(element.color, ctx.theme).qt()
         color.setAlphaF(alpha)
         kwargs["brush"] = pg.mkBrush(color)
-    item = pg.ScatterPlotItem(x=_col(d, "x"), y=_col(d, "y"), **kwargs)
+    x_log, y_log = _xy_log(ctx)
+    item = pg.ScatterPlotItem(x=logify(_col(d, "x"), x_log), y=logify(_col(d, "y"), y_log),
+                              **kwargs)
     ctx.parent_axes.addItem(item)
     if legend is not None:
         from ._legend import add_legend  # noqa: PLC0415
@@ -95,7 +104,11 @@ def render_curve(element: Curve, ctx):
     color = _color(element.color, ctx.theme).qt()
     color.setAlphaF(element.alpha)
     pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
-    item = pg.PlotCurveItem(x=_col(d, "x"), y=_col(d, "y"), pen=pen)
+    x_log, y_log = _xy_log(ctx)
+    # connect="finite" breaks the line at NaN — the mask logify leaves for
+    # non-positive values under log (and any NaN already in the data).
+    item = pg.PlotCurveItem(x=logify(_col(d, "x"), x_log), y=logify(_col(d, "y"), y_log),
+                            pen=pen, connect="finite")
     ctx.parent_axes.addItem(item)
     return item
 
@@ -108,7 +121,11 @@ def render_bars(element: Bars, ctx):
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")  # categorical → indices
     brush = _color(element.color, ctx.theme).qt()
-    item = pg.BarGraphItem(x=x, height=height, width=0.6, brush=brush)
+    x_log, y_log = _xy_log(ctx)
+    # under log-y bar *heights* are log10'd (baseline sits at data 1); a proper
+    # clipped-baseline treatment is deferred with the rest of the bar vocabulary.
+    item = pg.BarGraphItem(x=logify(x, x_log), height=logify(height, y_log),
+                           width=0.6, brush=brush)
     ctx.parent_axes.addItem(item)
     return item
 
@@ -119,7 +136,9 @@ def render_histogram(element: Histogram, ctx):
     counts, edges = np.histogram(vals, bins=bins, density=element.density)
     centers = (edges[:-1] + edges[1:]) / 2.0
     width = float(edges[1] - edges[0]) if len(edges) > 1 else 1.0
-    item = pg.BarGraphItem(x=centers, height=counts, width=width * 0.95,
+    x_log, y_log = _xy_log(ctx)
+    item = pg.BarGraphItem(x=logify(centers, x_log), height=logify(counts, y_log),
+                           width=width * 0.95,
                            brush=_color(element.color, ctx.theme).qt())
     ctx.parent_axes.addItem(item)
     return item
@@ -218,9 +237,17 @@ def render_heatmap(element: Heatmap, ctx):
 
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
+    x_log, y_log = _xy_log(ctx)
+    y, hi, lo = _col(d, "y"), _col(d, "err_hi"), _col(d, "err_lo")
+    ly = logify(y, y_log)
+    if y_log:
+        # error extents are deltas — recompute them in exponent space so the
+        # whiskers land at log10(y ± err), not log10(y) ± err.
+        top, bottom = logify(y + hi, True) - ly, ly - logify(y - lo, True)
+    else:
+        top, bottom = hi, lo
     item = pg.ErrorBarItem(
-        x=_col(d, "x"), y=_col(d, "y"),
-        top=_col(d, "err_hi"), bottom=_col(d, "err_lo"), beam=0.0,
+        x=logify(_col(d, "x"), x_log), y=ly, top=top, bottom=bottom, beam=0.0,
     )
     ctx.parent_axes.addItem(item)
     return item
@@ -228,9 +255,10 @@ def render_errorbars(element: ErrorBars, ctx):
 
 def render_spread(element: Spread, ctx):
     d = element.data
-    x = _col(d, "x")
-    lo = pg.PlotDataItem(x, _col(d, "y_lo"))
-    hi = pg.PlotDataItem(x, _col(d, "y_hi"))
+    x_log, y_log = _xy_log(ctx)
+    x = logify(_col(d, "x"), x_log)
+    lo = pg.PlotDataItem(x, logify(_col(d, "y_lo"), y_log))
+    hi = pg.PlotDataItem(x, logify(_col(d, "y_hi"), y_log))
     brush = _color(element.color, ctx.theme).qt()
     brush.setAlphaF(element.alpha)
     fill = pg.FillBetweenItem(lo, hi, brush=brush)

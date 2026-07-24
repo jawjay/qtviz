@@ -109,6 +109,33 @@ def resolve_scale(requested: str, available, *, axis: str, backend: str) -> str:
     return "linear"
 
 
+def effective_scales(node: Node, surf: OverlayOptions, available, backend: str) -> tuple[str, str]:
+    """The `(x_scale, y_scale)` a backend should actually render for one surface:
+    each axis capability-gated by `resolve_scale`, then — if the surface holds any
+    raster (`Image` / `Heatmap`, incl. a datashaded Scatter/Curve, which resolves to
+    `Image`) — forced back to linear with a warning. A raster is never
+    log-transformed ([D59] defer + gate; feasibility §10.4)."""
+    x_scale = resolve_scale(surf.x.scale, available, axis="x", backend=backend)
+    y_scale = resolve_scale(surf.y.scale, available, axis="y", backend=backend)
+    if x_scale == y_scale == "linear":
+        return (x_scale, y_scale)
+    from ..elements import Heatmap, Image  # noqa: PLC0415 — avoid a core→elements cycle
+
+    if any(isinstance(e, (Image, Heatmap)) for e in _elements_of(node)):
+        import warnings  # noqa: PLC0415
+
+        from ..errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(
+            f"{backend}: a raster (Image/Heatmap or datashaded) surface doesn't "
+            f"support non-linear axis scales yet; rendering linear.",
+            QtvizWarning,
+            stacklevel=2,
+        )
+        return ("linear", "linear")
+    return (x_scale, y_scale)
+
+
 def _elements_of(node: Node) -> Iterator[Element]:
     if isinstance(node, Element):
         yield node

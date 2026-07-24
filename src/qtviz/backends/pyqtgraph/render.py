@@ -8,9 +8,10 @@ from pathlib import Path
 import pyqtgraph as pg
 
 from ...core._degrade import check_recommended
+from ...core._scales import delog, log_lim
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
-from ...core.compose import Layout, Overlay, surface_of
+from ...core.compose import Layout, Overlay, effective_scales, surface_of
 from ...core.element import Element
 from ...core.event import EventBus
 from ...core.threading import require_gui_thread
@@ -36,6 +37,9 @@ _CAPS = Capabilities(
     # (svg/pdf) is the matplotlib backend's role by design (roadmap Phase 2).
     exports=frozenset({"png"}),
     threading_model="gui_only",
+    # log via Approach A (pre-log10'd data + log-tick AxisItem + R1 at the event
+    # boundaries); symlog is matplotlib-only (pyqtgraph #1035) and warn-degrades.
+    scales=frozenset({"linear", "log"}),
 )
 
 
@@ -55,20 +59,32 @@ class PgRenderHandle(RenderHandle):
         return self._plots[0].getViewBox() if self._plots else None
 
     def capture_state(self) -> ViewState:
+        """Portable state is **data space** (R1): under log the ViewBox range is in
+        exponent space and is de-logged here, so a `ViewState` round-trips across
+        rebuilds and backend switches unchanged."""
         vb = self._vb()
         if vb is None:
             return ViewState()
         (x0, x1), (y0, y1) = vb.viewRange()
-        return ViewState(x_range=(x0, x1), y_range=(y0, y1))
+        x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
+        return ViewState(
+            x_range=(delog(x0, x_log), delog(x1, x_log)),
+            y_range=(delog(y0, y_log), delog(y1, y_log)),
+        )
 
     def restore_state(self, state: ViewState) -> None:
         vb = self._vb()
         if vb is None:
             return
-        if state.x_range:
-            vb.setXRange(*state.x_range, padding=0)
-        if state.y_range:
-            vb.setYRange(*state.y_range, padding=0)
+        x_rng, y_rng = state.x_range, state.y_range
+        if x_rng and getattr(vb, "x_log", False):
+            x_rng = log_lim(x_rng, axis="x", backend="pyqtgraph")
+        if y_rng and getattr(vb, "y_log", False):
+            y_rng = log_lim(y_rng, axis="y", backend="pyqtgraph")
+        if x_rng:
+            vb.setXRange(*x_rng, padding=0)
+        if y_rng:
+            vb.setYRange(*y_rng, padding=0)
 
     def _dispose_rasters(self) -> None:
         for plot in self._plots:
@@ -153,16 +169,20 @@ class PyQtGraphBackend:
             self._render_cell(node, widget, theme, bus, plots, natives, 0, 0)
 
     def _render_cell(self, node, widget, theme, bus, plots, natives, row, col) -> None:
-        vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex)
+        surf = surface_of(node)
+        x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
+        vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex,
+                          x_log=(x_scale == "log"), y_log=(y_scale == "log"))
         plot = widget.addPlot(row=row, col=col, viewBox=vb)
         style_plot(plot, theme)
-        apply_surface(plot, surface_of(node), theme, self.capabilities.scales)
+        apply_surface(plot, surf, theme, x_scale, y_scale)
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
         for element in children:
-            self._render_element(element, plot, theme, bus, natives)
+            self._render_element(element, plot, theme, bus, natives, x_scale, y_scale)
 
-    def _render_element(self, element: Element, plot, theme, bus, natives) -> None:
+    def _render_element(self, element: Element, plot, theme, bus, natives,
+                        x_scale: str = "linear", y_scale: str = "linear") -> None:
         fn = self.renderers.get(type(element))
         if fn is None:
             raise RendererMissingError(
@@ -171,7 +191,8 @@ class PyQtGraphBackend:
         check_recommended(
             element, backend_name=self.name, honored=self.honored_options(type(element))
         )
-        ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self, parent_axes=plot)
+        ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self,
+                            parent_axes=plot, x_scale=x_scale, y_scale=y_scale)
         item = fn(element, ctx)
         natives[element.id] = item
         _events.attach(element, item, ctx)

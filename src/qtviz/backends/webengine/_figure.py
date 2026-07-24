@@ -18,7 +18,8 @@ from __future__ import annotations
 import numpy as np
 
 from ...core._degrade import check_recommended
-from ...core.compose import Overlay, resolve_scale, surface_of
+from ...core._scales import log_lim
+from ...core.compose import Overlay, effective_scales, surface_of
 from ...data import resolve_node
 from ...elements import (
     Bars,
@@ -255,6 +256,9 @@ def build(node, theme) -> tuple[dict, list[str]]:
     """
     surf = surface_of(node)  # before resolve — the shared-surface options (title/labels)
     node = resolve_node(node)
+    # effective scales need the *resolved* node — a datashaded Scatter is an Image
+    # by now, and the raster gate must see it ([D59]).
+    x_scale, y_scale = effective_scales(node, surf, _SUPPORTED_SCALES, "webengine")
     traces: list[dict] = []
     source_ids: list[str] = []
     for idx, element in enumerate(_elements(node)):
@@ -274,7 +278,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
         el_traces = builder(element, theme, idx)
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))
-    return {"data": traces, "layout": plotly_layout(theme, surf)}, source_ids
+    return {"data": traces, "layout": plotly_layout(theme, surf, x_scale, y_scale)}, source_ids
 
 
 def build_figure(node, theme) -> dict:
@@ -282,17 +286,17 @@ def build_figure(node, theme) -> dict:
     return build(node, theme)[0]
 
 
-# Axis scales the webengine (Plotly) path renders today (axis-surface seam, [D59]).
-# Keep in sync with WebEngineBackend.capabilities.scales; expands to {linear, log}
-# when log + R1 land (0.3 increment 2).
-_SUPPORTED_SCALES = frozenset({"linear"})
+# Axis scales the webengine (Plotly) path renders (axis-surface seam, [D59]).
+# Keep in sync with WebEngineBackend.capabilities.scales.
+_SUPPORTED_SCALES = frozenset({"linear", "log"})
 
 
-def _axis(grid: str, fg: str, axis: str, spec=None) -> dict:
+def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -> dict:
     """One Plotly axis dict — its own `title` object (never shared between x/y, so a
     label on one axis can't leak onto the other) — carrying the surface's per-axis
-    `AxisSpec` (label / declarative range / invert; scale warn-gated, applied in
-    increment 2)."""
+    `AxisSpec` (label / scale / declarative range / invert). Under `type="log"`
+    Plotly's `range` is **log₁₀**, so a data-space `lim` is transformed here — the
+    outgoing half of the webengine R1 (feasibility §10.2)."""
     title = {"font": {"color": fg}}
     if spec is not None and spec.label:
         title["text"] = spec.label
@@ -304,18 +308,24 @@ def _axis(grid: str, fg: str, axis: str, spec=None) -> dict:
         "title": title,
     }
     if spec is not None:
-        resolve_scale(spec.scale, _SUPPORTED_SCALES, axis=axis, backend="webengine")
-        if spec.lim is not None:
-            d["range"] = [spec.lim[0], spec.lim[1]]
+        is_log = eff_scale == "log"
+        if is_log:
+            d["type"] = "log"
+        lim = spec.lim
+        if lim is not None and is_log:
+            lim = log_lim(lim, axis=axis, backend="webengine")
+        if lim is not None:
+            d["range"] = [lim[0], lim[1]]
         if spec.invert:
             d["autorange"] = "reversed"
     return d
 
 
-def plotly_layout(theme, surf=None) -> dict:
+def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "linear") -> dict:
     """A Plotly layout carrying the qtviz Theme (axes/bg/font/palette) and, when
     given, the shared-surface options (`OverlayOptions` — title, per-axis labels /
-    limits / invert, aspect — axis-surface seam)."""
+    scale / limits / invert, aspect — axis-surface seam). The caller resolves the
+    effective scales (`effective_scales`)."""
     fg = _css(theme.foreground)
     bg = _css(theme.background)
     grid = _css(theme.grid)
@@ -324,8 +334,8 @@ def plotly_layout(theme, surf=None) -> dict:
         "plot_bgcolor": bg,
         "font": {"color": fg, "family": theme.font_family, "size": theme.font_size},
         "colorway": [_css(c) for c in theme.palette],
-        "xaxis": _axis(grid, fg, "x", surf.x if surf else None),
-        "yaxis": _axis(grid, fg, "y", surf.y if surf else None),
+        "xaxis": _axis(grid, fg, "x", surf.x if surf else None, x_scale),
+        "yaxis": _axis(grid, fg, "y", surf.y if surf else None, y_scale),
         "margin": {"l": 50, "r": 20, "t": 30, "b": 40},
         "showlegend": False,
     }

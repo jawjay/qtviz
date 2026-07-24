@@ -16,7 +16,7 @@ from matplotlib.figure import Figure
 from ...core._degrade import check_recommended
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
-from ...core.compose import Layout, Overlay, surface_of
+from ...core.compose import Layout, Overlay, effective_scales, surface_of
 from ...core.element import Element
 from ...core.event import EventBus, SelectEvent
 from ...core.threading import require_gui_thread
@@ -38,6 +38,9 @@ _CAPS = Capabilities(
     animation=False,  # honest: no animation API ([D52], §12 out of scope)
     exports=frozenset({"png", "svg", "pdf"}),
     threading_model="gui_only",
+    # mpl transforms data itself and keeps get_xlim() in data space — no R1 work;
+    # symlog is the mpl-only scale that exercises the capability gate ([D59]).
+    scales=frozenset({"linear", "log", "symlog"}),
 )
 
 
@@ -150,7 +153,9 @@ class MatplotlibBackend:
 
     def _render_cell(self, node, ax, theme, bus, surfaces, natives) -> None:
         apply_theme_ax(ax, theme)
-        apply_surface(ax, surface_of(node), theme, self.capabilities.scales)
+        surf = surface_of(node)
+        x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
+        apply_surface(ax, surf, theme, x_scale, y_scale)
         surface_id = uuid.uuid4().hex
         selectables: list = []
         surfaces.append({"ax": ax, "surface_id": surface_id, "selectables": selectables})

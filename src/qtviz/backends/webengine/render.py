@@ -15,6 +15,7 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from ...core._scales import delog, log_lim
 from ...core.backend import RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.event import EventBus, RangeEvent
@@ -41,6 +42,9 @@ _CAPS = Capabilities(
     # png via QWebEngineView.grab (a rendered page); svg/pdf would need kaleido — later.
     exports=frozenset({"png"}),
     threading_model="gui_only",
+    # Plotly renders log natively (`xaxis.type="log"`); its relayout/range values
+    # are log10, normalized at the handle boundary (R1). symlog is Plotly-less.
+    scales=frozenset({"linear", "log"}),
 )
 
 
@@ -49,15 +53,26 @@ class WebEngineRenderHandle(RenderHandle):
     last-known axis ranges (shadow state) so `capture_state` is synchronous even
     though the live ranges live in JS."""
 
-    def __init__(self, widget: PlotView, event_bus, host, source_ids, surface_id, theme) -> None:
+    def __init__(self, widget: PlotView, event_bus, host, source_ids, surface_id, theme,
+                 fig: dict | None = None) -> None:
         super().__init__(widget, event_bus, "webengine")
         self._host = host
         self._traces = list(source_ids)
         self._surface_id = surface_id
         self._theme = theme
-        self._x_range: tuple[float, float] | None = None
+        self._x_range: tuple[float, float] | None = None  # shadow state, DATA space (R1)
         self._y_range: tuple[float, float] | None = None
+        self._set_log_flags(fig)
         widget.received.connect(self._on_message)
+
+    def _set_log_flags(self, fig: dict | None) -> None:
+        """Whether each axis is log — read off the built figure spec (its layout is
+        the source of truth). Plotly's relayout/range values are log10 on a log axis,
+        so these flags drive the R1 normalization below. RawFigure hosts (no qtviz
+        figure spec) keep both False — their ranges pass through untouched."""
+        layout = (fig or {}).get("layout", {})
+        self._x_log = layout.get("xaxis", {}).get("type") == "log"
+        self._y_log = layout.get("yaxis", {}).get("type") == "log"
 
     def _on_message(self, name: str, payload) -> None:
         if name == "plotly.relayout":
@@ -75,13 +90,15 @@ class WebEngineRenderHandle(RenderHandle):
 
     def _merge_range(self, x, y) -> None:
         """Merge a (possibly partial) range update into the shadow state and emit
-        a RangeEvent once both axes are known (Plotly relayout / Bokeh ranges)."""
+        a RangeEvent once both axes are known (Plotly relayout / Bokeh ranges).
+        Incoming log-axis values are log10 — normalized to data space here (R1),
+        so the shadow state, `capture_state`, and every RangeEvent are data space."""
         if x is None and y is None:
             return
         if x is not None:
-            self._x_range = x
+            self._x_range = (delog(x[0], self._x_log), delog(x[1], self._x_log))
         if y is not None:
-            self._y_range = y
+            self._y_range = (delog(y[0], self._y_log), delog(y[1], self._y_log))
         if self._x_range is not None and self._y_range is not None:
             self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
 
@@ -97,11 +114,17 @@ class WebEngineRenderHandle(RenderHandle):
     def restore_state(self, state: ViewState) -> None:
         update: dict = {}
         if state.x_range:
-            self._x_range = state.x_range
-            update["xaxis.range"] = list(state.x_range)
+            self._x_range = state.x_range           # shadow state stays data space
+            sent = log_lim(state.x_range, axis="x", backend="webengine") \
+                if self._x_log else state.x_range   # …the wire wants log10 (R1)
+            if sent:
+                update["xaxis.range"] = list(sent)
         if state.y_range:
             self._y_range = state.y_range
-            update["yaxis.range"] = list(state.y_range)
+            sent = log_lim(state.y_range, axis="y", backend="webengine") \
+                if self._y_log else state.y_range
+            if sent:
+                update["yaxis.range"] = list(sent)
         if update:
             self._host.relayout(update)  # queued until the bridge is ready
 
@@ -109,6 +132,7 @@ class WebEngineRenderHandle(RenderHandle):
     def update(self, new_root) -> None:
         fig, source_ids = _figure.build(new_root, self._theme)
         self._traces = source_ids
+        self._set_log_flags(fig)  # the new root may change axis scales
         self._host.react(fig)
 
     def export(self, fmt: str, path) -> Path:
@@ -163,7 +187,8 @@ class WebEngineBackend:
         host = PlotlyBackend(fig)
         view = PlotView(host, parent=parent)
         bus = EventBus()
-        return WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme)
+        return WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme,
+                                     fig=fig)
 
     def _render_raw(self, node: RawFigure, parent, theme) -> WebEngineRenderHandle:
         """Host an existing Plotly/Bokeh/HoloViews figure unchanged (D31). The
