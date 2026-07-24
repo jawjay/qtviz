@@ -35,11 +35,13 @@ from .core.view import View
 from .data import (
     Accessor,
     Expression,
+    StreamRef,
     col,
     gridded,
     lit,
     set_raster_size,
     set_raster_threshold,
+    stream,
     tabular,
 )
 from .elements import (
@@ -76,6 +78,8 @@ __all__ = [
     # data binding (accessors, D14) + shape overrides (D17) + raster routing (Phase 4)
     "Accessor", "Expression", "col", "lit", "tabular", "gridded",
     "set_raster_threshold", "set_raster_size",
+    # streaming ([D76])
+    "stream", "StreamRef",
     # styling
     "Color", "ColorSpec", "Palette", "palettes", "Theme",
     "Options", "OverlayOptions", "LayoutOptions", "AxisSpec",

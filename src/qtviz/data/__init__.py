@@ -17,6 +17,7 @@ from .registry import (
     register_data_adapter,
     tabular,
 )
+from .stream import StreamRef, stream
 
 __all__ = [
     "DataRef",
@@ -44,4 +45,5 @@ __all__ = [
     "node_is_lazy",
     "set_raster_threshold",
     "set_raster_size",
+    "StreamRef", "stream",
 ]

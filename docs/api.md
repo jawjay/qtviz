@@ -63,6 +63,8 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - gridded
         - set_raster_threshold
         - set_raster_size
+        - stream
+        - StreamRef
 
 ## Encoding & styling
 
