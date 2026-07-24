@@ -44,6 +44,7 @@ from .data import (
 )
 from .elements import (
     Bars,
+    BoxPlot,
     Curve,
     ErrorBars,
     Heatmap,
@@ -55,6 +56,7 @@ from .elements import (
     Span,
     Spread,
     Text,
+    Violin,
     VLine,
 )
 from .reactive import Signal, batch, derived, effect, signal
@@ -65,6 +67,8 @@ __all__ = [
     "RawFigure",
     # annotation / reference elements ([D70])
     "HLine", "VLine", "Span", "Text",
+    # statistical elements ([D67])
+    "BoxPlot", "Violin",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)

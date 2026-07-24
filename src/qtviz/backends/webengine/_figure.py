@@ -23,6 +23,7 @@ from ...core.compose import Overlay, effective_scales, surface_of
 from ...data import resolve_node
 from ...elements import (
     Bars,
+    BoxPlot,
     Curve,
     ErrorBars,
     Heatmap,
@@ -34,6 +35,7 @@ from ...elements import (
     Span,
     Spread,
     Text,
+    Violin,
     VLine,
 )
 from ...errors import IncompatibleOverlayError, RendererMissingError
@@ -262,6 +264,74 @@ def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
     return [lo, hi]
 
 
+
+def _dist_groups(element, theme, idx: int):
+    """Shared BoxPlot/Violin prep: per-category groups + names + swatches."""
+    from ...core._stats import split_by  # noqa: PLC0415
+    from ...core.encoding import category_swatches  # noqa: PLC0415
+
+    d = element.data
+    cats, groups = split_by(d.series("column"),
+                            d.series("by") if element.by is not None else None)
+    if cats is not None:
+        names = [str(c) for c in cats]
+        swatches = category_swatches(cats, theme.palette)
+        show = True
+    else:
+        names = [element.label or element.id] * len(groups)
+        swatches = [_element_color(element, theme, idx)] * len(groups)
+        show = element.label is not None
+    return groups, names, swatches, show
+
+
+def _boxplot_trace(element: BoxPlot, theme, idx: int) -> list[dict]:
+    """Precomputed Plotly box traces from the shared `box_stats` ([D67]) — no
+    raw values, so Plotly cannot substitute its own statistics. Outliers ride
+    as a separate marker trace (precomputed boxes draw no fliers)."""
+    from ...core._stats import box_stats  # noqa: PLC0415
+
+    groups, names, swatches, show = _dist_groups(element, theme, idx)
+    traces: list[dict] = []
+    for i, g in enumerate(groups):
+        s = box_stats(g)
+        traces.append({
+            "type": "box", "x": [names[i]],
+            "q1": [s.q1], "median": [s.median], "q3": [s.q3],
+            "lowerfence": [s.lo_whisker], "upperfence": [s.hi_whisker],
+            "marker": {"color": _css(swatches[i])}, "opacity": element.alpha,
+            "name": names[i], "showlegend": show,
+        })
+        if len(s.outliers):
+            traces.append({
+                "type": "scattergl", "mode": "markers",
+                "x": [names[i]] * len(s.outliers), "y": _floats(s.outliers),
+                "marker": {"color": _css(theme.foreground), "size": 4},
+                "name": names[i], "showlegend": False, "hoverinfo": "skip",
+            })
+    return traces
+
+
+def _violin_trace(element: Violin, theme, idx: int) -> list[dict]:
+    """Filled polygons from the shared `kde` ([D67]) — deliberately NOT Plotly's
+    violin trace, whose own KDE would diverge from the native backends."""
+    from ...core._stats import kde  # noqa: PLC0415
+
+    groups, names, swatches, show = _dist_groups(element, theme, idx)
+    traces: list[dict] = []
+    for i, g in enumerate(groups):
+        grid, dens = kde(g)
+        half = dens / (dens.max() or 1.0) * 0.4
+        xs = np.concatenate([i + half, (i - half)[::-1]])
+        ys = np.concatenate([grid, grid[::-1]])
+        traces.append({
+            "type": "scatter", "mode": "lines", "x": xs, "y": ys,
+            "fill": "toself", "fillcolor": _rgba_css(swatches[i], element.alpha),
+            "line": {"width": 1, "color": _css(swatches[i])},
+            "name": names[i], "showlegend": show, "hoverinfo": "skip",
+        })
+    return traces
+
+
 _TRACE_BUILDERS = {
     Scatter: _scatter_trace,
     Curve: _curve_trace,
@@ -271,6 +341,8 @@ _TRACE_BUILDERS = {
     Heatmap: _heatmap_trace,
     ErrorBars: _errorbars_trace,
     Spread: _spread_trace,
+    BoxPlot: _boxplot_trace,
+    Violin: _violin_trace,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -288,6 +360,8 @@ HONORED: dict[type, frozenset[str]] = {
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Span: frozenset({"color", "alpha", "label"}),
     Text: frozenset({"color", "size", "anchor"}),
+    BoxPlot: frozenset({"by", "color", "alpha", "label"}),
+    Violin: frozenset({"by", "color", "alpha", "label"}),
 }
 
 

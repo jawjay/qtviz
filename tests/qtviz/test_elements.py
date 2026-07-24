@@ -22,6 +22,8 @@ def test_curated_vocabulary_constructs(make_elements):
         "ErrorBars", "Spread", "Image", "Heatmap",
         # the 0.4 annotation/reference elements ([D70])
         "HLine", "VLine", "Span", "Text",
+        # the 0.4 statistical elements ([D67])
+        "BoxPlot", "Violin",
     }
 
 

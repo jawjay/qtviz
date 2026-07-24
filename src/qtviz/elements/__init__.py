@@ -12,10 +12,12 @@ from .image import Image
 from .raw_figure import RawFigure
 from .scatter import Scatter
 from .spread import Spread
+from .stats import BoxPlot, Violin
 
 __all__ = [
     "Scatter", "Curve", "Bars", "Image",
     "Heatmap", "Histogram", "ErrorBars", "Spread",
     "RawFigure",
     "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
+    "BoxPlot", "Violin",
 ]

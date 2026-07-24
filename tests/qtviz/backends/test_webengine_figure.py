@@ -68,10 +68,11 @@ def test_layout_carries_theme(table):
     assert dark["xaxis"]["gridcolor"].startswith("rgb(")
 
 
-def test_supports_all_eight_elements():
+def test_supports_the_data_vocabulary():
     names = {t.__name__ for t in _figure.supported_types()}
     assert names == {
         "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars", "Spread",
+        "BoxPlot", "Violin",
     }
 
 

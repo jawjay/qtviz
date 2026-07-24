@@ -88,6 +88,9 @@ def make_elements(table, grid):
             "VLine": qv.VLine(5.0),
             "Span": qv.Span(0.2, 0.8),
             "Text": qv.Text(5.0, 0.5, "note"),
+            # statistical elements ([D67], 0.4)
+            "BoxPlot": qv.BoxPlot(table, column="y"),
+            "Violin": qv.Violin(table, column="y"),
         }
 
     return build

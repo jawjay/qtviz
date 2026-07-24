@@ -19,6 +19,8 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Heatmap
         - ErrorBars
         - Spread
+        - BoxPlot
+        - Violin
         - RawFigure
 
 ## Annotation & reference elements

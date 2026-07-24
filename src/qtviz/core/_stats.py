@@ -7,9 +7,51 @@ house rules.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 GRID_AGGS = ("mean", "sum", "count", "max", "min", "last")
+
+
+@dataclass(frozen=True)
+class BoxStats:
+    """Five-number summary + outliers ([D67]): quartiles by linear interpolation
+    (`np.percentile` default), whiskers at 1.5·IQR *clipped to the data*, and
+    everything beyond the fences as outliers."""
+
+    median: float
+    q1: float
+    q3: float
+    lo_whisker: float
+    hi_whisker: float
+    outliers: np.ndarray
+
+
+def box_stats(values) -> BoxStats:
+    a = np.asarray(values, dtype="float64")
+    a = a[np.isfinite(a)]
+    q1, med, q3 = np.percentile(a, [25.0, 50.0, 75.0])
+    iqr = q3 - q1
+    lo_fence, hi_fence = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    inside = a[(a >= lo_fence) & (a <= hi_fence)]
+    outliers = a[(a < lo_fence) | (a > hi_fence)]
+    return BoxStats(float(med), float(q1), float(q3),
+                    float(inside.min()), float(inside.max()), outliers)
+
+
+def kde(values, n: int = 128) -> tuple[np.ndarray, np.ndarray]:
+    """Gaussian kernel density on an `n`-point grid, Scott's-rule bandwidth
+    ([D67]). Shared by every Violin renderer so no backend substitutes its own
+    KDE. Returns `(grid, density)`; the density integrates to ~1."""
+    a = np.asarray(values, dtype="float64")
+    a = a[np.isfinite(a)]
+    std = float(a.std(ddof=1)) if len(a) > 1 else 1.0
+    bw = (std or 1.0) * len(a) ** (-1.0 / 5.0)
+    grid = np.linspace(a.min() - 3.0 * bw, a.max() + 3.0 * bw, n)
+    z = (grid[:, None] - a[None, :]) / bw
+    density = np.exp(-0.5 * z * z).sum(axis=1) / (len(a) * bw * np.sqrt(2.0 * np.pi))
+    return grid, density
 
 
 def group_bars(x, y, groups) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -56,3 +98,15 @@ def grid_reduce(xv, yv, zv, agg: str = "mean") -> tuple[np.ndarray, np.ndarray, 
     else:  # pragma: no cover - constructor validates
         raise ValueError(f"unknown aggregator {agg!r}")
     return xs, ys, grid.reshape(len(ys), len(xs))
+
+
+def split_by(values, by=None) -> tuple[np.ndarray | None, list[np.ndarray]]:
+    """Split `values` into per-category arrays by the `by` column (np.unique
+    order — the same canonical order `category_swatches` colors by), or one
+    group when `by` is None."""
+    v = np.asarray(values, dtype="float64")
+    if by is None:
+        return None, [v]
+    b = np.asarray(by)
+    cats, codes = np.unique(b, return_inverse=True)
+    return cats, [v[codes == i] for i in range(len(cats))]

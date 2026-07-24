@@ -16,6 +16,7 @@ from ...core._scales import logify
 from ...core.color import Color
 from ...elements import (
     Bars,
+    BoxPlot,
     Curve,
     ErrorBars,
     Heatmap,
@@ -26,6 +27,7 @@ from ...elements import (
     Span,
     Spread,
     Text,
+    Violin,
     VLine,
 )
 
@@ -415,6 +417,109 @@ def render_text(element: Text, ctx):
     return item
 
 
+
+def _dist_prep(element, ctx):
+    """Shared BoxPlot/Violin prep ([D67]): per-category value groups, base
+    positions, palette swatches (category order = color_by rule), tick labels,
+    and the categorical legend when `by` is set."""
+    from ...core._stats import split_by  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
+
+    d = element.data
+    cats, groups = split_by(d.series("column"),
+                            d.series("by") if element.by is not None else None)
+    pos = np.arange(len(groups), dtype="float64")
+    if cats is not None:
+        swatches = category_swatches(cats, ctx.theme.palette)
+        ctx.parent_axes.getAxis("bottom").setTicks(
+            [[(float(i), str(c)) for i, c in enumerate(cats)]]
+        )
+        if ctx.show_legend:
+            from ._legend import add_legend  # noqa: PLC0415
+
+            legend = Legend(kind="categorical", title=element.by,
+                            entries=tuple((str(c), swatches[i]) for i, c in enumerate(cats)))
+            add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+    else:
+        swatches = [_color(element.color, ctx.theme, ctx.series_index)] * len(groups)
+    return groups, pos, swatches
+
+
+def render_boxplot(element: BoxPlot, ctx):
+    """Boxes from the shared `box_stats` ([D67]) — body (BarGraphItem), whiskers/
+    caps/medians (one NaN-separated PlotCurveItem), outlier points."""
+    from ...core._stats import box_stats  # noqa: PLC0415
+
+    groups, pos, swatches = _dist_prep(element, ctx)
+    stats = [box_stats(g) for g in groups]
+    _x_log, y_log = _xy_log(ctx)
+
+    def ly(vals):
+        return logify(np.asarray(vals, dtype="float64"), y_log)
+
+    q1s, q3s = ly([s.q1 for s in stats]), ly([s.q3 for s in stats])
+    lows, highs = ly([s.lo_whisker for s in stats]), ly([s.hi_whisker for s in stats])
+    meds = ly([s.median for s in stats])
+    brushes = []
+    for sw in swatches:
+        c = sw.qt()
+        c.setAlphaF(element.alpha)
+        brushes.append(pg.mkBrush(c))
+    fg = ctx.theme.foreground.qt()
+    boxes = pg.BarGraphItem(x=pos, y0=q1s, y1=q3s, width=0.5,
+                            brushes=brushes, pen=pg.mkPen(fg))
+    seg_x: list[float] = []
+    seg_y: list[float] = []
+
+    def seg(x0, y0, x1, y1):
+        seg_x.extend([x0, x1, np.nan])
+        seg_y.extend([y0, y1, np.nan])
+
+    for i in range(len(stats)):
+        seg(pos[i], q3s[i], pos[i], highs[i])                  # upper whisker
+        seg(pos[i], q1s[i], pos[i], lows[i])                   # lower whisker
+        seg(pos[i] - 0.15, highs[i], pos[i] + 0.15, highs[i])  # caps
+        seg(pos[i] - 0.15, lows[i], pos[i] + 0.15, lows[i])
+        seg(pos[i] - 0.25, meds[i], pos[i] + 0.25, meds[i])    # median
+    lines = pg.PlotCurveItem(np.asarray(seg_x), np.asarray(seg_y),
+                             pen=pg.mkPen(fg, width=1.5), connect="finite")
+    out_x = [np.full(len(s.outliers), pos[i]) for i, s in enumerate(stats) if len(s.outliers)]
+    out_y = [s.outliers for s in stats if len(s.outliers)]
+    fliers = pg.ScatterPlotItem(
+        x=np.concatenate(out_x) if out_x else np.array([]),
+        y=ly(np.concatenate(out_y)) if out_y else np.array([]),
+        size=5, brush=pg.mkBrush(fg), pen=None,
+    )
+    for item in (boxes, lines, fliers):
+        ctx.parent_axes.addItem(item)
+    return [boxes, lines, fliers]
+
+
+def render_violin(element: Violin, ctx):
+    """Silhouettes from the shared `kde` ([D67]) — one filled polygon per group
+    (QGraphicsPathItem; pyqtgraph has no native polygon-fill plot item)."""
+    from PySide6.QtWidgets import QGraphicsPathItem  # noqa: PLC0415
+
+    from ...core._stats import kde  # noqa: PLC0415
+
+    groups, pos, swatches = _dist_prep(element, ctx)
+    _x_log, y_log = _xy_log(ctx)
+    items = []
+    for i, g in enumerate(groups):
+        grid, dens = kde(g)
+        half = dens / (dens.max() or 1.0) * 0.4
+        xs_p = np.concatenate([pos[i] + half, (pos[i] - half)[::-1]])
+        ys_p = logify(np.concatenate([grid, grid[::-1]]), y_log)
+        item = QGraphicsPathItem(pg.arrayToQPath(xs_p, ys_p))
+        c = swatches[i].qt()
+        c.setAlphaF(element.alpha)
+        item.setBrush(pg.mkBrush(c))
+        item.setPen(pg.mkPen(swatches[i].qt()))
+        ctx.parent_axes.addItem(item)
+        items.append(item)
+    return items
+
+
 RENDERERS = {
     Scatter: render_scatter,
     Curve: render_curve,
@@ -428,6 +533,8 @@ RENDERERS = {
     VLine: render_vline,
     Span: render_span,
     Text: render_text,
+    BoxPlot: render_boxplot,
+    Violin: render_violin,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -446,4 +553,6 @@ HONORED: dict[type, frozenset[str]] = {
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Span: frozenset({"color", "alpha", "label"}),
     Text: frozenset({"color", "size", "anchor"}),
+    BoxPlot: frozenset({"by", "color", "alpha", "label"}),
+    Violin: frozenset({"by", "color", "alpha", "label"}),
 }

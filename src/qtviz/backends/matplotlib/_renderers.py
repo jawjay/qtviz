@@ -11,6 +11,7 @@ import numpy as np
 from ...core.color import Color
 from ...elements import (
     Bars,
+    BoxPlot,
     Curve,
     ErrorBars,
     Heatmap,
@@ -21,6 +22,7 @@ from ...elements import (
     Span,
     Spread,
     Text,
+    Violin,
     VLine,
 )
 
@@ -340,6 +342,69 @@ def render_text(element: Text, ctx):
 
 
 
+
+def _dist_prep(element, ctx):
+    """Shared BoxPlot/Violin prep ([D67]) — mirrors the pyqtgraph helper."""
+    from ...core._stats import split_by  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
+
+    d = element.data
+    cats, groups = split_by(d.series("column"),
+                            d.series("by") if element.by is not None else None)
+    pos = np.arange(len(groups), dtype="float64")
+    ax = ctx.parent_axes
+    if cats is not None:
+        swatches = category_swatches(cats, ctx.theme.palette)
+        if ctx.show_legend:
+            legend = Legend(kind="categorical", title=element.by,
+                            entries=tuple((str(c), swatches[i]) for i, c in enumerate(cats)))
+            _add_legend(ax, legend, ctx.theme, ctx.legend_position)
+    else:
+        swatches = [_color(element.color, ctx.theme, ctx.series_index)] * len(groups)
+    return groups, pos, swatches, cats
+
+
+def _dist_ticks(ax, pos, cats) -> None:
+    """Category tick labels — applied *after* drawing (`ax.bxp` overwrites any
+    labels set before it)."""
+    if cats is not None:
+        ax.set_xticks(pos, [str(c) for c in cats])
+
+
+def render_boxplot(element: BoxPlot, ctx):
+    """`ax.bxp` with the shared precomputed `box_stats` ([D67]) — matplotlib
+    draws, qtviz decides the statistics."""
+    from ...core._stats import box_stats  # noqa: PLC0415
+
+    groups, pos, swatches, cats = _dist_prep(element, ctx)
+    stats = [box_stats(g) for g in groups]
+    bxp = [{"med": s.median, "q1": s.q1, "q3": s.q3, "whislo": s.lo_whisker,
+            "whishi": s.hi_whisker, "fliers": s.outliers} for s in stats]
+    result = ctx.parent_axes.bxp(bxp, positions=pos, showfliers=True, patch_artist=True)
+    for patch, sw in zip(result["boxes"], swatches, strict=True):
+        patch.set_facecolor(sw.mpl())
+        patch.set_alpha(element.alpha)
+    _dist_ticks(ctx.parent_axes, pos, cats)
+    return result
+
+
+def render_violin(element: Violin, ctx):
+    """Silhouettes from the shared `kde` ([D67]) via `fill_betweenx`."""
+    from ...core._stats import kde  # noqa: PLC0415
+
+    groups, pos, swatches, cats = _dist_prep(element, ctx)
+    artists = []
+    for i, g in enumerate(groups):
+        grid, dens = kde(g)
+        half = dens / (dens.max() or 1.0) * 0.4
+        artists.append(ctx.parent_axes.fill_betweenx(
+            grid, pos[i] - half, pos[i] + half,
+            color=swatches[i].mpl(), alpha=element.alpha,
+        ))
+    _dist_ticks(ctx.parent_axes, pos, cats)
+    return artists
+
+
 RENDERERS = {
     Scatter: render_scatter,
     Curve: render_curve,
@@ -353,6 +418,8 @@ RENDERERS = {
     VLine: render_vline,
     Span: render_span,
     Text: render_text,
+    BoxPlot: render_boxplot,
+    Violin: render_violin,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -373,4 +440,6 @@ HONORED: dict[type, frozenset[str]] = {
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Span: frozenset({"color", "alpha", "label"}),
     Text: frozenset({"color", "size", "anchor"}),
+    BoxPlot: frozenset({"by", "color", "alpha", "label"}),
+    Violin: frozenset({"by", "color", "alpha", "label"}),
 }
