@@ -65,7 +65,7 @@ class BokehBackend(PlotBackend):
         self._resources = resources
         self._view: WebBridgeView | None = None
         self._events = BokehEvents()
-        self._bk_theme = None  # bokeh.themes.Theme, lazy-built
+        self._bk_theme: Any = None  # bokeh.themes.Theme, lazy-built
 
     # ── PlotBackend protocol ─────────────────────────────────────────────
     def to_html(self) -> str:

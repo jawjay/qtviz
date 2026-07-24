@@ -55,7 +55,8 @@ class Palette(Immutable):
             return self.colors[-1]
         frac = pos - i
         a, b = self.colors[i].rgba, self.colors[i + 1].rgba
-        return Color(tuple(a[k] + (b[k] - a[k]) * frac for k in range(4)))
+        mixed = tuple(a[k] + (b[k] - a[k]) * frac for k in range(4))
+        return Color((mixed[0], mixed[1], mixed[2], mixed[3]))
 
     def __getitem__(self, i: int) -> Color:
         return self.colors[i]
@@ -74,7 +75,7 @@ class Palette(Immutable):
     def from_matplotlib(cls, name: str, *, n: int = 10) -> Palette:
         import matplotlib.cm as cm  # noqa: PLC0415
 
-        cmap = cm.get_cmap(name)
+        cmap = cm.get_cmap(name)  # type: ignore[attr-defined]  # mpl<3.9 API kept for compat
         stops = [tuple(cmap(i / (n - 1)))[:4] for i in range(n)]
         return cls(stops, name=name, kind="continuous")
 

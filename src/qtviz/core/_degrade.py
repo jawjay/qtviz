@@ -31,7 +31,7 @@ def _defaults(cls: type) -> dict:
     """`{param: default}` for an element's __init__ — the baseline a field must
     differ from to count as user-set. Cached per class (hot path: every render)."""
     try:
-        params = inspect.signature(cls.__init__).parameters
+        params = inspect.signature(cls.__init__).parameters  # type: ignore[misc]  # deliberate introspection
     except (ValueError, TypeError):  # pragma: no cover - exotic __init__
         return {}
     return {n: p.default for n, p in params.items() if p.default is not inspect.Parameter.empty}
@@ -40,7 +40,7 @@ def _defaults(cls: type) -> dict:
 def _overridden(element, opt: str) -> bool:
     """Did the user set `opt` to something other than its constructor default?
     A default-valued recommended option never warns (so `Scatter()` is silent)."""
-    defaults = _defaults(type(element))
+    defaults = _defaults(type(element))  # type: ignore[arg-type]  # a class is hashable
     if opt not in defaults:  # no known default → treat as explicitly set
         return True
     current = getattr(element, opt, defaults[opt])

@@ -120,9 +120,10 @@ class DaskGriddedRef(GriddedRef):
     def native(self) -> Any:
         return self._arr
 
-    def window(self, x: tuple | None = None, y: tuple | None = None) -> DaskGriddedRef:
-        """A narrowed lazy ref over **index-space** ranges ([D75]) — dask
-        slicing is itself lazy, so this is free until compute."""
+    def window(self, **ranges) -> DaskGriddedRef:
+        """A narrowed lazy ref over **index-space** `x`/`y` ranges ([D75]) —
+        dask slicing is itself lazy, so this is free until compute."""
+        x, y = ranges.get("x"), ranges.get("y")
         ny, nx = int(self._arr.shape[0]), int(self._arr.shape[1])
         ys = slice(*(int(v) for v in y)) if y is not None else slice(0, ny)
         xs = slice(*(int(v) for v in x)) if x is not None else slice(0, nx)

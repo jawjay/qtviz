@@ -3,8 +3,12 @@
 Same Element vocabulary as pyqtgraph, drawn through `Axes`. Each returns the
 mpl artist so interaction wiring can reach it.
 """
+# mypy: disable-error-code="attr-defined, assignment"
+# (post-resolve shape invariant — see the pyqtgraph renderer note)
 
 from __future__ import annotations
+
+from typing import Any
 
 import numpy as np
 
@@ -448,7 +452,7 @@ def render_violin(element: Violin, ctx):
     return artists
 
 
-RENDERERS = {
+RENDERERS: dict[type, Any] = {
     Scatter: render_scatter,
     Curve: render_curve,
     Bars: render_bars,

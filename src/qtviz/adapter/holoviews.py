@@ -184,6 +184,7 @@ def _convert(obj: Any, hv) -> Any:
                       y_lo=col(y) - col(delta), y_hi=col(y) + col(delta))
     if isinstance(obj, hv.ErrorBars):
         x, y = obj.kdims[0].name, obj.vdims[0].name
+        err: Any
         if len(obj.vdims) >= 3:  # [y, neg, pos] → asymmetric (lo, hi)
             err = (col(obj.vdims[1].name), col(obj.vdims[2].name))
         else:  # [y, err] → symmetric
@@ -191,7 +192,8 @@ def _convert(obj: Any, hv) -> Any:
         return ErrorBars(obj.dframe(), x=x, y=y, err=err)
     if isinstance(obj, hv.Image):  # gridded value array + bounds
         arr = obj.dimension_values(2, flat=False)
-        return Image(arr, bounds=tuple(float(b) for b in obj.bounds.lbrt()))
+        b0, b1, b2, b3 = (float(b) for b in obj.bounds.lbrt())
+        return Image(arr, bounds=(b0, b1, b2, b3))
 
     # ── fallback: host the whole figure on webengine, unchanged ([D28]) ───────
     if isinstance(obj, hv.core.Element):

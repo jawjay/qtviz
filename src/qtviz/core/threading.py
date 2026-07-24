@@ -51,7 +51,9 @@ class _GuiInvoker(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.moveToThread(gui_thread())
+        thread = gui_thread()
+        if thread is not None:
+            self.moveToThread(thread)
         self._trigger.connect(self._run, Qt.ConnectionType.QueuedConnection)
 
     @Slot(object)

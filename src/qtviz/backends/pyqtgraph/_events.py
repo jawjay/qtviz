@@ -4,6 +4,7 @@ Pick/hover are element-level events (carry the Element id); range/select/tap
 are surface-level (handled by the QtvizViewBox, _interaction.py). `attach`
 is the single dispatch the renderer calls per element.
 """
+# mypy: disable-error-code="attr-defined"
 
 from __future__ import annotations
 

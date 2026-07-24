@@ -5,8 +5,13 @@ One function per Element type. By the time a renderer runs, the resolve pipeline
 read channels by their fixed **role** name (`"x"`, `"y"`, …) — never the user's
 accessor, which may be a string, Expression, callable, or array.
 """
+# mypy: disable-error-code="attr-defined, assignment"
+# (renderers run post-resolve: a tabular element holds a TabularRef, a
+#  gridded one a GriddedRef — a shape invariant the static types cannot see)
 
 from __future__ import annotations
+
+from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
@@ -56,7 +61,8 @@ def _xy_log(ctx) -> tuple[bool, bool]:
 
 
 def _u8(rgba_row) -> tuple[int, int, int, int]:
-    return tuple(int(round(v * 255)) for v in rgba_row)
+    r, g, b, a = (int(round(v * 255)) for v in rgba_row)
+    return (r, g, b, a)
 
 
 def _scaled_sizes(values, lo: float = 5.0, hi: float = 18.0):
@@ -565,7 +571,7 @@ def render_violin(element: Violin, ctx):
     return items
 
 
-RENDERERS = {
+RENDERERS: dict[type, Any] = {
     Scatter: render_scatter,
     Curve: render_curve,
     Bars: render_bars,

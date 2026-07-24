@@ -15,7 +15,7 @@ from PySide6.QtCore import QObject, Signal, Slot
 class Bridge(QObject):
     """Python end of the JS<->Python bridge."""
 
-    event = Signal(str, object)
+    event = Signal(str, object)  # type: ignore[assignment]  # PySide Signal idiom
     ready = Signal()
     log = Signal(str, str)
 

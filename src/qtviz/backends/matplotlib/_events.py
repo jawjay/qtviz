@@ -5,6 +5,7 @@ range (axes lim callbacks) and pick (PathCollection picker) are wired here;
 brush is programmatic via `MplRenderHandle.select_bounds` (capability
 `brush="approximate"`). All deliveries go through the shared EventBus.
 """
+# mypy: disable-error-code="attr-defined"
 
 from __future__ import annotations
 

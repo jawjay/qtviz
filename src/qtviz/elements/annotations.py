@@ -23,6 +23,8 @@ from ..errors import ValidationError
 class _Reference(Element):
     """Shared base: neutral legend swatch (theme foreground, not a palette slot)."""
 
+    label: str | None  # declared for typing; Text carries no label
+
     def legend_entry(self, theme, index: int = 0):
         if getattr(self, "label", None) is None:
             return None

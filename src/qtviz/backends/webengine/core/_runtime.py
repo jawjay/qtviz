@@ -26,13 +26,13 @@ def load_qwebchannel_js() -> str:
     from PySide6.QtWebChannel import QWebChannel  # noqa: F401
 
     f = QFile(":/qtwebchannel/qwebchannel.js")
-    if not f.open(QIODevice.ReadOnly | QIODevice.Text):
+    if not f.open(QIODevice.OpenModeFlag.ReadOnly | QIODevice.OpenModeFlag.Text):
         raise RuntimeError(
             "Could not load qwebchannel.js from Qt resources. "
             "Is PySide6's QtWebChannel module installed?"
         )
     try:
-        return bytes(f.readAll()).decode("utf-8")
+        return bytes(f.readAll().data()).decode("utf-8")
     finally:
         f.close()
 

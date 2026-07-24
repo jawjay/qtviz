@@ -94,7 +94,7 @@ class _Tracking:
 
     def _run_tracked(self, fn: Callable[[], Any]) -> Any:
         self._clear_deps()
-        _observers.append(self)
+        _observers.append(self)  # type: ignore[arg-type]  # _Tracking shares the observer duck-type
         try:
             return fn()
         finally:

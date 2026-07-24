@@ -45,7 +45,7 @@ class ZarrGriddedRef(GriddedRef):
         return Schema(names=(), kind="gridded", shape=shape)
 
     def size(self) -> int:
-        return int(np.prod(self.schema().shape))
+        return int(np.prod(self.schema().shape or ()))
 
     def fingerprint(self):
         return (id(self._z), self._win and (self._win[0].start, self._win[0].stop,
@@ -54,9 +54,10 @@ class ZarrGriddedRef(GriddedRef):
     def native(self) -> Any:
         return self._z
 
-    def window(self, x: tuple | None = None, y: tuple | None = None) -> ZarrGriddedRef:
-        """A narrowed lazy ref over **index-space** ranges (gridded contract,
-        [D75]); nothing is read until materialize."""
+    def window(self, **ranges) -> ZarrGriddedRef:
+        """A narrowed lazy ref over **index-space** `x`/`y` ranges (gridded
+        contract, [D75]); nothing is read until materialize."""
+        x, y = ranges.get("x"), ranges.get("y")
         wy, wx = self._yx()
 
         def clip(rng, cur: slice, n: int) -> slice:

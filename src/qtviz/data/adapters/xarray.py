@@ -99,10 +99,11 @@ class XarrayGriddedRef(GriddedRef):
             return np.asarray(da.coords[dim].values)
         return np.arange(n)
 
-    def window(self, x: tuple | None = None, y: tuple | None = None):
-        """A narrowed lazy ref over **index-space** ranges ([D75]) — an xarray
-        positional slice is a view (numpy) or lazy (dask), and carries its
-        coords along."""
+    def window(self, **ranges):
+        """A narrowed lazy ref over **index-space** `x`/`y` ranges ([D75]) — an
+        xarray positional slice is a view (numpy) or lazy (dask), and carries
+        its coords along."""
+        x, y = ranges.get("x"), ranges.get("y")
         ys = slice(*(int(v) for v in y)) if y is not None else slice(None)
         xs = slice(*(int(v) for v in x)) if x is not None else slice(None)
         return XarrayGriddedRef(self._da[ys, xs])

@@ -43,7 +43,7 @@ class QtvizViewBox(pg.ViewBox):
         self._surface_id = surface_id
         self.x_log = x_log
         self.y_log = y_log
-        self._selectables: list[tuple[str, np.ndarray, np.ndarray]] = []
+        self._selectables: list[tuple[str, np.ndarray | None, np.ndarray | None]] = []
         self.sigRangeChanged.connect(self._on_range)
 
     # ── R1: view (possibly exponent) space → data space ──
@@ -72,7 +72,7 @@ class QtvizViewBox(pg.ViewBox):
         (element-id + indices + bounds; refines D8 for selection)."""
         bounds = (float(xmin), float(ymin), float(xmax), float(ymax))
         for source_id, x, y in self._selectables:
-            if x is None:  # bounds-only ([D78]): the bounds ARE the selection
+            if x is None or y is None:  # bounds-only ([D78]): the bounds ARE the selection
                 self._bus.emit(SelectEvent(source_id, [], bounds))
                 continue
             mask = (x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)

@@ -10,6 +10,7 @@ arrays the renderer reads.
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from ..data import GriddedRef, TabularRef, accessor_columns
 from ..errors import ValidationError
@@ -45,6 +46,7 @@ def validate_channels(data, channels: dict, *, who: str) -> None:
 
 
 class Element(Immutable):
+    data: Any  # every data-bearing subclass sets it (annotations are data-less)
     REQUIRED_OPTIONS: tuple[str, ...] = ()
     RECOMMENDED_OPTIONS: tuple[str, ...] = ()
     # Fixed channel roles bound to accessors; default role == field name.

@@ -72,7 +72,7 @@ class RenderHandle:
     """Owns a rendered widget tree — the bridge from immutable Elements to the
     mutable Qt world. Backends subclass to wire update/dispose/export/state."""
 
-    def __init__(self, widget: Any, event_bus: EventBus, backend_name: str) -> None:
+    def __init__(self, widget: Any, event_bus: Any, backend_name: str) -> None:
         self.widget = widget
         self.event_bus = event_bus
         self.backend_name = backend_name
@@ -144,7 +144,12 @@ class _MergedBus:
 
     def subscribe(self, event_type, cb, *, throttle_ms=None) -> Disposable:
         disposables = [b.subscribe(event_type, cb, throttle_ms=throttle_ms) for b in self._buses]
-        return Disposable(lambda: [d.dispose() for d in disposables])
+
+        def dispose_all() -> None:
+            for d in disposables:
+                d.dispose()
+
+        return Disposable(dispose_all)
 
     def emit(self, ev) -> None:
         for b in self._buses:

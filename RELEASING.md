@@ -1,8 +1,26 @@
 # Releasing qtviz
 
-qtviz is **not published to PyPI** (by design — see `design/project_no_pypi`/roadmap).
-A release is: a **git tag**, a **GitHub Release**, and a **docs deploy to GitHub Pages**.
-Install is `pip install git+https://github.com/jawjay/qtviz` or from source.
+qtviz is **not published to PyPI** (by design — see `design/project_no_pypi`/roadmap),
+and the repo is **private permanently** (owner decision, 2026-07-24), so there is no
+Pages deploy either. A release is: a **git tag** + a **GitHub Release**; docs are
+built/read locally (`uv run mkdocs serve`).
+Install is `pip install git+<repo>` (for repo collaborators) or from source.
+
+## Release gates (1.0+, run locally — CI was removed deliberately)
+
+Every release runs these; all must pass ([D80]/[D81], `docs/stability.md`):
+
+```bash
+uv run pytest -q                 # the suite (benchmarks excluded by default)
+uv run pytest -m benchmark -q    # the ceilings still hold
+uv run ruff check src tests examples
+uv run mypy src/qtviz            # zero errors ([D80])
+uv run pytest -q --cov           # coverage ≥ the recorded floor ([D81], fail_under)
+uv run mkdocs build --strict     # docs build clean
+```
+
+Surface changes must have updated `tests/qtviz/test_api_freeze.py` + the
+CHANGELOG in the same commit ([D82]).
 
 ---
 

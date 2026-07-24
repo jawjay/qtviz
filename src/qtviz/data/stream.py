@@ -107,7 +107,12 @@ class StreamRef(TabularRef):
 
     def subscribe(self, cb: Callable[[Any], None]) -> Disposable:
         self._subs.append(cb)
-        return Disposable(lambda: cb in self._subs and self._subs.remove(cb))
+
+        def unsubscribe() -> None:
+            if cb in self._subs:
+                self._subs.remove(cb)
+
+        return Disposable(unsubscribe)
 
     def schema(self) -> Schema:
         return Schema(names=tuple(self._dtypes), kind="tabular",

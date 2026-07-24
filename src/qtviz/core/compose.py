@@ -177,7 +177,8 @@ def negotiate(node: Node, view_backend: str | None, *, ancestor_hint: str | None
     unsupported. `"auto"` defers to `auto_negotiate`."""
     from .. import backends
 
-    chosen = node.backend_hint or ancestor_hint or view_backend or backends.global_default()
+    chosen = (node.backend_hint or ancestor_hint or view_backend
+              or backends.global_default() or "auto")
     if chosen == "auto":
         return auto_negotiate(node, ancestor_hint=ancestor_hint)
 

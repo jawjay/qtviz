@@ -76,6 +76,8 @@ def _parse_hex(s: str) -> tuple[float, float, float, float]:
 class Color:
     """Immutable canonical color. str / tuple inputs auto-convert."""
 
+    _rgba: tuple[float, float, float, float]
+
     __slots__ = ("_rgba",)
 
     def __init__(self, spec: ColorSpec) -> None:

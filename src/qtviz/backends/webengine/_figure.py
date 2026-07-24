@@ -12,8 +12,12 @@ plotly installed; the host validates when it renders.
 Each builder returns a **list** of traces so a multi-trace element (Spread's
 band = two traces) keeps the trace_index → source-id table 1:1.
 """
+# mypy: disable-error-code="attr-defined, index, call-overload, assignment, operator"
+# (builds heterogeneous Plotly spec dicts + post-resolve shape access)
 
 from __future__ import annotations
+
+from typing import Any
 
 import numpy as np
 
@@ -335,7 +339,7 @@ def _violin_trace(element: Violin, theme, idx: int) -> list[dict]:
     return traces
 
 
-_TRACE_BUILDERS = {
+_TRACE_BUILDERS: dict[type, Any] = {
     Scatter: _scatter_trace,
     Curve: _curve_trace,
     Bars: _bars_trace,
