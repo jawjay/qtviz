@@ -21,6 +21,8 @@ view.show()
 app.exec()
 ```
 
+![A scatter plot rendered by qtviz in a native Qt window](images/examples/01_hello.png)
+
 That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan and
 zoom out of the box. Change one keyword — `backend="matplotlib"` or
 `backend="webengine"` — and the same line renders through a different engine.
@@ -51,5 +53,10 @@ uv sync --extra matplotlib --extra dev        # add backends/data extras as need
 (`matplotlib`, `webengine`, `datashader`, `dask`, `xarray`, `holoviews`, `hvplot`) is
 an opt-in extra.
 
-→ Continue to the [Quickstart](quickstart.md), browse the [Gallery](gallery.md), or
-read the [API reference](api.md).
+![Three-panel linked dashboard with shared X axis, brushing, and the dark theme](images/examples/dashboard_native.png)
+
+*A linked three-panel dashboard in under sixty lines —
+[`examples/dashboard_native.py`](https://github.com/jawjay/qtviz/blob/main/examples/dashboard_native.py).*
+
+→ Continue to the [Quickstart](quickstart.md), browse the [Gallery](gallery.md)
+(a screenshot of every example), or read the [API reference](api.md).

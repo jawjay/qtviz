@@ -26,6 +26,11 @@ view.show()
 app.exec()
 ```
 
+<p align="center">
+  <img src="docs/images/examples/01_hello.png" width="720"
+       alt="A scatter plot rendered by qtviz in a native Qt window">
+</p>
+
 That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan
 and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 `backend="webengine"` — and the same line renders through a different engine.
@@ -39,6 +44,17 @@ and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 > 90% coverage. Private by design; install from source / `git+`.
 
 ---
+
+## In action
+
+| | |
+|---|---|
+| ![Sensor monitoring: baseline, tolerance band, flagged anomalies, linked residual panel](docs/images/examples/26_telemetry_monitoring.png) *Telemetry monitoring — rolling baseline, 3σ band, flagged anomalies, X-linked residual panel ([`examples/26`](examples/26_telemetry_monitoring.py))* | ![Market analytics: price, moving averages, Bollinger band over a linked volume panel](docs/images/examples/27_market_analytics.png) *Market analytics — price + moving averages + Bollinger `Spread` over linked volume `Bars` ([`examples/27`](examples/27_market_analytics.py))* |
+| ![2M events datashaded into a categorical density map with a legend](docs/images/examples/28_event_density_map.png) *2M events → a Datashaded categorical density map; hover reports the count under the cursor ([`examples/28`](examples/28_event_density_map.py))* | ![A Plotly 3-D surface hosted through RawFigure in a Qt WebEngine view](docs/images/examples/18_webengine_raw_figure.png) *A Plotly 3-D surface hosted via `RawFigure` — events still arrive as typed qtviz events ([`examples/18`](examples/18_webengine_raw_figure.py))* |
+
+All screenshots are captured straight from the runnable scripts in
+[`examples/`](examples) — regenerate them with
+`uv run python tools/capture_screenshots.py`.
 
 ## Why qtviz?
 
@@ -121,6 +137,9 @@ qv.HLine(4.5, line_style="dashed", label="alarm")   # reference chrome:
 qv.VLine(0.0) ; qv.Span(2.0, 4.0) ; qv.Text(5, 2, "peak")
 ```
 
+![Eight element types rendered in one grid layout](docs/images/examples/08_gallery.png)
+*The element vocabulary in one `Layout` grid ([`examples/08_gallery.py`](examples/08_gallery.py))*
+
 **Axes & legends** — first-class, capability-gated, honest:
 
 ```python
@@ -138,6 +157,9 @@ feed = qv.stream({"t": float, "v": float}, window=100_000)   # rolling ring buff
 view = qv.View(qv.Curve(feed, x="t", y="v"))                 # that's all the wiring
 feed.append(t=timestamps, v=values)                          # from any thread
 ```
+
+![A live rolling feed beside a datashaded 400k-point history and a brush-driven detail panel](docs/images/examples/34_streaming_telemetry.png)
+*A live rolling feed, its datashaded 400k-point history, and a brush-driven detail panel ([`examples/34_streaming_telemetry.py`](examples/34_streaming_telemetry.py))*
 
 **Composition** — build a figure tree with two operators:
 
@@ -170,6 +192,9 @@ view.on(qv.HoverEvent,  on_hover)
 qv.View(scatter, theme=qv.Theme.dark())
 qv.View(scatter, theme=qv.Theme.from_qt_app())     # match the host app's light/dark mode
 ```
+
+![Three overlaid curves drawn from a registered custom palette on the dark theme](docs/images/examples/04_theming.png)
+*A registered custom palette on `Theme.dark()` ([`examples/04_theming.py`](examples/04_theming.py))*
 
 ---
 
@@ -208,6 +233,9 @@ qv.Scatter(df, x="x", y="y", size_by="magnitude")    # per-point size
 It is the same data-to-color rule the Datashader path uses, so a column colors
 consistently however it is drawn, on any backend.
 
+![Categorical color legend on the left, continuous ramp with colorbar and per-point size on the right](docs/images/examples/12_color_mapping.png)
+*`color_by` a categorical column (key legend) and a numeric column (ramp + colorbar), with `size_by` ([`examples/12_color_mapping.py`](examples/12_color_mapping.py))*
+
 ### Big data — Datashader
 
 Past a few hundred thousand points a scatter overplots into a featureless blob.
@@ -230,6 +258,10 @@ datashaded plot, and it is **out-of-core**: backed by a lazy Dask / xarray / zar
 source, the data is aggregated partition-by-partition and the full table never
 lands in memory.
 
+| | |
+|---|---|
+| ![Millions of points aggregated to a density raster with an endpoint legend](docs/images/examples/09_datashader.png) *10M points as a density raster with honest endpoint keys ([`examples/09`](examples/09_datashader.py))* | ![A themed categorical blend raster with a legend beside a max-aggregated raster with a colorbar](docs/images/examples/32_datashader_legends.png) *Category-blend raster with a legend beside an `agg="max"` raster with a colorbar ([`examples/32`](examples/32_datashader_legends.py))* |
+
 ---
 
 ## Backends
@@ -244,6 +276,10 @@ Backends are **registered, never imported by the core**, so adding one touches
 only its own directory and the rest of the library is none the wiser.
 `View(root, backend=...)` accepts a name, a `Backend`, or `"auto"`; negotiation
 resolves an engine per node from backend hints, capabilities, and data size.
+
+| | |
+|---|---|
+| ![A pyqtgraph pane and a matplotlib pane side by side in one layout](docs/images/examples/07_mixed_backends.png) *One `Layout`, two engines: pyqtgraph beside matplotlib, one event stream ([`examples/07`](examples/07_mixed_backends.py))* | ![A native pyqtgraph scatter beside a webengine Plotly contour heatmap](docs/images/examples/20_mixed_native_web.png) *Native pyqtgraph beside a webengine Plotly pane in one splitter ([`examples/20`](examples/20_mixed_native_web.py))* |
 
 ### webengine + `RawFigure` — your existing figures, hosted
 
@@ -264,6 +300,9 @@ view.on(qv.PickEvent, on_pick)                    # Plotly events still arrive a
 appropriate renderer — so the native HoloViews/Bokeh ecosystems remain one line
 away whenever you need them.
 
+![A qtviz Scatter rendered as an interactive Plotly figure with a density colorbar inside a Qt window](docs/images/examples/13_webengine.png)
+*The same `Scatter` Element as an interactive Plotly chart in a `QWebEngineView` — the button swaps it back to a native backend live ([`examples/13_webengine.py`](examples/13_webengine.py))*
+
 > The `webengine` backend needs the `webengine` extra and a real display (a
 > `QWebEngineView` is not usable under headless/offscreen Qt). The native
 > pyqtgraph and matplotlib backends have no such constraint.
@@ -279,12 +318,19 @@ Self-contained, runnable scripts live in [`examples/`](examples) — each expose
 uv run python examples/01_hello.py
 ```
 
+![A three-panel dashboard with a shared X axis, brushing, and the dark theme](docs/images/examples/dashboard_native.png)
+*The linked three-panel dashboard, under sixty lines ([`examples/dashboard_native.py`](examples/dashboard_native.py))*
+
+Every example has a screenshot in the [gallery](docs/gallery.md).
+
 **Native:** `01_hello` · `02_composition` · `03_backends` (switch live) ·
 `04_theming` · `05_interaction` · `06_data_binding` · `07_mixed_backends` ·
 `08_gallery` (all eight elements) · `09_datashader` (millions of points,
 re-aggregated on zoom) · `10_out_of_core` (lazy Dask) · `11_datashader_matplotlib`
 · `12_color_mapping` · `25_raster_inspect` (hover a datashaded plot for the count
-under the cursor) · `dashboard_native` (3-panel linked dashboard).
+under the cursor) · `31_axis_labels` · `32_datashader_legends` ·
+`33_native_escape_hatch` (the live pyqtgraph item) · `34_streaming_telemetry`
+(live feed + datashaded history) · `dashboard_native` (3-panel linked dashboard).
 
 **Reactive & adapter:** `21_reactive_crossfilter` (brush one view → a `Signal`
 re-renders another) · `22_from_holoviews` (render a HoloViews tree natively) ·

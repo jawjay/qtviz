@@ -18,6 +18,8 @@ qv.ErrorBars(table, x="x", y="y", err="sigma")
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
 ```
 
+![All eight element types rendered in one grid](images/examples/08_gallery.png)
+
 ## Composition
 
 Build a figure tree with two operators:
@@ -64,6 +66,8 @@ qv.Scatter(big, x="x", y="y", scale="datashader")   # density raster, re-aggrega
 qv.Scatter(big, x="x", y="y", scale="auto")         # rasterize past a threshold
 view.on(qv.HoverEvent, lambda e: print(e.value))    # count/mean under the cursor
 ```
+
+![Millions of points aggregated into a density raster](images/examples/09_datashader.png)
 
 ## Reactive
 
