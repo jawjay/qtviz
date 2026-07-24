@@ -252,6 +252,44 @@ def test_pyqtgraph_continuous_colorbar_is_a_true_gradient(qtbot):
 
 
 @pytest.mark.tier2
+def test_milestone_0_3_acceptance(qtbot):
+    """milestone-0.3-firstclass §8, end to end: labeled Curves in a log-x Overlay
+    render with a log axis, a two-entry legend, and a data-space brush on
+    pyqtgraph; the backend switch to matplotlib keeps all three; the webengine
+    figure spec carries the log axis + legend."""
+    if not _has("matplotlib"):
+        pytest.skip("matplotlib not registered")
+    from qtviz.backends.webengine import _figure
+
+    data = {"x": np.array([1.0, 10.0, 100.0, 1000.0]), "y": np.array([1.0, 2.0, 3.0, 4.0])}
+    node = qv.Overlay(
+        [qv.Curve(data, x="x", y="y", label="raw"),
+         qv.Curve(data, x="x", y=qv.col("y") * 2.0, label="smoothed")],
+        options=qv.OverlayOptions(title="Acceptance", x=qv.AxisSpec(scale="log"),
+                                  legend=True),
+    )
+    view = qv.View(node, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    plot = view.handle.plots[0]
+    assert plot.getAxis("bottom").logMode                       # log x, data pre-transformed
+    assert [lb.text for _s, lb in plot._qtviz_legend.items] == ["raw", "smoothed"]
+    got: list = []
+    view.on(qv.SelectEvent, got.append, throttle_ms=0)
+    plot.getViewBox().select_bounds(5.0, 0.0, 500.0, 10.0)      # data-space brush
+    assert got and got[-1].bounds == (5.0, 0.0, 500.0, 10.0)
+
+    view.set_backend("matplotlib")                              # swap keeps everything
+    ax = view.handle.axes[0]
+    assert ax.get_xscale() == "log"
+    assert [t.get_text() for t in ax.get_legend().get_texts()] == ["raw", "smoothed"]
+
+    fig = _figure.build_figure(node, qv.Theme.light())          # webengine spec parity
+    assert fig["layout"]["xaxis"]["type"] == "log"
+    assert fig["layout"]["showlegend"] is True
+    assert [t["name"] for t in fig["data"]] == ["raw", "smoothed"]
+
+
+@pytest.mark.tier2
 def test_pyqtgraph_eq_hist_density_keeps_endpoints_key(qtbot):
     """Legend honesty ([D48]): an eq_hist density raster's color↔value map is
     non-linear, so it keeps the endpoints-only key — never a gradient bar that

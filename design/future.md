@@ -1,4 +1,13 @@
-# Future development ideas
+# Future development ideas — SUPERSEDED (historical)
+
+> **Superseded (2026-07-24).** This catalog predates the `qtwebplot`→qtviz pivot —
+> its "Where we are" below describes the old bridge POC, and most of its top bets
+> (CI matrix, linked events, docs site, HoloViews, theme propagation, the
+> matplotlib backend, binary transport) have long since shipped. The living
+> horizon is now [`improvement-plan.md`](improvement-plan.md) (§4, staged
+> 0.3→1.0); still-live ideas from this list (streaming, annotation layer, plot
+> persistence, toolbar/inspector polish, plugin entry-points, type-checking CI)
+> are absorbed or parked there. Kept for the record — statuses below are stale.
 
 A curated, opinionated list. Marked **★** for "I would advocate for this
 soon," **○** for "good idea, no rush," **△** for "interesting bet, would

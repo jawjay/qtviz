@@ -28,7 +28,7 @@ data core had to come first. Net effect:
 | 4 | reactive + Datashader | **Datashader ✅**; **reactive `Signal` ✅** (View-root, S-style; crossfilter) |
 | 5 | data layer + webengine | **lazy adapters ✅** (dask/xarray/zarr); Parquet/DuckDB/SQL sources ⬜; webengine rehome ◑ (**W0–W4 ✅ · W5.1a base64 transport ✅ · W5-offline (no-CDN) ✅**; W5.2 binary-fetch tail ⬜ deferred — see `webengine-arrow-transport.md` §10) |
 | 6 | release `0.1` | ✅ **released** — `v0.1.0` tag + GitHub prerelease (0.1.0 metadata · docs/CHANGELOG · mkdocs site · API docstrings); **Pages deploy deferred** (private repo / plan blocks Pages — see `RELEASING.md`). PyPI publish **not a goal** |
-| 0.2+ | post-0.1 (R1–R6) | ⬜ staged **0.2** hardening+escape-valve · **0.3** first-class axes+legends · **0.4** vocabulary+composite — see §8 + `weakness-root-causes.md` |
+| 0.2+ | post-0.1 (R1–R6) | **0.2** hardening+escape-valve ✅ released (`v0.2.0`) · **0.3** first-class axes+legends ◑ in progress · **0.4** vocabulary+composite ⬜ — see §8 + `weakness-root-causes.md` + `improvement-plan.md` (the 0.3→1.0 horizon) |
 
 **Recommended next order** (detail in §8 + `weakness-root-causes.md`): 0.1 is **released**
 (tag + GitHub prerelease; Pages deploy deferred). Next is the **staged post-0.1 plan**

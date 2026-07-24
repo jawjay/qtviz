@@ -65,6 +65,7 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Options
         - OverlayOptions
         - LayoutOptions
+        - AxisSpec
 
 ## Events
 

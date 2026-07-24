@@ -1,11 +1,13 @@
-# qtwebplot — architecture
+# Legacy webengine bridge — architecture (historical)
 
 > **Scope: the legacy `qtwebplot` WebEngine bridge** (Qt ↔ JS, with Plotly /
 > Bokeh / HoloViews on top). The project has since pivoted to native-Qt rendering
-> as **qtviz** (see `spec.md` and `development-plan.md` for the current
-> architecture). This subsystem is slated to be rehomed as the future
-> **`webengine` backend** (`roadmap.md` Phase 5); the `qtwebplot.*` names below
-> describe that legacy/rehoming layer, not the native qtviz core.
+> as **qtviz** — `spec.md` and `development-plan.md` describe the current
+> architecture. The rehome is **done**: this subsystem now lives under
+> `qtviz.backends.webengine` behind the native `Backend` protocol
+> (`webengine-rehome.md`); `import qtwebplot` survives only as a deprecation
+> shim. The `qtwebplot.*` names below describe that legacy layer as originally
+> built, not the native qtviz core.
 
 ## What this is
 

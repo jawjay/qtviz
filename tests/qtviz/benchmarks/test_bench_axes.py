@@ -53,7 +53,7 @@ def test_r1_normalization_per_event_is_microseconds():
     whole event's R1 cost must stay well under the event-bus noise floor."""
     n = 200_000
     t0 = time.perf_counter()
-    for i in range(n):
+    for _ in range(n):
         delog(0.1, True)
         delog(2.3, True)
         delog(-1.0, False)
