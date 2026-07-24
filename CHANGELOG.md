@@ -4,13 +4,38 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 0.6.0
+## [1.0.0] — 2026-07-24
+
+The stability release. The 0.3–0.6 milestones below were developed against the
+staged post-0.1 program (`design/improvement-plan.md`) and were never tagged
+individually — 1.0.0 ships them together, under a frozen, policy-backed public
+surface.
+
+### The 1.0 promise
+
+- **API freeze.** `qtviz.__all__` is a contract, pinned exactly by the suite
+  (`test_api_freeze.py`); the stability & deprecation policy is documented
+  (`docs/stability.md`): semver, warn ≥2 minor releases before removal, what
+  is public and what never was.
+- **Removed:** the `qtwebplot` import shim (deprecated 0.1, promised for two
+  releases, kept for five). `qtviz.Options` still warns — 0.2 promised it
+  "importable through 1.0", so 1.1 removes it.
+- **Quality gates, local by design** (the owner removed CI deliberately):
+  mypy over `src/qtviz` at zero errors; coverage measured 90% with an 88%
+  floor; the full gate list is a release step in `RELEASING.md`.
+- **Docs:** the extensibility story ships — "writing a backend"
+  (`docs/backends.md`) with the three honesty contracts and a worked example;
+  README describes 1.0, not "toward 0.1".
+- Typing hardening along the way: the gridded `window()` signature now matches
+  the `DataRef` contract (LSP-clean `**ranges`).
+
+### 0.6 — Live & linked
 
 Live & linked ([D63] — the differentiator; `design/milestone-0.6-live.md`,
 [D76]–[D78], resolves the long-open [D7]). Streaming + linked brushing through
 a datashaded view, as plain desktop widgets.
 
-### Added
+#### Added
 
 - **`qv.stream(...)` ([D76]).** A mutable, append-able tabular `DataRef` with
   ring-buffer rolling windows (`window=` — the spec §12 "auto-rolling"
@@ -34,13 +59,13 @@ a datashaded view, as plain desktop widgets.
   rolling feed, a datashaded 400k history, and a raster brush driving a
   linked detail panel via signals, in ~90 lines.
 
-## [Unreleased] — 0.5.0
+### 0.5 — The array data core
 
 The array data core (owner-directed scope: numpy / pandas / dask / zarr /
 xarray; `design/milestone-0.5-array-core.md`, [D73]–[D75]). Huge gridded
 arrays now render at **screen cost, not array cost**.
 
-### Added
+#### Added
 
 - **Decimated gridded materialize ([D74]).** A lazy grid (zarr / dask / N-D
   xarray) over budget reads a strided, screen-scale slice instead of
@@ -61,13 +86,13 @@ arrays now render at **screen cost, not array cost**.
   `gridded()` on a single-variable xarray `Dataset` selects the variable;
   xarray grid extents come from the eager coord arrays without computing.
 
-## [Unreleased] — 0.4.0
+### 0.4 — Vocabulary, annotation & export
 
 Vocabulary, annotation & export (R2/R3 partial + R6;
 `design/milestone-0.4-vocabulary.md`, [D67]–[D72]). Everything additive; the
 vocabulary stays curated ([D54]).
 
-### Added
+#### Added
 
 - **Annotation/reference elements ([D70]).** `HLine` / `VLine` / `Span` /
   `Text` — data-less pure-data elements, composable via `*`, on all three
@@ -95,7 +120,7 @@ vocabulary stays curated ([D54]).
   raising; vector formats stay per-pane by design ([D58]). Export knobs
   `dpi` / `transparent` — honored by matplotlib, honored-or-warned elsewhere.
 
-### Fixed
+#### Fixed
 
 - **Native series colors now cycle the palette.** Multiple default-colored
   series in an Overlay drew identically (all `palette[0]`) on the native
@@ -103,12 +128,12 @@ vocabulary stays curated ([D54]).
   drawn colors. One `series_index_map` now drives default colors and legend
   swatches on all three backends; annotation elements don't consume slots.
 
-## [Unreleased] — 0.3.0
+### 0.3 — First-class axes & legends
 
 First-class axes + legends (root cause R5; `design/milestone-0.3-firstclass.md`,
 [D59]/[D60]). The two afterthoughts promoted to real models.
 
-### Added
+#### Added
 
 - **First-class axes ([D59]).** `qv.AxisSpec` (`label` / `scale` / `lim` /
   `invert`) on `OverlayOptions.x`/`.y` + `aspect`. `scale="log"` renders on
