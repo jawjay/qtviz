@@ -47,6 +47,9 @@ class RenderContext:
     # unconditionally, so `OverlayOptions.legend=False` silences every path.
     show_legend: bool = True
     legend_position: str = "auto"
+    # This element's palette slot on its surface (`series_index_map`): default
+    # colors cycle by it, matching legend_entry(index=…) on every backend.
+    series_index: int = 0
 
 
 class RendererRegistry:

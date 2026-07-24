@@ -20,9 +20,13 @@ from ...elements import (
     ErrorBars,
     Heatmap,
     Histogram,
+    HLine,
     Image,
     Scatter,
+    Span,
     Spread,
+    Text,
+    VLine,
 )
 
 # qtviz marker vocabulary → pyqtgraph symbol codes / Qt pen styles ([D51]).
@@ -85,7 +89,7 @@ def render_scatter(element: Scatter, ctx):
             pg.mkBrush(r, g, b, int(round(a * alpha))) for r, g, b, a in (_u8(c) for c in rgba)
         ]
     else:
-        color = _color(element.color, ctx.theme).qt()
+        color = _color(element.color, ctx.theme, ctx.series_index).qt()
         color.setAlphaF(alpha)
         kwargs["brush"] = pg.mkBrush(color)
     x_log, y_log = _xy_log(ctx)
@@ -101,7 +105,7 @@ def render_scatter(element: Scatter, ctx):
 
 def render_curve(element: Curve, ctx):
     d = element.data
-    color = _color(element.color, ctx.theme).qt()
+    color = _color(element.color, ctx.theme, ctx.series_index).qt()
     color.setAlphaF(element.alpha)
     pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
     x_log, y_log = _xy_log(ctx)
@@ -120,7 +124,7 @@ def render_bars(element: Bars, ctx):
         x = _col(d, "x")
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")  # categorical → indices
-    brush = _color(element.color, ctx.theme).qt()
+    brush = _color(element.color, ctx.theme, ctx.series_index).qt()
     x_log, y_log = _xy_log(ctx)
     # under log-y bar *heights* are log10'd (baseline sits at data 1); a proper
     # clipped-baseline treatment is deferred with the rest of the bar vocabulary.
@@ -139,7 +143,7 @@ def render_histogram(element: Histogram, ctx):
     x_log, y_log = _xy_log(ctx)
     item = pg.BarGraphItem(x=logify(centers, x_log), height=logify(counts, y_log),
                            width=width * 0.95,
-                           brush=_color(element.color, ctx.theme).qt())
+                           brush=_color(element.color, ctx.theme, ctx.series_index).qt())
     ctx.parent_axes.addItem(item)
     return item
 
@@ -265,12 +269,87 @@ def render_spread(element: Spread, ctx):
     x = logify(_col(d, "x"), x_log)
     lo = pg.PlotDataItem(x, logify(_col(d, "y_lo"), y_log))
     hi = pg.PlotDataItem(x, logify(_col(d, "y_hi"), y_log))
-    brush = _color(element.color, ctx.theme).qt()
+    brush = _color(element.color, ctx.theme, ctx.series_index).qt()
     brush.setAlphaF(element.alpha)
     fill = pg.FillBetweenItem(lo, hi, brush=brush)
     for it in (lo, hi, fill):
         ctx.parent_axes.addItem(it)
     return fill
+
+
+def _ref_color(spec, theme) -> Color:
+    """Annotation default: the theme foreground — a reference is chrome, not a
+    series, so it must not look like palette data ([D70])."""
+    return Color(spec) if spec is not None else theme.foreground
+
+
+def _ref_scalar(value: float, is_log: bool) -> float | None:
+    """A single annotation coordinate through the axis scale (R1): logified under
+    log; `None` (drop, already warned) when non-positive makes it non-finite."""
+    v = logify(np.array([value], dtype="float64"), is_log)[0]
+    return float(v) if np.isfinite(v) else None
+
+
+def render_hline(element: HLine, ctx):
+    _x_log, y_log = _xy_log(ctx)
+    pos = _ref_scalar(element.y, y_log)
+    if pos is None:
+        return None
+    color = _ref_color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
+    item = pg.InfiniteLine(pos=pos, angle=0, pen=pen, movable=False)
+    ctx.parent_axes.addItem(item)
+    return item
+
+
+def render_vline(element: VLine, ctx):
+    x_log, _y_log = _xy_log(ctx)
+    pos = _ref_scalar(element.x, x_log)
+    if pos is None:
+        return None
+    color = _ref_color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
+    item = pg.InfiniteLine(pos=pos, angle=90, pen=pen, movable=False)
+    ctx.parent_axes.addItem(item)
+    return item
+
+
+def render_span(element: Span, ctx):
+    x_log, y_log = _xy_log(ctx)
+    is_h = element.orient == "h"          # a y-range band across the full width
+    lo = _ref_scalar(element.lo, y_log if is_h else x_log)
+    hi = _ref_scalar(element.hi, y_log if is_h else x_log)
+    if lo is None or hi is None:
+        return None
+    color = _ref_color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    item = pg.LinearRegionItem(
+        values=(lo, hi), orientation="horizontal" if is_h else "vertical",
+        movable=False, brush=pg.mkBrush(color), pen=pg.mkPen(None),
+    )
+    ctx.parent_axes.addItem(item)
+    return item
+
+
+_TEXT_ANCHOR = {"center": (0.5, 0.5), "left": (0.0, 0.5), "right": (1.0, 0.5)}
+
+
+def render_text(element: Text, ctx):
+    x_log, y_log = _xy_log(ctx)
+    px, py = _ref_scalar(element.x, x_log), _ref_scalar(element.y, y_log)
+    if px is None or py is None:
+        return None
+    item = pg.TextItem(element.text, color=_ref_color(element.color, ctx.theme).qt(),
+                       anchor=_TEXT_ANCHOR[element.anchor])
+    if element.size is not None:
+        font = item.textItem.font()
+        font.setPointSizeF(float(element.size))
+        item.setFont(font)
+    ctx.parent_axes.addItem(item)
+    item.setPos(px, py)
+    return item
 
 
 RENDERERS = {
@@ -282,6 +361,10 @@ RENDERERS = {
     Heatmap: render_heatmap,
     ErrorBars: render_errorbars,
     Spread: render_spread,
+    HLine: render_hline,
+    VLine: render_vline,
+    Span: render_span,
+    Text: render_text,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -296,4 +379,8 @@ HONORED: dict[type, frozenset[str]] = {
     Heatmap: frozenset(),                                          # colormap/aggregator unwired
     ErrorBars: frozenset({"label"}),                               # color/direction unwired
     Spread: frozenset({"color", "alpha", "label"}),
+    HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    Span: frozenset({"color", "alpha", "label"}),
+    Text: frozenset({"color", "size", "anchor"}),
 }

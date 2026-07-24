@@ -83,6 +83,11 @@ def make_elements(table, grid):
             "Spread": qv.Spread(table, x="x", y_lo="y_lo", y_hi="y_hi"),
             "Image": qv.Image(values, bounds=bounds),
             "Heatmap": qv.Heatmap(table, x="x", y="y", z="z"),
+            # annotation / reference elements ([D70], 0.4)
+            "HLine": qv.HLine(0.5),
+            "VLine": qv.VLine(5.0),
+            "Span": qv.Span(0.2, 0.8),
+            "Text": qv.Text(5.0, 0.5, "note"),
         }
 
     return build

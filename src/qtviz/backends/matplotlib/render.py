@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from dataclasses import replace
 from math import ceil
 from pathlib import Path
 
@@ -16,7 +17,13 @@ from matplotlib.figure import Figure
 from ...core._degrade import check_recommended
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
-from ...core.compose import Layout, Overlay, effective_scales, surface_of
+from ...core.compose import (
+    Layout,
+    Overlay,
+    effective_scales,
+    series_index_map,
+    surface_of,
+)
 from ...core.element import Element
 from ...core.event import EventBus, SelectEvent
 from ...core.threading import require_gui_thread
@@ -161,16 +168,17 @@ class MatplotlibBackend:
         surfaces.append({"ax": ax, "surface_id": surface_id, "selectables": selectables})
         _events.connect_range(ax, surface_id, bus)
         children = node.children if isinstance(node, Overlay) else (node,)
+        indices = series_index_map(children)  # palette slots; annotations excluded
         ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self,
                             parent_axes=ax, x_scale=x_scale, y_scale=y_scale,
                             show_legend=surf.legend_enabled,
                             legend_position=surf.legend_position)
-        for element in children:
-            self._render_element(element, ctx, selectables, natives)
+        for element, si in zip(children, indices, strict=True):
+            self._render_element(element, replace(ctx, series_index=si), selectables, natives)
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:
-            entries = [el.legend_entry(theme, i) for i, el in enumerate(children)
+            entries = [el.legend_entry(theme, si) for el, si in zip(children, indices, strict=True)
                        if isinstance(el, Element)]
             entries = [e for e in entries if e is not None]
             if entries:

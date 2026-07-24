@@ -1,7 +1,8 @@
-"""The Phase-1 element vocabulary (spec §5)."""
+"""The curated element vocabulary (spec §5 + the 0.4 additions, [D54]/[D70])."""
 
 from __future__ import annotations
 
+from .annotations import ANNOTATION_TYPES, HLine, Span, Text, VLine
 from .bars import Bars
 from .curve import Curve
 from .errorbars import ErrorBars
@@ -16,4 +17,5 @@ __all__ = [
     "Scatter", "Curve", "Bars", "Image",
     "Heatmap", "Histogram", "ErrorBars", "Spread",
     "RawFigure",
+    "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
 ]

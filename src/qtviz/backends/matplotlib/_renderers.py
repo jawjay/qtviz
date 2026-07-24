@@ -15,9 +15,13 @@ from ...elements import (
     ErrorBars,
     Heatmap,
     Histogram,
+    HLine,
     Image,
     Scatter,
+    Span,
     Spread,
+    Text,
+    VLine,
 )
 
 _LINE_STYLE = {"solid": "-", "dashed": "--", "dotted": ":", "dashdot": "-."}
@@ -66,7 +70,8 @@ def render_scatter(element: Scatter, ctx):
         return artist
     return ctx.parent_axes.scatter(
         _col(d, "x"), _col(d, "y"),
-        color=_color(element.color, ctx.theme).mpl(), s=s, alpha=element.alpha, marker=marker,
+        color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
+        s=s, alpha=element.alpha, marker=marker,
     )
 
 
@@ -128,7 +133,7 @@ def _add_legend(ax, legend, theme, position: str = "auto") -> None:
 def render_curve(element: Curve, ctx):
     (line,) = ctx.parent_axes.plot(
         _col(element.data, "x"), _col(element.data, "y"),
-        color=_color(element.color, ctx.theme).mpl(),
+        color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
         lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
     )
     return line
@@ -140,14 +145,16 @@ def render_bars(element: Bars, ctx):
         x = _col(element.data, "x")
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")
-    return ctx.parent_axes.bar(x, height, color=_color(element.color, ctx.theme).mpl())
+    return ctx.parent_axes.bar(
+        x, height, color=_color(element.color, ctx.theme, ctx.series_index).mpl())
 
 
 def render_histogram(element: Histogram, ctx):
     vals = _col(element.data, "column")
     bins = element.bins if isinstance(element.bins, int) else "auto"
     _n, _bins, patches = ctx.parent_axes.hist(
-        vals, bins=bins, density=element.density, color=_color(element.color, ctx.theme).mpl(),
+        vals, bins=bins, density=element.density,
+        color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
     )
     return patches
 
@@ -252,7 +259,7 @@ def render_errorbars(element: ErrorBars, ctx):
     kwargs = {"yerr": err} if element.direction in ("y", "both") else {"xerr": err}
     return ctx.parent_axes.errorbar(
         _col(d, "x"), _col(d, "y"), fmt="o",
-        color=_color(element.color, ctx.theme).mpl(), **kwargs,
+        color=_color(element.color, ctx.theme, ctx.series_index).mpl(), **kwargs,
     )
 
 
@@ -260,8 +267,41 @@ def render_spread(element: Spread, ctx):
     d = element.data
     return ctx.parent_axes.fill_between(
         _col(d, "x"), _col(d, "y_lo"), _col(d, "y_hi"),
-        color=_color(element.color, ctx.theme).mpl(), alpha=element.alpha,
+        color=_color(element.color, ctx.theme, ctx.series_index).mpl(), alpha=element.alpha,
     )
+
+
+def _ref_color(spec, theme) -> Color:
+    """Annotation default: the theme foreground — chrome, not a palette series."""
+    return Color(spec) if spec is not None else theme.foreground
+
+
+def render_hline(element: HLine, ctx):
+    return ctx.parent_axes.axhline(
+        element.y, color=_ref_color(element.color, ctx.theme).mpl(),
+        lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
+    )
+
+
+def render_vline(element: VLine, ctx):
+    return ctx.parent_axes.axvline(
+        element.x, color=_ref_color(element.color, ctx.theme).mpl(),
+        lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
+    )
+
+
+def render_span(element: Span, ctx):
+    fn = ctx.parent_axes.axhspan if element.orient == "h" else ctx.parent_axes.axvspan
+    return fn(element.lo, element.hi,
+              color=_ref_color(element.color, ctx.theme).mpl(), alpha=element.alpha)
+
+
+def render_text(element: Text, ctx):
+    kwargs = {"color": _ref_color(element.color, ctx.theme).mpl(), "ha": element.anchor}
+    if element.size is not None:
+        kwargs["fontsize"] = element.size
+    return ctx.parent_axes.text(element.x, element.y, element.text, **kwargs)
+
 
 
 RENDERERS = {
@@ -273,11 +313,17 @@ RENDERERS = {
     Heatmap: render_heatmap,
     ErrorBars: render_errorbars,
     Spread: render_spread,
+    HLine: render_hline,
+    VLine: render_vline,
+    Span: render_span,
+    Text: render_text,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
 # Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 # Keep in sync with the renderers — the conformance test guards this.
+
+
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
@@ -287,4 +333,8 @@ HONORED: dict[type, frozenset[str]] = {
     Heatmap: frozenset({"colormap"}),                            # not aggregator
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
+    HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    Span: frozenset({"color", "alpha", "label"}),
+    Text: frozenset({"color", "size", "anchor"}),
 }

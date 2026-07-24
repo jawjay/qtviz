@@ -18,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 
 from ...core._degrade import check_recommended
-from ...core._scales import log_lim
+from ...core._scales import log_lim, logify
 from ...core.compose import Overlay, effective_scales, surface_of
 from ...data import resolve_node
 from ...elements import (
@@ -27,10 +27,14 @@ from ...elements import (
     ErrorBars,
     Heatmap,
     Histogram,
+    HLine,
     Image,
     RawFigure,
     Scatter,
+    Span,
     Spread,
+    Text,
+    VLine,
 )
 from ...errors import IncompatibleOverlayError, RendererMissingError
 
@@ -258,6 +262,10 @@ HONORED: dict[type, frozenset[str]] = {
     Heatmap: frozenset(),                        # hardcoded colorscale; no aggregator
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
+    HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
+    Span: frozenset({"color", "alpha", "label"}),
+    Text: frozenset({"color", "size", "anchor"}),
 }
 
 
@@ -274,12 +282,79 @@ def _elements(node):
     return [node]
 
 
+def _ref_css(element, theme) -> str:
+    """Annotation default color: theme foreground — chrome, not a palette series."""
+    from ...core.color import Color  # noqa: PLC0415
+
+    color = Color(element.color) if getattr(element, "color", None) is not None \
+        else theme.foreground
+    return _css(color)
+
+
+def _shape_coord(value: float, scale: str) -> float | None:
+    """One annotation coordinate for a Plotly shape: on a log axis Plotly wants
+    log10 values; a non-positive coordinate drops (warned by logify), R1-style."""
+    if scale != "log":
+        return float(value)
+    v = logify(np.array([value], dtype="float64"), True)[0]
+    return float(v) if np.isfinite(v) else None
+
+
+def _line_shape(pos: float | None, axis: str, element, css: str) -> dict | None:
+    if pos is None:
+        return None
+    free = "y" if axis == "x" else "x"
+    return {
+        "type": "line",
+        f"{free}ref": "paper", f"{free}0": 0.0, f"{free}1": 1.0,
+        f"{axis}ref": axis, f"{axis}0": pos, f"{axis}1": pos,
+        "opacity": element.alpha,
+        "line": {"color": css, "width": element.line_width,
+                 "dash": _DASH.get(element.line_style, "solid")},
+    }
+
+
+def _shape(element, theme, x_scale: str, y_scale: str) -> dict | None:
+    """An HLine / VLine / Span as a Plotly layout shape ([D70])."""
+    css = _ref_css(element, theme)
+    if isinstance(element, HLine):
+        return _line_shape(_shape_coord(element.y, y_scale), "y", element, css)
+    if isinstance(element, VLine):
+        return _line_shape(_shape_coord(element.x, x_scale), "x", element, css)
+    axis = "y" if element.orient == "h" else "x"       # Span
+    scale = y_scale if axis == "y" else x_scale
+    lo, hi = _shape_coord(element.lo, scale), _shape_coord(element.hi, scale)
+    if lo is None or hi is None:
+        return None
+    free = "x" if axis == "y" else "y"
+    return {
+        "type": "rect",
+        f"{free}ref": "paper", f"{free}0": 0.0, f"{free}1": 1.0,
+        f"{axis}ref": axis, f"{axis}0": lo, f"{axis}1": hi,
+        "fillcolor": css, "opacity": element.alpha, "line": {"width": 0},
+    }
+
+
+def _note(element: Text, theme, x_scale: str, y_scale: str) -> dict | None:
+    """A Text element as a Plotly layout annotation."""
+    x, y = _shape_coord(element.x, x_scale), _shape_coord(element.y, y_scale)
+    if x is None or y is None:
+        return None
+    font: dict = {"color": _ref_css(element, theme)}
+    if element.size is not None:
+        font["size"] = element.size
+    return {"x": x, "y": y, "text": element.text, "showarrow": False,
+            "font": font, "xanchor": element.anchor}
+
+
 def build(node, theme) -> tuple[dict, list[str]]:
     """Resolve `node` → (Plotly figure spec, per-trace source-id table).
 
     The source-id list is the D27 trace_index → Element.id map the event layer
     needs to route pick/select back to the originating Element. Multi-trace
-    elements repeat their id once per trace.
+    elements repeat their id once per trace. Annotation elements ([D70]) become
+    layout shapes/annotations — no trace, no source-id row (they emit no
+    events) — and do not consume a palette slot (`series_index_map` rule).
     """
     surf = surface_of(node)  # before resolve — the shared-surface options (title/labels)
     node = resolve_node(node)
@@ -288,24 +363,43 @@ def build(node, theme) -> tuple[dict, list[str]]:
     x_scale, y_scale = effective_scales(node, surf, _SUPPORTED_SCALES, "webengine")
     traces: list[dict] = []
     source_ids: list[str] = []
-    for idx, element in enumerate(_elements(node)):
+    shapes: list[dict] = []
+    notes: list[dict] = []
+    idx = 0  # data-series palette slot; annotations excluded
+    for element in _elements(node):
         if isinstance(element, RawFigure):
             raise IncompatibleOverlayError(
                 "RawFigure is a whole figure and can't be overlaid; render it on its own"
-            )
-        builder = _TRACE_BUILDERS.get(type(element))
-        if builder is None:
-            raise RendererMissingError(
-                f"webengine has no Plotly renderer for {type(element).__name__}"
             )
         check_recommended(
             element, backend_name="webengine",
             honored=HONORED.get(type(element), frozenset()),
         )
+        if isinstance(element, (HLine, VLine, Span)):
+            shape = _shape(element, theme, x_scale, y_scale)
+            if shape is not None:
+                shapes.append(shape)
+            continue
+        if isinstance(element, Text):
+            note = _note(element, theme, x_scale, y_scale)
+            if note is not None:
+                notes.append(note)
+            continue
+        builder = _TRACE_BUILDERS.get(type(element))
+        if builder is None:
+            raise RendererMissingError(
+                f"webengine has no Plotly renderer for {type(element).__name__}"
+            )
         el_traces = builder(element, theme, idx)
+        idx += 1
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))
-    return {"data": traces, "layout": plotly_layout(theme, surf, x_scale, y_scale)}, source_ids
+    layout = plotly_layout(theme, surf, x_scale, y_scale)
+    if shapes:
+        layout["shapes"] = shapes
+    if notes:
+        layout["annotations"] = notes
+    return {"data": traces, "layout": layout}, source_ids
 
 
 def build_figure(node, theme) -> dict:

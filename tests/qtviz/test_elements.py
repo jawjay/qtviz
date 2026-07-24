@@ -14,11 +14,14 @@ qv = pytest.importorskip("qtviz")
 pytestmark = pytest.mark.tier1
 
 
-def test_all_eight_elements_construct(make_elements):
+def test_curated_vocabulary_constructs(make_elements):
     elements = make_elements(qv)
     assert set(elements) == {
+        # the 8 Phase-1 data elements
         "Scatter", "Curve", "Bars", "Histogram",
         "ErrorBars", "Spread", "Image", "Heatmap",
+        # the 0.4 annotation/reference elements ([D70])
+        "HLine", "VLine", "Span", "Text",
     }
 
 

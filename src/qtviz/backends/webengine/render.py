@@ -20,7 +20,7 @@ from ...core.backend import RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.event import EventBus, RangeEvent
 from ...core.threading import require_gui_thread
-from ...elements import RawFigure
+from ...elements import ANNOTATION_TYPES, RawFigure
 from . import _figure, _translate
 from .ext.plotly.backend import PlotlyBackend
 
@@ -164,8 +164,11 @@ class WebEngineBackend:
             self.renderers.register(element_type, _figure._TRACE_BUILDERS[element_type])
 
     def supports(self, element_type: type) -> bool:
-        # RawFigure is a passthrough (D26) — no trace renderer, hosted directly.
-        return element_type is RawFigure or self.renderers.get(element_type) is not None
+        # RawFigure is a passthrough (D26); annotations render as layout
+        # shapes/annotations ([D70]) — neither has a trace renderer.
+        return (element_type is RawFigure
+                or element_type in ANNOTATION_TYPES
+                or self.renderers.get(element_type) is not None)
 
     def honored_options(self, element_type: type) -> frozenset[str]:
         """Recommended options this backend honors for `element_type` (spec §3.4)."""

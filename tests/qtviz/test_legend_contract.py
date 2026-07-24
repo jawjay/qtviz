@@ -252,6 +252,30 @@ def test_pyqtgraph_continuous_colorbar_is_a_true_gradient(qtbot):
 
 
 @pytest.mark.tier2
+def test_native_series_colors_cycle_and_match_legend(qtbot):
+    """Two default-colored series must draw in distinct palette slots (0.4 fix:
+    native renderers used palette[0] for every series while webengine cycled),
+    and the legend swatches must match the drawn colors. An annotation element
+    in the overlay must NOT consume a palette slot."""
+    theme = qv.Theme.light()
+    node = qv.Overlay([
+        qv.Curve(_DATA, x="x", y="y", label="a"),
+        qv.HLine(3.0),                                        # chrome, no slot
+        qv.Curve(_DATA, x="x", y=qv.col("y") * 2.0, label="b"),
+    ])
+    view = qv.View(node, backend="pyqtgraph", theme=theme)
+    qtbot.addWidget(view)
+    a, _h, b = node.children
+    pen_a = view.native(a.id).opts["pen"].color().name()
+    pen_b = view.native(b.id).opts["pen"].color().name()
+    assert pen_a == theme.palette[0].qt().name()
+    assert pen_b == theme.palette[1].qt().name()              # slot 1, not 0 or 2
+    entries = {lb.text: s for s, lb in view.handle.plots[0]._qtviz_legend.items}
+    assert entries["a"].item.opts["brush"].color().name() == pen_a
+    assert entries["b"].item.opts["brush"].color().name() == pen_b
+
+
+@pytest.mark.tier2
 def test_milestone_0_3_acceptance(qtbot):
     """milestone-0.3-firstclass §8, end to end: labeled Curves in a log-x Overlay
     render with a log axis, a two-entry legend, and a data-space brush on

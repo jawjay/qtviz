@@ -48,10 +48,14 @@ from .elements import (
     ErrorBars,
     Heatmap,
     Histogram,
+    HLine,
     Image,
     RawFigure,
     Scatter,
+    Span,
     Spread,
+    Text,
+    VLine,
 )
 from .reactive import Signal, batch, derived, effect, signal
 
@@ -59,6 +63,8 @@ __all__ = [
     # elements
     "Scatter", "Curve", "Bars", "Image", "Heatmap", "Histogram", "ErrorBars", "Spread",
     "RawFigure",
+    # annotation / reference elements ([D70])
+    "HLine", "VLine", "Span", "Text",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)

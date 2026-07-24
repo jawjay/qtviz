@@ -31,7 +31,7 @@ _NON_DEFAULT = {
     "marker": "square", "alpha": 0.5, "line_style": "dashed", "line_width": 3.0,
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
     "group": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,
-    "color": "#ff0000", "size": 10.0, "label": "series-A",
+    "color": "#ff0000", "size": 10.0, "label": "series-A", "anchor": "left",
 }
 
 

@@ -76,8 +76,16 @@ def test_supports_all_eight_elements():
 
 
 def test_every_element_builds_at_least_one_trace(make_elements):
+    from qtviz.elements import ANNOTATION_TYPES
+
     for name, el in make_elements(qv).items():
         fig = _figure.build_figure(el, qv.Theme.light())
+        if isinstance(el, ANNOTATION_TYPES):
+            # annotations are layout shapes/annotations, never traces ([D70])
+            layout = fig["layout"]
+            assert layout.get("shapes") or layout.get("annotations"), \
+                f"{name} produced no layout shape/annotation"
+            continue
         assert fig["data"], f"{name} produced no traces"
         assert all("type" in tr for tr in fig["data"])
 

@@ -21,6 +21,18 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Spread
         - RawFigure
 
+## Annotation & reference elements
+
+::: qtviz
+    options:
+      show_root_heading: false
+      show_root_toc_entry: false
+      members:
+        - HLine
+        - VLine
+        - Span
+        - Text
+
 ## Composition & View
 
 ::: qtviz

@@ -136,6 +136,25 @@ def effective_scales(node: Node, surf: OverlayOptions, available, backend: str) 
     return (x_scale, y_scale)
 
 
+def series_index_map(children) -> list[int]:
+    """Per-child palette slot for one surface: data elements count 0, 1, 2, …;
+    annotation/reference elements are chrome — they get slot 0 (unused; their
+    default color is the theme foreground) and do NOT shift the series that
+    follow. The single source of truth for default-color cycling and
+    `legend_entry(index=…)`, shared by all three backends ([D70])."""
+    from ..elements.annotations import ANNOTATION_TYPES  # noqa: PLC0415
+
+    out: list[int] = []
+    i = 0
+    for el in children:
+        if isinstance(el, ANNOTATION_TYPES):
+            out.append(0)
+        else:
+            out.append(i)
+            i += 1
+    return out
+
+
 def _elements_of(node: Node) -> Iterator[Element]:
     if isinstance(node, Element):
         yield node
