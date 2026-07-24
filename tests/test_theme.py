@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from qtwebplot.theme import Theme
+from qtviz.backends.webengine.theme import Theme
 
 
 def test_theme_defaults_light():

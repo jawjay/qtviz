@@ -4,7 +4,7 @@ from __future__ import annotations
 
 
 def test_import_package() -> None:
-    import qtwebplot
+    import qtviz.backends.webengine as qtwebplot
 
     assert hasattr(qtwebplot, "__version__")
     assert qtwebplot.WebBridgeView is not None
@@ -13,7 +13,7 @@ def test_import_package() -> None:
 
 
 def test_inject_head_scripts_with_head() -> None:
-    from qtwebplot.core._inject import inject_head_scripts
+    from qtviz.backends.webengine.core._inject import inject_head_scripts
 
     html = "<html><head><title>x</title></head><body>hi</body></html>"
     out = inject_head_scripts(html, ["<script>A</script>", "<script>B</script>"])
@@ -26,7 +26,7 @@ def test_inject_head_scripts_with_head() -> None:
 
 
 def test_inject_head_scripts_no_head_falls_back_to_body() -> None:
-    from qtwebplot.core._inject import inject_head_scripts
+    from qtviz.backends.webengine.core._inject import inject_head_scripts
 
     html = "<html><body>hi</body></html>"
     out = inject_head_scripts(html, ["<script>A</script>"])
@@ -37,7 +37,7 @@ def test_inject_head_scripts_no_head_falls_back_to_body() -> None:
 
 def test_inject_preserves_backslash_sequences_in_scripts() -> None:
     """Regression: injected JS like /\\d+/ or "\\n" must survive verbatim."""
-    from qtwebplot.core._inject import inject_head_scripts
+    from qtviz.backends.webengine.core._inject import inject_head_scripts
 
     html = "<html><head></head><body></body></html>"
     js = r"<script>var re = /\d+/; var s = '\n'; console.log('\b');</script>"
@@ -47,7 +47,7 @@ def test_inject_preserves_backslash_sequences_in_scripts() -> None:
 
 
 def test_inject_body_end_script() -> None:
-    from qtwebplot.core._inject import inject_body_end_script
+    from qtviz.backends.webengine.core._inject import inject_body_end_script
 
     html = "<html><body>hi</body></html>"
     out = inject_body_end_script(html, "<script>Z</script>")

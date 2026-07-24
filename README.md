@@ -393,11 +393,11 @@ in [`design/`](design/).
 
 ## Migrating from `qtwebplot`
 
-qtviz began as `qtwebplot`; the Qt↔JS bridge now lives under
-`qtviz.backends.webengine`. Existing `import qtwebplot` code keeps working through a
-compatibility shim that transparently redirects to the new location and emits a
-`DeprecationWarning`. Update imports to `qtviz.backends.webengine` (or the public
-`qtviz` API) when convenient — the shim is kept for two releases, then removed.
+qtviz began as `qtwebplot`; the Qt↔JS bridge lives under
+`qtviz.backends.webengine`. The compatibility shim that redirected
+`import qtwebplot` (deprecated since 0.1) was **removed in 1.0** — update any
+remaining imports to `qtviz.backends.webengine` (or the public `qtviz` API).
+See [docs/stability.md](docs/stability.md) for the deprecation policy.
 
 ---
 

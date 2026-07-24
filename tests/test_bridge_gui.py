@@ -27,7 +27,7 @@ if (
 
 pytest.importorskip("PySide6.QtWebEngineWidgets")
 
-from qtwebplot import WebBridgeView  # noqa: E402
+from qtviz.backends.webengine import WebBridgeView  # noqa: E402
 
 FIXTURE_HTML = """
 <!doctype html>

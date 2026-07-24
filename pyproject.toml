@@ -89,15 +89,11 @@ Issues = "https://github.com/jawjay/qtviz/issues"
 Changelog = "https://github.com/jawjay/qtviz/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
-# The Qt WebEngine bridge now lives under qtviz.backends.webengine; src/qtwebplot
-# is a thin deprecation shim re-exporting from there, kept packaged for two
-# releases (roadmap Phase 6) so old `import qtwebplot` code keeps working.
-packages = ["src/qtviz", "src/qtwebplot"]
+packages = ["src/qtviz"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "src/qtviz",
-    "src/qtwebplot",
     "README.md",
     "pyproject.toml",
     "LICENSE",

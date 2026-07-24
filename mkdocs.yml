@@ -27,6 +27,8 @@ nav:
   - Quickstart: quickstart.md
   - Gallery: gallery.md
   - API reference: api.md
+  - Writing a backend: backends.md
+  - Stability policy: stability.md
   - Design notes: design.md
 
 plugins:
