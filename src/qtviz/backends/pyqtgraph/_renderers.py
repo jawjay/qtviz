@@ -73,6 +73,7 @@ def _color_mapping(element, d, theme):
     return map_colors(
         np.asarray(d.series("color")), palette=theme.palette,
         continuous_palette=palettes.get("viridis"), title=element.color_by,
+        norm=getattr(element, "color_norm", "linear"),
     )
 
 
@@ -541,7 +542,8 @@ RENDERERS = {
 # Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
+                        "color_norm", "label"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Bars: frozenset({"color", "group", "label"}),                  # not orient
     Histogram: frozenset({"bins", "density", "color", "label"}),

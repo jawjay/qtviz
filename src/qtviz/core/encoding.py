@@ -65,17 +65,21 @@ def map_colors(
     vmin: float | None = None,
     vmax: float | None = None,
     title: str | None = None,
+    norm: Literal["linear", "log"] = "linear",
 ) -> tuple[np.ndarray, Legend]:
     """`values` → `(rgba, legend)` where rgba is `(N, 4)` float in [0, 1].
 
     `palette` colors categories; `continuous_palette` (default: `palette`) is the
-    ramp for numeric columns. `kind="auto"` picks by dtype.
+    ramp for numeric columns. `kind="auto"` picks by dtype. `norm="log"` ([D71])
+    normalizes through log10 — the emitted Legend is then `linear=False`
+    (endpoints-only key, [D48]) with data-space bounds; non-positive values warn
+    and map to the bottom of the ramp.
     """
     arr = np.asarray(values)
     categorical = is_categorical(arr) if kind == "auto" else kind == "categorical"
     if categorical:
         return _categorical(arr, palette, title)
-    return _continuous(arr, continuous_palette or palette, vmin, vmax, title)
+    return _continuous(arr, continuous_palette or palette, vmin, vmax, title, norm)
 
 
 def continuous_ramp(palette: Palette) -> tuple[Color, ...]:
@@ -102,13 +106,23 @@ def _categorical(arr, palette: Palette, title) -> tuple[np.ndarray, Legend]:
     return rgba, Legend(kind="categorical", title=title, entries=entries)
 
 
-def _continuous(arr, palette: Palette, vmin, vmax, title) -> tuple[np.ndarray, Legend]:
+def _continuous(arr, palette: Palette, vmin, vmax, title,
+                norm: str = "linear") -> tuple[np.ndarray, Legend]:
     a = np.asarray(arr, dtype="float64")
+    if norm == "log":
+        from ._scales import logify  # noqa: PLC0415
+
+        a = logify(a, True)  # non-positive → NaN + warn ([D59] policy)
     lo = float(np.nanmin(a)) if vmin is None else float(vmin)
     hi = float(np.nanmax(a)) if vmax is None else float(vmax)
     span = (hi - lo) or 1.0
-    norm = np.nan_to_num(np.clip((a - lo) / span, 0.0, 1.0), nan=0.0)
+    normed = np.nan_to_num(np.clip((a - lo) / span, 0.0, 1.0), nan=0.0)
     lut = np.array([palette.at(t / (_LUT_N - 1)).rgba for t in range(_LUT_N)], dtype="float64")
-    rgba = lut[(norm * (_LUT_N - 1)).astype("int64")]
-    legend = Legend(kind="continuous", title=title, vmin=lo, vmax=hi, ramp=continuous_ramp(palette))
+    rgba = lut[(normed * (_LUT_N - 1)).astype("int64")]
+    if norm == "log":  # legend bounds back in data space; non-linear → endpoints-only
+        legend = Legend(kind="continuous", title=title, vmin=10.0**lo, vmax=10.0**hi,
+                        ramp=continuous_ramp(palette), linear=False)
+    else:
+        legend = Legend(kind="continuous", title=title, vmin=lo, vmax=hi,
+                        ramp=continuous_ramp(palette))
     return rgba, legend

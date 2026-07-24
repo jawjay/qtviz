@@ -87,6 +87,7 @@ def _color_by_list(element, d, theme) -> list[str]:
         palette=theme.palette,
         continuous_palette=palettes.get("viridis"),
         title=element.color_by,
+        norm=getattr(element, "color_norm", "linear"),
     )
     return [
         f"rgb({int(round(r * 255))},{int(round(g * 255))},{int(round(b * 255))})"
@@ -124,8 +125,10 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
         from ...core.encoding import is_categorical  # noqa: PLC0415
 
         values = np.asarray(d.series("color"))
-        if is_categorical(values):
-            marker["color"] = _color_by_list(element, d, theme)  # per-category key: later
+        if is_categorical(values) or element.color_norm == "log":
+            # categorical, or log-normed continuous: pre-mapped css colors — a
+            # linear Plotly colorbar would lie about a log mapping ([D48])
+            marker["color"] = _color_by_list(element, d, theme)
         else:
             _continuous_marker_color(element, values, marker)
     else:
@@ -348,7 +351,8 @@ _TRACE_BUILDERS = {
 # Recommended options each trace builder above actually consumes (spec §3.4 /
 # [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
+    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
+                        "color_norm", "label"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Bars: frozenset({"color", "orient", "group", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
