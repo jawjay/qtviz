@@ -58,6 +58,22 @@ class PandasAdapter:
     def wrap(self, obj, shape: str | None = None) -> EagerTabularRef:
         _reject_gridded("a DataFrame", shape)
         cols = {str(c): np.asarray(obj[c].to_numpy()) for c in obj.columns}
+        # The index joins the columns ([D73]) — a time-indexed frame plots
+        # without reset_index(). A real data column always wins the name.
+        index_name = str(obj.index.name) if obj.index.name is not None else "index"
+        if index_name in cols:
+            import warnings  # noqa: PLC0415
+
+            from ...errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn(
+                f"DataFrame index name {index_name!r} collides with a data column; "
+                f"the column wins and the index is not exposed.",
+                QtvizWarning,
+                stacklevel=4,
+            )
+        else:
+            cols[index_name] = np.asarray(obj.index.to_numpy())
         return EagerTabularRef(obj, cols)
 
 

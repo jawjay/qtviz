@@ -84,6 +84,15 @@ class XarrayGriddedRef(GriddedRef):
     def native(self) -> Any:
         return self._da
 
+    def extent(self, name):
+        """Dim extents from the coord arrays ([D73]) — coords are small and
+        eager even on a dask-backed DataArray, so this never computes values."""
+        if name in self._da.coords:
+            from ..ref import _numeric_extent  # noqa: PLC0415
+
+            return _numeric_extent(np.asarray(self._da.coords[name].values))
+        return None
+
     def _coord(self, dim, n) -> np.ndarray:
         if dim in self._da.coords:
             return np.asarray(self._da.coords[dim].values)
@@ -111,7 +120,13 @@ class XarrayAdapter:
 
         if isinstance(obj, xr.Dataset):
             if shape == "gridded":
-                raise TypeError("an xarray Dataset is tabular; cannot force gridded")
+                data_vars = list(obj.data_vars)
+                if len(data_vars) != 1:  # [D73]: only an unambiguous Dataset grids
+                    raise TypeError(
+                        f"gridded() on a Dataset needs exactly one data variable; "
+                        f"got {data_vars} — pick one (e.g. ds[{data_vars[0]!r}])"
+                    )
+                return XarrayGriddedRef(obj[data_vars[0]])
             return XarrayTabularRef(obj)
         # DataArray
         if shape == "tabular" or (shape is None and obj.ndim == 1):

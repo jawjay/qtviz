@@ -129,7 +129,10 @@ def test_is_tabular(ref):
 
 
 def test_schema_names(ref):
-    assert set(ref.schema().names) == set(REF)
+    names = set(ref.schema().names)
+    assert set(REF) <= names
+    # the only sanctioned extra: pandas exposes its index as a column ([D73])
+    assert names - set(REF) <= {"index"}
 
 
 def test_size(ref):
