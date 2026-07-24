@@ -120,6 +120,18 @@ class DaskGriddedRef(GriddedRef):
     def native(self) -> Any:
         return self._arr
 
+    def window(self, x: tuple | None = None, y: tuple | None = None) -> DaskGriddedRef:
+        """A narrowed lazy ref over **index-space** ranges ([D75]) — dask
+        slicing is itself lazy, so this is free until compute."""
+        ny, nx = int(self._arr.shape[0]), int(self._arr.shape[1])
+        ys = slice(*(int(v) for v in y)) if y is not None else slice(0, ny)
+        xs = slice(*(int(v) for v in x)) if x is not None else slice(0, nx)
+        return DaskGriddedRef(
+            self._arr[ys, xs],
+            self._x[xs] if self._x is not None else None,
+            self._y[ys] if self._y is not None else None,
+        )
+
     def materialize(self, limit: int | None = None, *,
                     max_cells: int | None = None) -> EagerGriddedRef:
         strides = (decimation_strides(self._arr.shape, max_cells)

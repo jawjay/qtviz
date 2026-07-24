@@ -220,11 +220,20 @@ def render_image(element: Image, ctx):
     from PySide6.QtCore import QRectF  # noqa: PLC0415
 
     agg = getattr(element, "_raster_agg", None)
+    legend = None
     if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
         result = _shade_raster(element, agg, ctx.theme)
         item = pg.ImageItem(result.rgba, axisOrder="row-major")
+        legend = result.legend
+    elif getattr(element, "_grid_source", None) is not None:
+        # decimated lazy grid ([D74]): shade with the same ramp the regrid loop
+        # uses, so the first frame matches every re-grid after it ([D75])
+        from ...core.palette import palettes  # noqa: PLC0415
+        from ...data.regrid import shade_values  # noqa: PLC0415
+
+        rgba, legend = shade_values(element.data.grid().values, palettes.get("viridis"))
+        item = pg.ImageItem(rgba, axisOrder="row-major")
     else:
-        result = None
         values = np.asarray(element.data.grid().values)
         if values.ndim == 3:  # RGBA raster (e.g. a user-built image): row 0 = ymin
             item = pg.ImageItem(values, axisOrder="row-major")
@@ -233,12 +242,13 @@ def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
-    if result is not None and result.legend is not None and ctx.show_legend:
+    if legend is not None and ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
         # category key / colorbar (C3)
-        add_legend(ctx.parent_axes, result.legend, ctx.theme, ctx.legend_position)
+        add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     _wire_dynamic_raster(element, item, ctx)
+    _wire_dynamic_regrid(element, item, ctx)
     return item
 
 
@@ -298,6 +308,40 @@ def _wire_dynamic_raster(element, item, ctx) -> None:
         vb._qtviz_rasters = []
     vb._qtviz_rasters.append(controller)
     vb._qtviz_rasters.append(wire_raster_hover(vb, element.id, ctx.event_bus, holder))
+
+
+
+def _wire_dynamic_regrid(element, item, ctx) -> None:
+    """Viewport-regrid loop for a decimated lazy grid ([D75]) — the same
+    RasterController/target/debounce/stale-drop the datashader loop uses, with
+    `regrid` (window → decimate → shade) as the rasterize. Mutually exclusive
+    with `_wire_dynamic_raster` by construction (`_raster_source` vs
+    `_grid_source` never co-exist)."""
+    source = getattr(element, "_grid_source", None)
+    if source is None:
+        return
+    from ...core.palette import palettes  # noqa: PLC0415
+    from ...core.raster import RasterController  # noqa: PLC0415
+    from ...data.regrid import make_regrid  # noqa: PLC0415
+    from ._legend import add_legend  # noqa: PLC0415
+    from ._raster import PgRasterTarget  # noqa: PLC0415
+
+    vb = ctx.parent_axes.getViewBox()
+    plot = ctx.parent_axes
+    theme = ctx.theme
+    position = ctx.legend_position
+    refresh_legend = (  # vmin/vmax track the visible window (C3)
+        (lambda lg: add_legend(plot, lg, theme, position)) if ctx.show_legend
+        else (lambda lg: None)
+    )
+    controller = RasterController(
+        source=source, target=PgRasterTarget(item, vb),
+        rasterize=make_regrid(element.bounds, palettes.get("viridis")),
+        parent=vb, on_legend=refresh_legend,
+    )
+    if not hasattr(vb, "_qtviz_rasters"):
+        vb._qtviz_rasters = []
+    vb._qtviz_rasters.append(controller)
 
 
 def render_heatmap(element: Heatmap, ctx):

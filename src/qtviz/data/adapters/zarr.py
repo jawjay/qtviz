@@ -24,34 +24,61 @@ from ..ref import (
 
 
 class ZarrGriddedRef(GriddedRef):
+    """zarr has no lazy views, so a `window()` ([D75]) is carried as index
+    slices applied at read time — one `z[y0:y1:sy, x0:x1:sx]` touches only the
+    chunks the (strided) window intersects."""
+
     is_lazy = True
 
-    def __init__(self, z) -> None:
+    def __init__(self, z, win: tuple[slice, slice] | None = None) -> None:
         self._z = z
+        self._win = win  # (y-slice, x-slice) in source index space
+
+    def _yx(self) -> tuple[slice, slice]:
+        if self._win is not None:
+            return self._win
+        return slice(0, int(self._z.shape[0])), slice(0, int(self._z.shape[1]))
 
     def schema(self) -> Schema:
-        return Schema(names=(), kind="gridded", shape=tuple(self._z.shape))
+        wy, wx = self._yx()
+        shape = (wy.stop - wy.start, wx.stop - wx.start, *self._z.shape[2:])
+        return Schema(names=(), kind="gridded", shape=shape)
 
     def size(self) -> int:
-        return int(np.prod(self._z.shape))  # shape is cheap metadata
+        return int(np.prod(self.schema().shape))
 
     def fingerprint(self):
-        return id(self._z)
+        return (id(self._z), self._win and (self._win[0].start, self._win[0].stop,
+                                            self._win[1].start, self._win[1].stop))
 
     def native(self) -> Any:
         return self._z
 
+    def window(self, x: tuple | None = None, y: tuple | None = None) -> ZarrGriddedRef:
+        """A narrowed lazy ref over **index-space** ranges (gridded contract,
+        [D75]); nothing is read until materialize."""
+        wy, wx = self._yx()
+
+        def clip(rng, cur: slice, n: int) -> slice:
+            if rng is None:
+                return cur
+            lo = max(cur.start, cur.start + int(np.floor(rng[0])))
+            hi = min(cur.stop, cur.start + int(np.ceil(rng[1])))
+            return slice(min(lo, n - 1), max(hi, lo + 1))
+
+        return ZarrGriddedRef(self._z, (clip(y, wy, self._z.shape[0]),
+                                        clip(x, wx, self._z.shape[1])))
+
     def materialize(self, limit: int | None = None, *,
                     max_cells: int | None = None) -> EagerGriddedRef:
-        strides = (decimation_strides(self._z.shape, max_cells)
-                   if len(self._z.shape) >= 2 else None)
-        if strides is None:
-            return EagerGriddedRef(self._z, np.asarray(self._z[:]))
-        sy, sx = strides
-        values = np.asarray(self._z[::sy, ::sx])  # trailing (e.g. RGBA) dims untouched
-        ny, nx = self._z.shape[0], self._z.shape[1]
+        wy, wx = self._yx()
+        shape = (wy.stop - wy.start, wx.stop - wx.start)
+        strides = decimation_strides(shape, max_cells) if len(self._z.shape) >= 2 else None
+        sy, sx = strides or (1, 1)
+        values = np.asarray(self._z[wy.start:wy.stop:sy, wx.start:wx.stop:sx])
         return EagerGriddedRef(self._z, values,
-                               x=np.arange(0, nx, sx), y=np.arange(0, ny, sy))
+                               x=np.arange(wx.start, wx.stop, sx),
+                               y=np.arange(wy.start, wy.stop, sy))
 
     def grid(self, value: str | None = None):
         return self.materialize().grid(value)

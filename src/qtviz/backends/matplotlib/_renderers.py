@@ -212,6 +212,19 @@ def render_image(element: Image, ctx):
             _add_legend(ctx.parent_axes, result.legend, ctx.theme, ctx.legend_position)
         _wire_dynamic_raster(element, artist, ctx)
         return artist
+    if getattr(element, "_grid_source", None) is not None:
+        # decimated lazy grid ([D74]) — shaded like the regrid loop ([D75])
+        from ...core.palette import palettes  # noqa: PLC0415
+        from ...data.regrid import shade_values  # noqa: PLC0415
+
+        rgba, legend = shade_values(element.data.grid().values, palettes.get("viridis"))
+        artist = ctx.parent_axes.imshow(
+            rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+        )
+        if ctx.show_legend:
+            _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+        _wire_dynamic_regrid(element, artist, ctx)
+        return artist
     values = np.asarray(element.data.grid().values)
     if values.ndim == 3:  # RGBA raster (e.g. a user-built image)
         artist = ctx.parent_axes.imshow(
@@ -280,6 +293,35 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
         ax._qtviz_rasters = []
     ax._qtviz_rasters.append(controller)
     ax._qtviz_rasters.append(wire_raster_hover(ax, element.id, ctx.event_bus, holder))
+
+
+
+def _wire_dynamic_regrid(element, artist, ctx) -> None:
+    """Viewport-regrid loop for a decimated lazy grid ([D75]) — mirrors the
+    pyqtgraph wiring through the shared RasterController."""
+    source = getattr(element, "_grid_source", None)
+    if source is None:
+        return
+    from ...core.palette import palettes  # noqa: PLC0415
+    from ...core.raster import RasterController  # noqa: PLC0415
+    from ...data.regrid import make_regrid  # noqa: PLC0415
+    from ._raster import MplRasterTarget  # noqa: PLC0415
+
+    ax = ctx.parent_axes
+    theme = ctx.theme
+    position = ctx.legend_position
+    refresh_legend = (
+        (lambda lg: _add_legend(ax, lg, theme, position)) if ctx.show_legend
+        else (lambda lg: None)
+    )
+    controller = RasterController(
+        source=source, target=MplRasterTarget(artist, ax),
+        rasterize=make_regrid(element.bounds, palettes.get("viridis")),
+        parent=ax.figure.canvas, on_legend=refresh_legend,
+    )
+    if not hasattr(ax, "_qtviz_rasters"):
+        ax._qtviz_rasters = []
+    ax._qtviz_rasters.append(controller)
 
 
 def render_heatmap(element: Heatmap, ctx):
