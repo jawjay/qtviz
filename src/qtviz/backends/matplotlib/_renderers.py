@@ -140,6 +140,8 @@ def render_curve(element: Curve, ctx):
 
 
 def render_bars(element: Bars, ctx):
+    if element.group is not None:
+        return _render_group_bars(element, ctx)
     height = _col(element.data, "y")
     try:
         x = _col(element.data, "x")
@@ -147,6 +149,41 @@ def render_bars(element: Bars, ctx):
         x = np.arange(len(height), dtype="float64")
     return ctx.parent_axes.bar(
         x, height, color=_color(element.color, ctx.theme, ctx.series_index).mpl())
+
+
+def _render_group_bars(element: Bars, ctx):
+    """One bar series per group ([D68]) — offset (grouped) or bottom-stacked;
+    palette per group in category order + a categorical group legend."""
+    from ...core._stats import group_bars  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
+
+    d = element.data
+    xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
+                             np.asarray(d.series("group")))
+    numeric = np.issubdtype(xs.dtype, np.number)
+    pos = xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")
+    ax = ctx.parent_axes
+    if not numeric:
+        ax.set_xticks(pos, [str(c) for c in xs])
+    swatches = category_swatches(gs, ctx.theme.palette)
+    artists = []
+    if element.mode == "grouped":
+        total_w = 0.8
+        w = total_w / len(gs)
+        for gi in range(len(gs)):
+            artists.append(ax.bar(pos - total_w / 2 + w / 2 + gi * w, mat[gi],
+                                  width=w * 0.95, color=swatches[gi].mpl()))
+    else:  # stacked
+        bases = np.zeros(len(xs))
+        for gi in range(len(gs)):
+            artists.append(ax.bar(pos, mat[gi], width=0.6, bottom=bases,
+                                  color=swatches[gi].mpl()))
+            bases = bases + mat[gi]
+    if ctx.show_legend:
+        legend = Legend(kind="categorical", title=element.group,
+                        entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
+        _add_legend(ax, legend, ctx.theme, ctx.legend_position)
+    return artists
 
 
 def render_histogram(element: Histogram, ctx):
@@ -243,12 +280,11 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
 
 
 def render_heatmap(element: Heatmap, ctx):
+    from ...core._stats import grid_reduce  # noqa: PLC0415
+
     d = element.data
-    xv, yv, zv = d.series("x"), d.series("y"), _col(d, "z")
-    xs, x_inv = np.unique(xv, return_inverse=True)
-    ys, y_inv = np.unique(yv, return_inverse=True)
-    grid = np.full((len(ys), len(xs)), np.nan)
-    grid[y_inv, x_inv] = zv
+    _xs, _ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
+                                 element.aggregator)  # real reduction ([D69])
     return ctx.parent_axes.imshow(grid, origin="lower", aspect="auto", cmap=element.colormap)
 
 
@@ -327,10 +363,10 @@ RENDERERS = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Bars: frozenset({"color", "label"}),                         # not group/orient
+    Bars: frozenset({"color", "group", "label"}),                # not orient
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
-    Heatmap: frozenset({"colormap"}),                            # not aggregator
+    Heatmap: frozenset({"colormap", "aggregator"}),
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

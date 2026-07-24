@@ -118,6 +118,8 @@ def render_curve(element: Curve, ctx):
 
 
 def render_bars(element: Bars, ctx):
+    if element.group is not None:
+        return _render_group_bars(element, ctx)
     d = element.data
     height = _col(d, "y")
     try:
@@ -132,6 +134,69 @@ def render_bars(element: Bars, ctx):
                            width=0.6, brush=brush)
     ctx.parent_axes.addItem(item)
     return item
+
+
+def _bar_positions(xs) -> tuple[np.ndarray, bool]:
+    """Category base positions: numeric x uses the values; strings use 0..n-1
+    (the caller sets tick labels)."""
+    numeric = np.issubdtype(xs.dtype, np.number)
+    return (xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")), numeric
+
+
+def _log_base_top(bases, tops, y_log: bool):
+    """Stacked-bar segment bounds under log-y: computed in *data* space, then to
+    exponent space. A zero base keeps the (data 1) baseline convention without a
+    spurious non-positive warning."""
+    if not y_log:
+        return bases, tops
+    lb = np.zeros_like(bases)
+    positive = bases > 0
+    lb[positive] = np.log10(bases[positive])
+    return lb, logify(tops, True)
+
+
+def _render_group_bars(element: Bars, ctx):
+    """One BarGraphItem per group ([D68]): side-by-side offsets (grouped) or
+    cumulative data-space bases (stacked); palette per group in category order
+    (`category_swatches` — same rule as color_by) + a categorical group legend."""
+    from ...core._stats import group_bars  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
+
+    d = element.data
+    xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
+                             np.asarray(d.series("group")))
+    pos, numeric = _bar_positions(xs)
+    if not numeric:
+        ctx.parent_axes.getAxis("bottom").setTicks(
+            [[(float(i), str(c)) for i, c in enumerate(xs)]]
+        )
+    swatches = category_swatches(gs, ctx.theme.palette)
+    _x_log, y_log = _xy_log(ctx)
+    items = []
+    if element.mode == "grouped":
+        total_w = 0.8
+        w = total_w / len(gs)
+        for gi in range(len(gs)):
+            offs = pos - total_w / 2 + w / 2 + gi * w
+            items.append(pg.BarGraphItem(x=offs, height=logify(mat[gi], y_log),
+                                         width=w * 0.95, brush=swatches[gi].qt()))
+    else:  # stacked
+        bases = np.zeros(len(xs))
+        for gi in range(len(gs)):
+            tops = bases + mat[gi]
+            y0, y1 = _log_base_top(bases, tops, y_log)
+            items.append(pg.BarGraphItem(x=pos, y0=y0, y1=y1, width=0.6,
+                                         brush=swatches[gi].qt()))
+            bases = tops
+    for item in items:
+        ctx.parent_axes.addItem(item)
+    if ctx.show_legend:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        legend = Legend(kind="categorical", title=element.group,
+                        entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
+        add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+    return items
 
 
 def render_histogram(element: Histogram, ctx):
@@ -233,13 +298,11 @@ def _wire_dynamic_raster(element, item, ctx) -> None:
 
 
 def render_heatmap(element: Heatmap, ctx):
+    from ...core._stats import grid_reduce  # noqa: PLC0415
+
     d = element.data
-    xv, yv = d.series("x"), d.series("y")
-    zv = _col(d, "z")
-    xs, x_inv = np.unique(xv, return_inverse=True)
-    ys, y_inv = np.unique(yv, return_inverse=True)
-    grid = np.full((len(ys), len(xs)), np.nan)
-    grid[y_inv, x_inv] = zv  # last value wins (aggregator TODO, §5.5)
+    _xs, _ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
+                                 element.aggregator)  # real reduction ([D69])
     item = pg.ImageItem(grid)
     ctx.parent_axes.addItem(item)
     return item
@@ -373,10 +436,10 @@ RENDERERS = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Bars: frozenset({"color", "label"}),                           # not group/orient
+    Bars: frozenset({"color", "group", "label"}),                  # not orient
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset(),                                            # colormap/interpolation unwired
-    Heatmap: frozenset(),                                          # colormap/aggregator unwired
+    Heatmap: frozenset({"aggregator"}),                            # colormap unwired
     ErrorBars: frozenset({"label"}),                               # color/direction unwired
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

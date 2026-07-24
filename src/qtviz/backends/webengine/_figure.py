@@ -150,6 +150,8 @@ def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
 
 def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
     d = element.data
+    if element.group is not None:
+        return _group_bars_traces(element, theme)
     x = list(np.asarray(d.series("x")))            # keep categorical labels as-is
     trace = {"type": "bar", "marker": {"color": _css(_element_color(element, theme, idx))},
              "name": element.label or element.id, "showlegend": element.label is not None}
@@ -158,6 +160,27 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
     else:
         trace["x"], trace["y"] = x, _floats(d.series("y"))
     return [trace]
+
+
+def _group_bars_traces(element: Bars, theme) -> list[dict]:
+    """One bar trace per group ([D68]); the stacking/offset itself is Plotly's
+    `layout.barmode`, set by `build`. Palette per group in category order —
+    same swatch rule as the native backends."""
+    from ...core._stats import group_bars  # noqa: PLC0415
+    from ...core.encoding import category_swatches  # noqa: PLC0415
+
+    d = element.data
+    xs, gs, mat = group_bars(np.asarray(d.series("x")),
+                             np.asarray(d.series("y"), dtype="float64"),
+                             np.asarray(d.series("group")))
+    numeric = np.issubdtype(xs.dtype, np.number)
+    x = _floats(xs) if numeric else [str(c) for c in xs]
+    swatches = category_swatches(gs, theme.palette)
+    return [{
+        "type": "bar", "x": x, "y": mat[gi],
+        "marker": {"color": _css(swatches[gi])},
+        "name": str(g), "showlegend": True,
+    } for gi, g in enumerate(gs)]
 
 
 def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
@@ -196,13 +219,12 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
 
 
 def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
+    from ...core._stats import grid_reduce  # noqa: PLC0415
+
     d = element.data
-    xv, yv = np.asarray(d.series("x")), np.asarray(d.series("y"))
-    zv = np.asarray(d.series("z"), dtype="float64")
-    xs, x_inv = np.unique(xv, return_inverse=True)
-    ys, y_inv = np.unique(yv, return_inverse=True)
-    grid = np.full((len(ys), len(xs)), np.nan)
-    grid[y_inv, x_inv] = zv                        # last value wins (aggregator TODO §5.5)
+    xs, ys, grid = grid_reduce(d.series("x"), d.series("y"),
+                               np.asarray(d.series("z"), dtype="float64"),
+                               element.aggregator)  # real reduction ([D69])
     return [{
         "type": "heatmap", "x": xs, "y": ys, "z": grid,
         "colorscale": "Viridis", "name": element.id,
@@ -256,10 +278,10 @@ _TRACE_BUILDERS = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker", "label"}),
     Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Bars: frozenset({"color", "orient", "label"}),               # not group
+    Bars: frozenset({"color", "orient", "group", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset(),                          # colorscale hardcoded Viridis
-    Heatmap: frozenset(),                        # hardcoded colorscale; no aggregator
+    Heatmap: frozenset({"aggregator"}),          # colorscale still hardcoded
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
@@ -366,6 +388,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
     shapes: list[dict] = []
     notes: list[dict] = []
     idx = 0  # data-series palette slot; annotations excluded
+    barmode: str | None = None  # set by a grouped/stacked Bars ([D68])
     for element in _elements(node):
         if isinstance(element, RawFigure):
             raise IncompatibleOverlayError(
@@ -394,7 +417,11 @@ def build(node, theme) -> tuple[dict, list[str]]:
         idx += 1
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))
+        if isinstance(element, Bars) and element.group is not None:
+            barmode = "stack" if element.mode == "stacked" else "group"
     layout = plotly_layout(theme, surf, x_scale, y_scale)
+    if barmode is not None:
+        layout["barmode"] = barmode
     if shapes:
         layout["shapes"] = shapes
     if notes:
