@@ -135,6 +135,47 @@ def test_matplotlib_falls_back_to_debounced_rebuild(qtbot):
 
 
 @pytest.mark.tier2
+def test_milestone_0_6_acceptance(qtbot):
+    """milestone-0.6-live §9, driving the shipped example: the live panel updates
+    in place as the feed appends; brushing the datashaded history panel emits
+    true source rows and the linked detail panel re-renders with them."""
+    import importlib.util
+    from pathlib import Path
+
+    pytest.importorskip("datashader")
+    path = Path(__file__).resolve().parents[2] / "examples" / "34_streaming_telemetry.py"
+    spec = importlib.util.spec_from_file_location("streaming_telemetry", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    splitter, main_view, detail_view, feed, _timer = module.build()
+    qtbot.addWidget(splitter)
+    qtbot.waitUntil(lambda: main_view.handle is not None, timeout=8000)  # async raster
+    live_id = next(iter(main_view.handle._natives))          # the live Curve item
+    live_item = main_view.handle._natives[live_id]
+    n_before = len(live_item.getData()[0])
+    feed.append(t=np.arange(1000.0, 1025.0), v=np.zeros(25))  # one wire batch
+    qtbot.waitUntil(
+        lambda: len(main_view.handle._natives[live_id].getData()[0]) == n_before + 25,
+        timeout=3000,
+    )
+    assert main_view.handle._natives[live_id] is live_item   # in place, no rebuild
+    # brush the history raster → detail panel shows just the brushed rows
+    raster_vb = main_view.handle.plots[1].getViewBox()
+    raster_vb.select_bounds(-36_000.0, -10.0, -35_900.0, 10.0)
+
+    def detail_shows_selection():
+        handle = detail_view.handle
+        if handle is None or not handle._natives:
+            return False
+        item = next(iter(handle._natives.values()))
+        data = getattr(item, "getData", lambda: (None,))()[0]
+        return data is not None and 0 < len(data) < 400_000
+
+    qtbot.waitUntil(detail_shows_selection, timeout=5000)
+
+
+@pytest.mark.tier2
 def test_stream_under_log_axis_stays_r1_consistent(qtbot):
     feed = qv.stream({"t": float, "v": float})
     feed.append(t=np.array([1.0, 10.0]), v=np.array([1.0, 2.0]))

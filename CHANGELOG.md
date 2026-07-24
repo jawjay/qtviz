@@ -4,6 +4,36 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 0.6.0
+
+Live & linked ([D63] — the differentiator; `design/milestone-0.6-live.md`,
+[D76]–[D78], resolves the long-open [D7]). Streaming + linked brushing through
+a datashaded view, as plain desktop widgets.
+
+### Added
+
+- **`qv.stream(...)` ([D76]).** A mutable, append-able tabular `DataRef` with
+  ring-buffer rolling windows (`window=` — the spec §12 "auto-rolling"
+  deferral, lifted). `append(**columns)` from any thread; renders never see a
+  torn append; notifies through the base contract's `subscribe` seam —
+  designed in Phase 1, dead until now. Elements stay immutable ([D38]/R1).
+- **Incremental refresh ([D77]).** `RenderHandle.set_element_data` — pyqtgraph
+  updates live Scatter/Curve items in place (`setData`, ms at 100k points; log
+  surfaces stay R1-consistent; brush selectables refresh), finally backing the
+  `streaming=True` it has declared since 0.1. Appends coalesce to **one
+  refresh per event-loop tick** ([D7] resolved); other paths degrade
+  explicitly (webengine: Plotly-react diff; matplotlib: debounced rebuild —
+  its `streaming=False` was always honest). A user zoom is never re-ranged.
+- **Raster selection ([D78]).** Brushing a datashaded view (which emitted
+  nothing) now emits a `SelectEvent` for the *source* element: true row
+  indices when the source is eager (closing the [D58] pixel→source-rows
+  deferral), and bounds-only for lazy sources — the predicate that scales,
+  filtered downstream via `window(bounds)` pushdown. Both native backends;
+  crossfilter-through-a-raster works end to end.
+- `examples/34_streaming_telemetry.py` — the milestone dashboard: a live
+  rolling feed, a datashaded 400k history, and a raster brush driving a
+  linked detail panel via signals, in ~90 lines.
+
 ## [Unreleased] — 0.5.0
 
 The array data core (owner-directed scope: numpy / pandas / dask / zarr /
