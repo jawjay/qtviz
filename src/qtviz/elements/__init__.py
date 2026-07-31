@@ -12,6 +12,7 @@ from .errorbars import ErrorBars
 from .heatmap import Heatmap
 from .histogram import Histogram
 from .image import Image
+from .mesh import Mesh
 from .pie import Pie
 from .raw_figure import RawFigure
 from .scatter import Scatter
@@ -26,5 +27,5 @@ __all__ = [
     "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
     "Arrow", "Rect", "Ellipse", "Polygon", "RefLine",
     "BoxPlot", "Violin",
-    "Area", "Ecdf", "Pie", "Contour",
+    "Area", "Ecdf", "Pie", "Contour", "Mesh",
 ]

@@ -33,6 +33,7 @@ from ...elements import (
     Histogram,
     HLine,
     Image,
+    Mesh,
     Polygon,
     Rect,
     RefLine,
@@ -596,6 +597,41 @@ def _log_deltas(center, lo, hi, is_log: bool, lc):
     return lc - logify(center - lo, True), logify(center + hi, True) - lc
 
 
+def _pg_colormap(name: str):
+    """The pg ColorMap for a name — same resolution/fallback contract as
+    `_pg_lut` (pg's maps, then matplotlib's registry, warn → viridis)."""
+    for source in (None, "matplotlib"):
+        try:
+            return pg.colormap.get(name, source=source)
+        except Exception:  # noqa: BLE001
+            continue
+    import warnings  # noqa: PLC0415
+
+    from ...errors import QtvizWarning  # noqa: PLC0415
+
+    warnings.warn(f"pyqtgraph: no colormap named {name!r}; using 'viridis'",
+                  QtvizWarning, stacklevel=2)
+    return pg.colormap.get("viridis")
+
+
+def render_mesh(element: Mesh, ctx):
+    """Non-uniform rectilinear grid ([D106]) via `PColorMeshItem` (spiked:
+    edge-corner meshgrids, explicit levels). Shares the [D105] norm path."""
+    values = element.check_shape(element.data.grid().values)
+    display, levels, norm_legend = _norm_display(element, values, ctx)
+    xg, yg = np.meshgrid(np.asarray(element.x_edges), np.asarray(element.y_edges))
+    kwargs: dict = {"colorMap": _pg_colormap(element.colormap)}
+    if levels is not None:
+        kwargs.update(levels=levels, enableAutoLevels=False)
+    item = pg.PColorMeshItem(xg, yg, display, **kwargs)
+    ctx.parent_axes.addItem(item)
+    if norm_legend is not None and ctx.show_legend:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        add_legend(ctx.parent_axes, norm_legend, ctx.theme, ctx.legend_position)
+    return item
+
+
 def render_contour(element: Contour, ctx):
     """Iso-lines over a grid ([D89]) via `IsocurveItem` — one item per shared
     core level, colormap-colored, index coords mapped onto `bounds` the way
@@ -1033,6 +1069,7 @@ RENDERERS: dict[type, Any] = {
     Area: render_area,
     Ecdf: render_ecdf,
     Contour: render_contour,
+    Mesh: render_mesh,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -1069,5 +1106,6 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
+    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

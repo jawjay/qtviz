@@ -39,6 +39,7 @@ from ...elements import (
     Histogram,
     HLine,
     Image,
+    Mesh,
     Pie,
     Polygon,
     RawFigure,
@@ -585,6 +586,20 @@ def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
     return [trace]
 
 
+def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
+    """Non-uniform grid ([D106]): a Plotly heatmap whose x/y carry one more
+    entry than z — Plotly reads them as block boundaries (the edges)."""
+    values = element.check_shape(element.data.grid().values)
+    trace = {
+        "type": "heatmap", "z": values,
+        "x": np.asarray(element.x_edges, dtype="float64"),
+        "y": np.asarray(element.y_edges, dtype="float64"),
+        "colorscale": _colorscale(element.colormap), "name": element.id,
+    }
+    _apply_norm(trace, element, values)
+    return [trace]
+
+
 def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
     """Iso-lines / filled bands ([D89]). Plotly takes uniform start/end/size
     levels — exactly what the shared core levels are for an int `levels`; a
@@ -631,6 +646,7 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Ecdf: _ecdf_trace,
     Pie: _pie_trace,
     Contour: _contour_trace,
+    Mesh: _mesh_trace,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -661,6 +677,7 @@ HONORED: dict[type, frozenset[str]] = {
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
+    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 

@@ -58,6 +58,7 @@ from .elements import (
     Histogram,
     HLine,
     Image,
+    Mesh,
     Pie,
     Polygon,
     RawFigure,
@@ -82,7 +83,7 @@ __all__ = [
     # statistical elements ([D67])
     "BoxPlot", "Violin",
     # composition vocabulary (parity program increment 3, [D84b]/[D90]/[D91])
-    "Area", "Ecdf", "Pie", "Contour",
+    "Area", "Ecdf", "Pie", "Contour", "Mesh",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)

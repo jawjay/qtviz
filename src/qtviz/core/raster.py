@@ -119,10 +119,19 @@ class RasterController(QObject):
         _raster_pool().submit(self._run, build_id, work)
 
     def _run(self, build_id: int, work) -> None:
+        result, exc = None, None
         try:
-            self._done.emit(build_id, work(), None)
+            result = work()
         except Exception as e:  # noqa: BLE001
-            self._done.emit(build_id, None, e)
+            exc = e
+        import contextlib  # noqa: PLC0415
+
+        # The controller's C++ half can be deleted while an aggregation is in
+        # flight (widget teardown races the worker pool) — emitting on a dead
+        # QObject is fatal under shiboken; dropping the stale result is the
+        # correct outcome anyway.
+        with contextlib.suppress(RuntimeError):
+            self._done.emit(build_id, result, exc)
 
     @Slot(int, object, object)
     def _on_done(self, build_id: int, result, exc) -> None:

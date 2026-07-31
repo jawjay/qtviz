@@ -50,6 +50,7 @@ def test_pg_streamed_raster_refreshes_in_place(qtbot):
     assert ok is True                                   # rung 1, not a rebuild
     assert handle.native(el.id) is item_before          # same live raster item
     qtbot.waitUntil(lambda: controller._build_id > builds_before, timeout=3000)
+    handle.dispose()  # settle in-flight aggregations before teardown
 
 
 @pytest.mark.tier2
@@ -66,6 +67,7 @@ def test_mpl_streamed_raster_refreshes_in_place(qtbot):
     assert handle.set_element_data(el.id, {"t": np.array([1.0]),
                                            "v": np.array([1.0])}) is True
     qtbot.waitUntil(lambda: controller._build_id > builds_before, timeout=3000)
+    handle.dispose()  # settle in-flight aggregations before teardown
 
 
 @pytest.mark.tier2

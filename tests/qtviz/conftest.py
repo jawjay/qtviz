@@ -101,6 +101,8 @@ def make_elements(table, grid):
             "Area": qv.Area(table, x="x", y="y"),
             "Ecdf": qv.Ecdf(table, column="y"),
             "Contour": qv.Contour(values, bounds=bounds),
+            "Mesh": qv.Mesh(values, x_edges=np.linspace(0.0, 30.0, 31),
+                            y_edges=np.geomspace(1.0, 20.0, 21)),
             "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"]},
                           values="v", labels="l"),
         }

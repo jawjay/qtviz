@@ -27,6 +27,7 @@ from ...elements import (
     Histogram,
     HLine,
     Image,
+    Mesh,
     Pie,
     Polygon,
     Rect,
@@ -578,6 +579,16 @@ def render_pie(element: Pie, ctx):
     return wedges
 
 
+def render_mesh(element: Mesh, ctx):
+    """Non-uniform rectilinear grid ([D106]) — edges straight to pcolormesh;
+    the [D105] norm surface shared with Image/Heatmap."""
+    values = element.check_shape(element.data.grid().values)
+    display, norm_kw = _norm_display(element, values, ctx, ctx.parent_axes)
+    return ctx.parent_axes.pcolormesh(
+        np.asarray(element.x_edges), np.asarray(element.y_edges), display,
+        cmap=_mpl_cmap(element.colormap), **norm_kw)
+
+
 def render_contour(element: Contour, ctx):
     """Iso-lines / filled bands over a grid ([D89]) — level values come from
     core (`contour_levels`) so every backend draws the same lines."""
@@ -823,6 +834,7 @@ RENDERERS: dict[type, Any] = {
     Ecdf: render_ecdf,
     Pie: render_pie,
     Contour: render_contour,
+    Mesh: render_mesh,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -861,5 +873,6 @@ HONORED: dict[type, frozenset[str]] = {
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
+    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
