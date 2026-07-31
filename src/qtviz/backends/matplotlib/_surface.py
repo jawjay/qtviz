@@ -11,7 +11,14 @@ resolves the effective scales via `core.compose.effective_scales`.
 
 from __future__ import annotations
 
+from ...core._ticks import format_tick
 from ...core.color import Color
+
+
+def _tick_formatter(spec: str):
+    from matplotlib.ticker import FuncFormatter  # noqa: PLC0415
+
+    return FuncFormatter(lambda v, _pos: format_tick(v, spec))
 
 
 def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
@@ -40,3 +47,7 @@ def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
         ax.set_aspect(surf.aspect)
     if not surf.grid:
         ax.grid(False)  # override the themed default ([D87])
+    if surf.x.tick_format != "auto":  # ([D86]); mpl passes data-space values
+        ax.xaxis.set_major_formatter(_tick_formatter(surf.x.tick_format))
+    if surf.y.tick_format != "auto":
+        ax.yaxis.set_major_formatter(_tick_formatter(surf.y.tick_format))

@@ -29,6 +29,12 @@ the popular libraries, declaratively" ([D83]).
   worked); categorical tick labels move to the y axis.
 - **Surface grid toggle ([D87]).** `OverlayOptions(grid=False)` turns the
   grid off on every backend (it was permanently on).
+- **Tick formatting wired ([D86]).** `AxisSpec(tick_format=…)` — reserved
+  since 0.3 — now formats ticks on all three backends: a Python format-spec
+  string (`".2f"`, `",d"`, `".0%"`, …) or `"eng"` (SI prefixes). matplotlib
+  gets a `FuncFormatter`, pyqtgraph a data-space `tickStrings` override
+  (labels read 10**v under log — R1), webengine the d3-format twin. Invalid
+  specs raise `ValidationError` at construction.
 - `Bars.mode` joined the honor-or-warn contract (`RECOMMENDED_OPTIONS`), and
   `Bars(mode="stacked")` without `group=` is now a `ValidationError` instead
   of a silent no-op.

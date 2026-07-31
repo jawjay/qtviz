@@ -57,7 +57,8 @@ class AxisSpec(Immutable):
     """Per-axis surface config (axis-surface seam; feasibility §2.1, [D59]).
 
     `scale` (`linear|log|symlog|time`), declarative `lim`, and `invert` land in 0.3;
-    `tick_format` is reserved for a later phase (honored as ``"auto"`` for now). A
+    `tick_format` ([D86]) is `"auto"`, `"eng"` (SI prefixes), or a Python
+    format-spec string (`".2f"`, `",d"`, `".0%"`, …), honored on every backend. A
     backend that can't render the requested `scale` warns and falls back to linear."""
 
     def __init__(
@@ -69,10 +70,13 @@ class AxisSpec(Immutable):
         invert: bool = False,
         tick_format: str = "auto",
     ) -> None:
+        from ._ticks import validate_tick_format  # noqa: PLC0415 — avoid a cycle
+
         if scale not in _SCALES:
             raise ValidationError(f"scale must be one of {_SCALES}, got {scale!r}")
         if lim is not None and len(tuple(lim)) != 2:
             raise ValidationError(f"lim must be a (lo, hi) pair, got {lim!r}")
+        validate_tick_format(tick_format)
         self.label = label
         self.scale = scale
         self.lim = (float(lim[0]), float(lim[1])) if lim is not None else None

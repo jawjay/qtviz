@@ -675,6 +675,10 @@ def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -
             d["range"] = [lim[0], lim[1]]
         if spec.invert:
             d["autorange"] = "reversed"
+        if spec.tick_format != "auto":  # ([D86]) d3-format ≈ Python format spec
+            from ...core._ticks import plotly_tick_format  # noqa: PLC0415
+
+            d["tickformat"] = plotly_tick_format(spec.tick_format)
     return d
 
 
