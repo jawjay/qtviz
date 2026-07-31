@@ -46,7 +46,7 @@ _CAPS = Capabilities(
     threading_model="gui_only",
     # log via Approach A (pre-log10'd data + log-tick AxisItem + R1 at the event
     # boundaries); symlog is matplotlib-only (pyqtgraph #1035) and warn-degrades.
-    scales=frozenset({"linear", "log"}),
+    scales=frozenset({"linear", "log", "time"}),  # time: [D94]
 )
 
 

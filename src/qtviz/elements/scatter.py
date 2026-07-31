@@ -49,6 +49,17 @@ class Scatter(Element):
         check_alpha(alpha, who="Scatter")
         check_agg(agg, color_by, scale, who="Scatter")
         check_axis(axis, scale, who="Scatter")
+        if pyqtgraph_use_opengl:
+            import warnings  # noqa: PLC0415
+
+            warnings.warn(
+                "Scatter(pyqtgraph_use_opengl=...) was never wired and is deprecated "
+                "(owner ruling, 2026-07-31); it will be removed with qtviz.Options. "
+                "pyqtgraph's default raster path already handles large scatters, and "
+                "huge data routes through scale='datashader'.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if color_norm not in ("linear", "log"):
             raise ValidationError(f"color_norm must be 'linear' or 'log', got {color_norm!r}")
         if color_norm != "linear" and color_by is None:

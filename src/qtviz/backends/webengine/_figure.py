@@ -76,7 +76,9 @@ def _element_color(element, theme, idx: int):
 def _floats(series) -> np.ndarray:
     # numpy (not .tolist()) so the figure → go.Figure → Plotly's base64
     # typed-array encoder engages (W5.1a; the encoder is numpy-only).
-    return np.asarray(series, dtype="float64")
+    from ...core._time import as_float_seconds  # noqa: PLC0415
+
+    return as_float_seconds(series)  # datetime64 → epoch s ([D94])
 
 
 def _scaled_sizes(values) -> np.ndarray:
@@ -675,6 +677,13 @@ def build(node, theme) -> tuple[dict, list[str]]:
         y2_spec = surf.y2 if surf.y2 is not None else AxisSpec()
         y2 = (y2_spec, resolve_scale(y2_spec.scale, _SUPPORTED_SCALES,
                                      axis="y2", backend="webengine"))
+    for key, scale in (("x", x_scale), ("y", y_scale)):
+        if scale != "time":
+            continue
+        for tr in traces:  # canonical epoch seconds → Plotly date-axis ms ([D94])
+            vals = tr.get(key)
+            if vals is not None and getattr(vals, "dtype", None) is not None:
+                tr[key] = np.asarray(vals, dtype="float64") * 1000.0
     if not surf.legend_enabled:  # the one legend switch silences colorbars too
         for tr in traces:
             if "showscale" in tr:
@@ -696,7 +705,7 @@ def build_figure(node, theme) -> dict:
 
 # Axis scales the webengine (Plotly) path renders (axis-surface seam, [D59]).
 # Keep in sync with WebEngineBackend.capabilities.scales.
-_SUPPORTED_SCALES = frozenset({"linear", "log"})
+_SUPPORTED_SCALES = frozenset({"linear", "log", "time"})  # time: [D94]
 
 
 def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -> dict:
@@ -719,9 +728,13 @@ def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -
         is_log = eff_scale == "log"
         if is_log:
             d["type"] = "log"
+        elif eff_scale == "time":  # data arrives as epoch ms on a date axis ([D94])
+            d["type"] = "date"
         lim = spec.lim
         if lim is not None and is_log:
             lim = log_lim(lim, axis=axis, backend="webengine")
+        elif lim is not None and eff_scale == "time":
+            lim = (lim[0] * 1000.0, lim[1] * 1000.0)  # data-space s → Plotly ms
         if lim is not None:
             d["range"] = [lim[0], lim[1]]
         if spec.invert:

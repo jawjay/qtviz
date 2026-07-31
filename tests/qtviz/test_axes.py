@@ -90,15 +90,15 @@ def test_limits_invert_aspect_applied(backend, qtbot):
 
 
 @pytest.mark.tier2
-@pytest.mark.parametrize("backend", ["pyqtgraph", "matplotlib"])
-def test_unsupported_scale_warns_and_renders(backend, qtbot):
+def test_unsupported_scale_warns_and_renders(qtbot):
     """A scale outside the backend's `Capabilities.scales` warns and renders linear —
-    no crash. `time` is in the vocabulary but reserved (no backend renders it yet)."""
-    if not _has(backend):
-        pytest.skip(f"{backend} not registered")
-    node = _surface(qv.Scatter(_DATA, x="x", y="y"), x=qv.AxisSpec(scale="time"))
-    with pytest.warns(QtvizWarning, match="scale='time'"):
-        view = qv.View(node, backend=backend)
+    no crash. `time` graduated from reserved to supported ([D94]), so the probe is
+    `symlog`, which stays matplotlib-only (pyqtgraph #1035)."""
+    if not _has("pyqtgraph"):
+        pytest.skip("pyqtgraph not registered")
+    node = _surface(qv.Scatter(_DATA, x="x", y="y"), x=qv.AxisSpec(scale="symlog"))
+    with pytest.warns(QtvizWarning, match="scale='symlog'"):
+        view = qv.View(node, backend="pyqtgraph")
         qtbot.addWidget(view)
     assert view.handle is not None  # rendered despite the unsupported scale
 

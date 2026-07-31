@@ -8,8 +8,6 @@ is the single dispatch the renderer calls per element.
 
 from __future__ import annotations
 
-import numpy as np
-
 from ...core.event import HoverEvent, PickEvent
 from ...elements import Curve, Image, Scatter
 
@@ -66,8 +64,10 @@ def attach(element, item, ctx) -> None:
     pick/hover."""
     vb = ctx.parent_axes.getViewBox()
     if isinstance(element, (Scatter, Curve)) and hasattr(vb, "add_selectable"):
-        x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
-        y = np.asarray(element.data.series("y"), dtype="float64")
+        from ...core._time import as_float_seconds  # noqa: PLC0415
+
+        x = as_float_seconds(element.data.series("x"))  # resolved role; epoch s ([D94])
+        y = as_float_seconds(element.data.series("y"))
         vb.add_selectable(element.id, x, y)
     raster = raster_source_xy(element)
     if raster is not None and hasattr(vb, "add_selectable"):

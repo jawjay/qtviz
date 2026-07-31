@@ -109,15 +109,35 @@ def resolve_scale(requested: str, available, *, axis: str, backend: str) -> str:
     return "linear"
 
 
+def _any_datetime(node: Node, role: str) -> bool:
+    """Any data element whose resolved `role` channel is datetime64 ([D94]).
+    Best-effort: unresolved refs (or elements without the role) contribute
+    nothing — promotion happens at render, where the node is resolved."""
+    for el in _elements_of(node):
+        try:
+            if el.data.series(role).dtype.kind == "M":
+                return True
+        except Exception:  # noqa: BLE001,S112 — no such role / unresolved ref
+            continue
+    return False
+
+
 def effective_scales(node: Node, surf: OverlayOptions, available, backend: str) -> tuple[str, str]:
     """The `(x_scale, y_scale)` a backend should actually render for one surface:
-    each axis capability-gated by `resolve_scale`, then — if the surface holds any
-    raster (`Image` / `Heatmap`, incl. a datashaded Scatter/Curve, which resolves to
-    `Image`) — forced back to linear with a warning. A raster is never
-    log-transformed ([D59] defer + gate; feasibility §10.4)."""
+    each axis capability-gated by `resolve_scale`; a linear axis whose data is
+    datetime64 promotes to `"time"` ([D94] — calendar dressing only; the data
+    space stays linear epoch seconds); then — if the surface holds any raster
+    (`Image` / `Heatmap` / `Contour`, incl. a datashaded Scatter/Curve, which
+    resolves to `Image`) — a *transforming* scale (log/symlog) is forced back to
+    linear with a warning. A raster is never log-transformed ([D59] defer +
+    gate; feasibility §10.4); `time` doesn't transform, so it passes."""
     x_scale = resolve_scale(surf.x.scale, available, axis="x", backend=backend)
     y_scale = resolve_scale(surf.y.scale, available, axis="y", backend=backend)
-    if x_scale == y_scale == "linear":
+    if x_scale == "linear" and _any_datetime(node, "x"):
+        x_scale = resolve_scale("time", available, axis="x", backend=backend)
+    if y_scale == "linear" and _any_datetime(node, "y"):
+        y_scale = resolve_scale("time", available, axis="y", backend=backend)
+    if {x_scale, y_scale} <= {"linear", "time"}:
         return (x_scale, y_scale)
     from ..elements import Contour, Heatmap, Image  # noqa: PLC0415 — avoid a core→elements cycle
 

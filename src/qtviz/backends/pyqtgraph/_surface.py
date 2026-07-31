@@ -74,6 +74,9 @@ def make_y2(plot, vb, spec, theme, x_scale: str, y2_scale: str):
     vb2._to_data_y = (lambda v: 10.0 ** v) if y2_log else float
     plot.scene().addItem(vb2)
     plot.showAxis("right")
+    # spec first — a time axis swaps the right AxisItem ([D94]), so the link
+    # below must target the item that will actually drive the view
+    _apply_axis(plot, vb2, "y", "right", spec, y2_scale, theme.foreground.hex())
     right = plot.getAxis("right")
     right.linkToView(vb2)
     vb2.setXLink(vb)
@@ -83,11 +86,23 @@ def make_y2(plot, vb, spec, theme, x_scale: str, y2_scale: str):
 
     vb.sigResized.connect(_sync)
     _sync()
-    _apply_axis(plot, vb2, "y", "right", spec, y2_scale, theme.foreground.hex())
     return vb2
 
 
+def _swap_date_axis(plot, side: str, color) -> None:
+    """Replace one AxisItem with a UTC `DateAxisItem` ([D94]): the plotted
+    values are epoch seconds, pg's calendar ticks read them natively."""
+    import pyqtgraph as pg  # noqa: PLC0415
+
+    axis = pg.DateAxisItem(orientation=side, utcOffset=0)
+    axis.setPen(color)
+    axis.setTextPen(color)
+    plot.setAxisItems({side: axis})
+
+
 def _apply_axis(plot, vb, axis: str, side: str, spec, eff_scale: str, color) -> None:
+    if eff_scale == "time":  # before label/format so they land on the new item
+        _swap_date_axis(plot, side, color)
     if spec.label:
         plot.setLabel(side, spec.label, color=color)
     is_log = eff_scale == "log"

@@ -48,7 +48,9 @@ def _color(spec, theme, idx: int = 0) -> Color:
 
 
 def _col(ref, name) -> np.ndarray:
-    return np.asarray(ref.series(name), dtype="float64")
+    from ...core._time import as_float_seconds  # noqa: PLC0415
+
+    return as_float_seconds(ref.series(name))  # datetime64 → epoch s ([D94])
 
 
 def _scaled_sizes(values, lo: float = 5.0, hi: float = 18.0):

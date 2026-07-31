@@ -159,17 +159,27 @@ def parse_bokeh_ranges(payload):
     return x, y
 
 
+def _range_value(v) -> float:
+    """One relayout range endpoint → data space: floats pass through; a date
+    axis reports ISO strings, parsed to canonical epoch seconds ([D94])."""
+    if isinstance(v, str):
+        import numpy as np  # noqa: PLC0415
+
+        return float(np.datetime64(v).astype("datetime64[ms]").astype("int64")) / 1000.0
+    return float(v)
+
+
 def _axis_range(update: dict, prefix: str):
     try:
         lo = update.get(f"{prefix}.range[0]")
         hi = update.get(f"{prefix}.range[1]")
         if lo is not None and hi is not None:
-            return (float(lo), float(hi))
+            return (_range_value(lo), _range_value(hi))
         r = update.get(f"{prefix}.range")
         if isinstance(r, (list, tuple)) and len(r) == 2:
-            return (float(r[0]), float(r[1]))
+            return (_range_value(r[0]), _range_value(r[1]))
     except (TypeError, ValueError):
-        return None  # non-numeric (e.g. datetime) axis — not wired in W1
+        return None  # unparseable axis payload
     return None
 
 

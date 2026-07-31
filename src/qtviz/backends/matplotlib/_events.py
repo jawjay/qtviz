@@ -84,8 +84,10 @@ def attach(element, artist, ctx, selectables: list) -> None:
         # the PathCollection picker reports primary-axes coordinates.
         return
     if isinstance(element, (Scatter, Curve)):
-        x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
-        y = np.asarray(element.data.series("y"), dtype="float64")
+        from ...core._time import as_float_seconds  # noqa: PLC0415
+
+        x = as_float_seconds(element.data.series("x"))  # resolved role; epoch s ([D94])
+        y = as_float_seconds(element.data.series("y"))
         selectables.append((element.id, x, y))
     from ..pyqtgraph._events import raster_source_xy  # noqa: PLC0415 — shared [D78] rule
 

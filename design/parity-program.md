@@ -46,7 +46,7 @@ changes a frozen name (`Options` removal stays scheduled for 1.1 as promised).
 | 4 ✅ | **Tick formatting** | `AxisSpec.tick_format` wired: Python format-spec mini-language + named formats, all three backends | [D86] |
 | 5 ✅ | **Twin axes** | `y2` on the surface + `Element.axis="y2"`; feasibility spike first (R1 for the second axis) | [D88] |
 | 6 ✅ | **Fields** | `Contour` (line + filled), gridded like `Image` | [D89] |
-| 7 ⏸ | **Calendar time** | datetime dtype through the data layer + `scale="time"` honored — **reopens [D62]; owner confirm at this boundary** | [D94] |
+| 7 ✅ | **Calendar time** | datetime dtype through the data layer + `scale="time"` honored — **reopens [D62]; owner confirm at this boundary** | [D94] |
 | 8 ✅ | **Interaction ease** | `View(toolbar=True)` (native toolbar where the backend has one), mpl interactive brush | [D95] |
 
 Ordering rationale: 1–2 are small, high-frequency wins and pay honesty debts
@@ -124,8 +124,7 @@ an owner call; 8 is polish that benefits from everything before it.
   which violates the [D67] shared-numbers principle. webengine switches from a
   `histogram` trace to a pre-binned `bar` trace. String rules stop being
   silently collapsed to `"auto"` (support-matrix wart #4).
-- **[D94] Datetime axes get reopened as increment 7 — owner confirmation
-  required at that boundary** (this reverses the [D62] parking; the parity
+- **[D94] — CONFIRMED (owner, 2026-07-31): datetime axes reopened** (this reverses the [D62] parking; the parity
   mandate is the "demand" that ruling anticipated). Sequenced last of the big
   lifts; starts with the dtype-propagation feasibility pass improvement-plan
   risk #3 prescribed (accessors → resolve → transport → backends).

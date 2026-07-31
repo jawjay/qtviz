@@ -46,7 +46,7 @@ _CAPS = Capabilities(
     threading_model="gui_only",
     # mpl transforms data itself and keeps get_xlim() in data space — no R1 work;
     # symlog is the mpl-only scale that exercises the capability gate ([D59]).
-    scales=frozenset({"linear", "log", "symlog"}),
+    scales=frozenset({"linear", "log", "symlog", "time"}),  # time: [D94]
 )
 
 
@@ -111,6 +111,11 @@ class MplRenderHandle(RenderHandle):
         for s in self._surfaces:
             for controller in getattr(s["ax"], "_qtviz_rasters", ()):
                 controller.dispose()
+            brush = getattr(s["ax"], "_qtviz_brush", None)
+            if brush is not None:  # detach before the canvas dies ([D95]) — a
+                brush.set_active(False)  # live selector on a deleted canvas
+                brush.disconnect_events()  # segfaults in queued Qt events
+                s["ax"]._qtviz_brush = None
         self.event_bus.dispose()
         self._fig.clf()
         w = self.widget

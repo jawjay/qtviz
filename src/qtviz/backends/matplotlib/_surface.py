@@ -21,6 +21,22 @@ def _tick_formatter(spec: str):
     return FuncFormatter(lambda v, _pos: format_tick(v, spec))
 
 
+def _time_formatter(ax, axis: str):
+    """Adaptive calendar labels for a time axis ([D94]): values are epoch
+    seconds; the strftime granularity follows the visible span at draw time."""
+    from matplotlib.ticker import FuncFormatter  # noqa: PLC0415
+
+    from ...core._time import format_time_auto  # noqa: PLC0415
+
+    limits = ax.get_xlim if axis == "x" else ax.get_ylim
+
+    def fmt(v, _pos) -> str:
+        lo, hi = limits()
+        return format_time_auto(v, hi - lo)
+
+    return FuncFormatter(fmt)
+
+
 def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
     fg = theme.foreground.mpl()
     if surf.background is not None:
@@ -31,10 +47,14 @@ def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
         ax.set_xlabel(surf.x.label, color=fg, fontsize=theme.font_size)
     if surf.y.label:
         ax.set_ylabel(surf.y.label, color=fg, fontsize=theme.font_size)
-    if x_scale != "linear":
+    if x_scale in ("log", "symlog"):  # "time" stays linear (epoch seconds, [D94])
         ax.set_xscale(x_scale)
-    if y_scale != "linear":
+    if y_scale in ("log", "symlog"):
         ax.set_yscale(y_scale)
+    if x_scale == "time" and surf.x.tick_format == "auto":
+        ax.xaxis.set_major_formatter(_time_formatter(ax, "x"))
+    if y_scale == "time" and surf.y.tick_format == "auto":
+        ax.yaxis.set_major_formatter(_time_formatter(ax, "y"))
     if surf.x.lim is not None:
         ax.set_xlim(*surf.x.lim)
     if surf.y.lim is not None:
@@ -63,8 +83,10 @@ def apply_y2(ax2, spec, theme, y2_scale: str) -> None:
     ax2.spines["right"].set_color(fg)
     if spec.label:
         ax2.set_ylabel(spec.label, color=fg, fontsize=theme.font_size)
-    if y2_scale != "linear":
+    if y2_scale in ("log", "symlog"):  # "time" stays linear ([D94])
         ax2.set_yscale(y2_scale)
+    if y2_scale == "time" and spec.tick_format == "auto":
+        ax2.yaxis.set_major_formatter(_time_formatter(ax2, "y"))
     if spec.lim is not None:
         ax2.set_ylim(*spec.lim)
     if spec.invert:

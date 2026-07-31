@@ -12,6 +12,20 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Calendar-time axes ([D94] — [D62] reversed by owner, 2026-07-31).** The
+  canonical time data-space is **epoch seconds (UTC)** on every backend:
+  datetime64 columns pass through the data layer and become seconds at the
+  column seam; a linear axis auto-promotes to `scale="time"` when its data
+  is datetime (warn-and-degrades to linear seconds on a backend without the
+  capability). Calendar rendering is per-backend dressing — matplotlib gets
+  an adaptive strftime formatter (granularity follows the visible span),
+  pyqtgraph a UTC `DateAxisItem`, webengine a Plotly date axis (ms at its
+  boundary, date-string relayouts parsed back to seconds). Events, brushes
+  and `ViewState` stay plain floats in one space (R1), so time views
+  round-trip across backend switches. `tick_format` accepts strftime
+  patterns (`"%H:%M"`) on time axes. Previously datetime64 silently
+  rendered as **nanosecond** floats — garbage axes with no warning.
+
 - **`Contour` ([D89]).** Iso-value contours over a 2-D grid (the `Image`
   data contract): `levels` (count or explicit values — computed once in core
   so every backend draws the same lines), `filled`, `colormap`,
@@ -80,6 +94,13 @@ the popular libraries, declaratively" ([D83]).
   positions + tick labels), matching webengine; pyqtgraph heatmaps were
   additionally **transposed** (col-major default) relative to the other
   backends — fixed with row-major orientation.
+
+### Deprecated
+
+- `Scatter(pyqtgraph_use_opengl=...)` — never wired to anything; warns now,
+  removed with `qtviz.Options` (owner ruling, 2026-07-31). pyqtgraph's
+  default raster path covers large scatters; huge data goes through
+  `scale="datashader"`.
 
 ### Fixed
 

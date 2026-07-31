@@ -11,11 +11,16 @@ a bad spec fails loud, not at render.
 from __future__ import annotations
 
 import math
+import re
 
 from ..errors import ValidationError
 
 # Integer presentation types: ticks arrive as floats, so these format round(v).
 _INT_TYPES = set("bcdoxXn")
+
+# A strftime directive (%H, %Y, …) marks a calendar spec ([D94]); a bare
+# trailing "%" (the ".0%" percent format-spec) does not.
+_STRFTIME = re.compile(r"%[a-zA-Z]")
 
 # SI prefixes for 10**-24 … 10**24 (index offset +8 in steps of 10**3).
 _SI = ("y", "z", "a", "f", "p", "n", "µ", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y")
@@ -28,16 +33,22 @@ def validate_tick_format(spec: str, *, who: str = "AxisSpec") -> None:
         format_tick(1234.5678, spec)
     except (ValueError, TypeError) as e:
         raise ValidationError(
-            f"{who}: tick_format must be 'auto', 'eng', or a Python format spec "
-            f"(e.g. '.2f', ',d', '.0%'); got {spec!r} ({e})"
+            f"{who}: tick_format must be 'auto', 'eng', a Python format spec "
+            f"(e.g. '.2f', ',d', '.0%'), or a strftime pattern (e.g. '%H:%M'); "
+            f"got {spec!r} ({e})"
         ) from e
 
 
 def format_tick(value: float, spec: str) -> str:
     """One tick label under `spec` (never `"auto"` — the caller keeps the
-    backend default for that)."""
+    backend default for that). A strftime pattern treats `value` as epoch
+    seconds ([D94])."""
     if spec == "eng":
         return _eng(value)
+    if _STRFTIME.search(spec):
+        from ._time import format_time  # noqa: PLC0415
+
+        return format_time(value, spec)
     if spec and spec[-1] in _INT_TYPES:
         return format(int(round(value)), spec)
     return format(value, spec)
