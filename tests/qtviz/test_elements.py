@@ -26,8 +26,8 @@ def test_curated_vocabulary_constructs(make_elements):
         "BoxPlot", "Violin",
         # the parity-increment-3 composition vocabulary ([D84b]/[D90]/[D91])
         "Area", "Ecdf", "Pie", "Contour",
-        # wave-1 annotations ([D96]/[D97])
-        "Arrow", "Rect", "Ellipse", "Polygon",
+        # wave-1 annotations ([D96]/[D97]/[D99])
+        "Arrow", "Rect", "Ellipse", "Polygon", "RefLine",
     }
 
 

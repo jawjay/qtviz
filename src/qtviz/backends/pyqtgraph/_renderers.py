@@ -35,6 +35,7 @@ from ...elements import (
     Image,
     Polygon,
     Rect,
+    RefLine,
     Scatter,
     Span,
     Spread,
@@ -43,12 +44,26 @@ from ...elements import (
     VLine,
 )
 
-# qtviz marker vocabulary → pyqtgraph symbol codes / Qt pen styles ([D51]).
-_MARKER = {"circle": "o", "square": "s", "triangle": "t", "diamond": "d", "cross": "x"}
+# qtviz marker vocabulary → pyqtgraph symbol codes / Qt pen styles ([D51]/[D99]).
+# NOTE: pg "t" points DOWN — "triangle" is "t1" (up) to match mpl "^"/Plotly
+# "triangle-up" (a pre-existing cross-backend mismatch fixed in [D99]).
+_MARKER = {"circle": "o", "square": "s", "triangle": "t1", "triangle_down": "t",
+           "diamond": "d", "cross": "x", "plus": "+", "star": "star",
+           "pentagon": "p", "hexagon": "h"}
 _PEN_STYLE = {
     "solid": Qt.SolidLine, "dashed": Qt.DashLine,
     "dotted": Qt.DotLine, "dashdot": Qt.DashDotLine,
 }
+
+
+def _mk_pen(color, width: float, style):
+    """A pen from the [D99] line-style vocabulary: named Qt style, or a dash
+    tuple in points (Qt dash patterns are in units of the pen width)."""
+    if isinstance(style, str):
+        return pg.mkPen(color, width=width, style=_PEN_STYLE[style])
+    pen = pg.mkPen(color, width=width)
+    pen.setDashPattern([v / max(width, 0.5) for v in style])
+    return pen
 
 
 def _color(spec, theme, idx: int = 0) -> Color:
@@ -139,7 +154,7 @@ def render_curve(element: Curve, ctx):
     d = element.data
     color = _color(element.color, ctx.theme, ctx.series_index).qt()
     color.setAlphaF(element.alpha)
-    pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
+    pen = _mk_pen(color, element.line_width, element.line_style)
     x_log, y_log = _xy_log(ctx)
     x, y = _col(d, "x"), _col(d, "y")
     # connect="finite" breaks the line at NaN — the mask logify leaves for
@@ -150,18 +165,43 @@ def render_curve(element: Curve, ctx):
         if element.step == "mid":
             x = _mid_edges(x)  # edges in data space, then logified below
     lx, ly = logify(x, x_log), logify(y, y_log)
-    if element.marker is not None and element.step != "mid":
+    every = element.marker_every
+    if element.marker is not None and element.step != "mid" and every == 1:
         item = pg.PlotDataItem(x=lx, y=ly, symbol=_MARKER[element.marker],
                                symbolBrush=color, symbolPen=None, symbolSize=7, **kwargs)
     else:
         item = pg.PlotCurveItem(x=lx, y=ly, **kwargs)
-        if element.marker is not None:  # mid-step: symbols sit at the data points,
-            dots = pg.ScatterPlotItem(   # not the edges — a separate points item
-                x=logify(_col(d, "x"), x_log), y=ly,
+        if element.marker is not None:
+            # mid-step symbols sit at data points (not edges); marker_every>1
+            # thins them ([D99]) — either way a separate points item
+            dots = pg.ScatterPlotItem(
+                x=logify(_col(d, "x"), x_log)[::every], y=ly[::every],
                 symbol=_MARKER[element.marker], brush=color, pen=None, size=7)
             ctx.parent_axes.addItem(dots)
     ctx.parent_axes.addItem(item)
     return item
+
+
+def _bar_label_items(ctx, positions, values, tops, element, *, inside=False) -> None:
+    """Value labels beside/inside bars ([D98]) — formatted via [D86]."""
+    if element.bar_labels is None:
+        return
+    from ...core._ticks import format_tick  # noqa: PLC0415
+
+    spec = element.bar_labels if element.bar_labels != "auto" else "g"
+    horizontal = element.orient == "h"
+    fg = ctx.theme.foreground.qt()
+    for pos, val, top in zip(positions, values, tops, strict=True):
+        item = pg.TextItem(format_tick(float(val), spec), color=fg,
+                           anchor=((0.5, 0.5) if inside
+                                   else (0.0, 0.5) if horizontal
+                                   else (0.5, 1.0)))
+        font = item.textItem.font()
+        font.setPointSizeF(8.0)
+        item.setFont(font)
+        ctx.parent_axes.addItem(item)
+        item.setPos(*((float(top), float(pos)) if horizontal
+                      else (float(pos), float(top))))
 
 
 def render_bars(element: Bars, ctx):
@@ -180,9 +220,11 @@ def render_bars(element: Bars, ctx):
     if element.orient == "h":  # positions on y, lengths on x ([D85])
         item = pg.BarGraphItem(y=logify(x, y_log), x0=0.0, x1=logify(height, x_log),
                                height=0.6, brush=brush)
+        _bar_label_items(ctx, logify(x, y_log), height, logify(height, x_log), element)
     else:
         item = pg.BarGraphItem(x=logify(x, x_log), height=logify(height, y_log),
                                width=0.6, brush=brush)
+        _bar_label_items(ctx, logify(x, x_log), height, logify(height, y_log), element)
     ctx.parent_axes.addItem(item)
     return item
 
@@ -582,9 +624,14 @@ def render_ecdf(element: Ecdf, ctx):
 def render_spread(element: Spread, ctx):
     d = element.data
     x_log, y_log = _xy_log(ctx)
-    x = logify(_col(d, "x"), x_log)
-    lo = pg.PlotDataItem(x, logify(_col(d, "y_lo"), y_log))
-    hi = pg.PlotDataItem(x, logify(_col(d, "y_hi"), y_log))
+    if element.orient == "h":  # ([D99]) band spans x as a function of y
+        y = logify(_col(d, "y"), y_log)
+        lo = pg.PlotDataItem(logify(_col(d, "x_lo"), x_log), y)
+        hi = pg.PlotDataItem(logify(_col(d, "x_hi"), x_log), y)
+    else:
+        x = logify(_col(d, "x"), x_log)
+        lo = pg.PlotDataItem(x, logify(_col(d, "y_lo"), y_log))
+        hi = pg.PlotDataItem(x, logify(_col(d, "y_hi"), y_log))
     brush = _color(element.color, ctx.theme, ctx.series_index).qt()
     brush.setAlphaF(element.alpha)
     fill = pg.FillBetweenItem(lo, hi, brush=brush)
@@ -613,7 +660,7 @@ def render_hline(element: HLine, ctx):
         return None
     color = _ref_color(element.color, ctx.theme).qt()
     color.setAlphaF(element.alpha)
-    pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
+    pen = _mk_pen(color, element.line_width, element.line_style)
     item = pg.InfiniteLine(pos=pos, angle=0, pen=pen, movable=False)
     ctx.parent_axes.addItem(item)
     return item
@@ -626,7 +673,7 @@ def render_vline(element: VLine, ctx):
         return None
     color = _ref_color(element.color, ctx.theme).qt()
     color.setAlphaF(element.alpha)
-    pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
+    pen = _mk_pen(color, element.line_width, element.line_style)
     item = pg.InfiniteLine(pos=pos, angle=90, pen=pen, movable=False)
     ctx.parent_axes.addItem(item)
     return item
@@ -705,6 +752,29 @@ def render_arrow(element: Arrow, ctx):
         ctx.parent_axes.addItem(head)
         items.append(head)
     return items
+
+
+def render_refline(element, ctx):
+    """`y = slope·x + intercept` as an InfiniteLine ([D99]); pg's angle is in
+    data coordinates. No log-scale form — warn-and-drop (mpl rule shared)."""
+    import math  # noqa: PLC0415
+
+    if ctx.x_scale == "log" or ctx.y_scale == "log":
+        import warnings  # noqa: PLC0415
+
+        from ...errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn("pyqtgraph: RefLine is a straight data-space line and has "
+                      "no log-scale form; it was dropped.", QtvizWarning, stacklevel=2)
+        return None
+    color = _ref_color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    item = pg.InfiniteLine(pos=(0.0, element.intercept),
+                           angle=math.degrees(math.atan(element.slope)),
+                           pen=_mk_pen(color, element.line_width, element.line_style),
+                           movable=False)
+    ctx.parent_axes.addItem(item)
+    return item
 
 
 def _render_shape_points(pts, element, ctx):
@@ -873,6 +943,7 @@ RENDERERS: dict[type, Any] = {
     Rect: render_rect,
     Ellipse: render_ellipse,
     Polygon: render_polygon,
+    RefLine: render_refline,
     # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
 }
 
@@ -882,9 +953,9 @@ RENDERERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label", "axis"}),
-    Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
-                      "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "group", "mode", "orient", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "marker",
+                      "marker_every", "step", "alpha", "label", "axis"}),
+    Bars: frozenset({"color", "group", "mode", "orient", "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap"}),                                # interpolation unwired
     Heatmap: frozenset({"colormap", "aggregator"}),
@@ -903,4 +974,5 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
+    RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

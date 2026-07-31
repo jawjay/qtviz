@@ -20,6 +20,7 @@ FROZEN_1_0 = frozenset({
     "Spread", "RawFigure",
     "HLine", "VLine", "Span", "Text",            # annotations ([D70])
     "Arrow", "Rect", "Ellipse", "Polygon",        # wave 1 ([D96]/[D97])
+    "RefLine",                                    # wave 1 ([D99])
     "BoxPlot", "Violin",                          # statistics ([D67])
     "Area", "Ecdf", "Pie",                        # parity increment 3 ([D84b]/[D90]/[D91])
     "Contour",                                    # parity increment 6 ([D89])

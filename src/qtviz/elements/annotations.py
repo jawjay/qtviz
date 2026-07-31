@@ -48,14 +48,17 @@ class HLine(_Reference):
         *,
         color: ColorSpec | None = None,
         line_width: float = 1.5,
-        line_style: Literal["solid", "dashed", "dotted", "dashdot"] = "solid",
+        line_style: str | tuple[float, ...] = "solid",
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
+
         check_alpha(alpha, who=type(self).__name__)
+        check_line_style(line_style, who=type(self).__name__)
         self.y = float(y)
         self.color = color
         self.line_width = line_width
@@ -77,14 +80,17 @@ class VLine(_Reference):
         *,
         color: ColorSpec | None = None,
         line_width: float = 1.5,
-        line_style: Literal["solid", "dashed", "dotted", "dashdot"] = "solid",
+        line_style: str | tuple[float, ...] = "solid",
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
+
         check_alpha(alpha, who=type(self).__name__)
+        check_line_style(line_style, who=type(self).__name__)
         self.x = float(x)
         self.color = color
         self.line_width = line_width
@@ -168,6 +174,44 @@ class Text(_Reference):
         self._freeze()
 
 
+class RefLine(_Reference):
+    """An infinite reference line `y = slope·x + intercept` ([D99] — the
+    `axline` analog; `HLine`/`VLine` cover the axis-parallel cases). A
+    straight data-space line isn't straight under log scales, so it
+    warns-and-drops there."""
+
+    REQUIRED_OPTIONS = ("slope", "intercept")
+    RECOMMENDED_OPTIONS = ("color", "line_width", "line_style", "alpha", "label")
+
+    def __init__(
+        self,
+        slope: float,
+        intercept: float = 0.0,
+        *,
+        color: ColorSpec | None = None,
+        line_width: float = 1.5,
+        line_style: str | tuple[float, ...] = "solid",
+        alpha: float = 1.0,
+        label: str | None = None,
+        backend_hint: str | None = None,
+        id=None,
+    ) -> None:
+        super().__init__(backend_hint=backend_hint, id=id)
+        from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
+
+        check_alpha(alpha, who="RefLine")
+        check_line_style(line_style, who="RefLine")
+        self.slope = float(slope)
+        self.intercept = float(intercept)
+        self.color = color
+        self.line_width = line_width
+        self.line_style = line_style if isinstance(line_style, str) \
+            else tuple(float(v) for v in line_style)
+        self.alpha = alpha
+        self.label = label
+        self._freeze()
+
+
 _HEADS = ("end", "both", "none")
 
 
@@ -211,4 +255,4 @@ class Arrow(_Reference):
 from .shapes import Ellipse, Polygon, Rect  # noqa: E402 — shapes share the class
 
 ANNOTATION_TYPES: tuple[type, ...] = (HLine, VLine, Span, Text, Arrow,
-                                      Rect, Ellipse, Polygon)
+                                      Rect, Ellipse, Polygon, RefLine)

@@ -38,7 +38,7 @@ def test_curve_step_and_marker_validate():
     with pytest.raises(ValidationError):
         qv.Curve(_TABLE, x="x", y="y", step="stairs")
     with pytest.raises(ValidationError):
-        qv.Curve(_TABLE, x="x", y="y", marker="star")
+        qv.Curve(_TABLE, x="x", y="y", marker="blob")  # ("star" is valid since [D99])
 
 
 @pytest.mark.tier1

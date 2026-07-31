@@ -30,6 +30,7 @@ from ...elements import (
     Pie,
     Polygon,
     Rect,
+    RefLine,
     Scatter,
     Span,
     Spread,
@@ -39,8 +40,17 @@ from ...elements import (
 )
 
 _LINE_STYLE = {"solid": "-", "dashed": "--", "dotted": ":", "dashdot": "-."}
-# qtviz marker vocabulary → matplotlib marker codes ([D51]).
-_MARKER = {"circle": "o", "square": "s", "triangle": "^", "diamond": "D", "cross": "X"}
+
+
+def _ls(style):
+    """Named style or a dash tuple in points ([D99]) → mpl linestyle."""
+    return _LINE_STYLE[style] if isinstance(style, str) else (0, style)
+
+
+# qtviz marker vocabulary → matplotlib marker codes ([D51]/[D99]).
+_MARKER = {"circle": "o", "square": "s", "triangle": "^", "triangle_down": "v",
+           "diamond": "D", "cross": "X", "plus": "P", "star": "*",
+           "pentagon": "p", "hexagon": "h"}
 # qtviz step vocabulary → matplotlib drawstyle ([D84]).
 _STEP = {"pre": "steps-pre", "mid": "steps-mid", "post": "steps-post"}
 
@@ -177,9 +187,10 @@ def render_curve(element: Curve, ctx):
     (line,) = ctx.parent_axes.plot(
         _col(element.data, "x"), _col(element.data, "y"),
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
-        lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
+        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
         drawstyle=_STEP[element.step] if element.step else "default",
         marker=_MARKER[element.marker] if element.marker else None, markersize=6,
+        markevery=element.marker_every if element.marker_every > 1 else None,
     )
     return line
 
@@ -193,6 +204,19 @@ def _bar_fns(ax, orient: str):
     return ax.bar, "width", ax.set_xticks
 
 
+def _label_bars(ax, container, element, theme, *, inside: bool = False) -> None:
+    """Value labels on one bar container ([D98]) — formatted through the
+    [D86] tick vocabulary ("auto" → '%g')."""
+    if element.bar_labels is None:
+        return
+    from ...core._ticks import format_tick  # noqa: PLC0415
+
+    spec = element.bar_labels if element.bar_labels != "auto" else "g"
+    ax.bar_label(container, fmt=lambda v: format_tick(v, spec),
+                 color=theme.foreground.mpl(), padding=2,
+                 label_type="center" if inside else "edge", fontsize=8)
+
+
 def render_bars(element: Bars, ctx):
     if element.group is not None:
         return _render_group_bars(element, ctx)
@@ -202,8 +226,10 @@ def render_bars(element: Bars, ctx):
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")
     bar, thick, _ticks = _bar_fns(ctx.parent_axes, element.orient)
-    return bar(x, height, **{thick: 0.8},
-               color=_color(element.color, ctx.theme, ctx.series_index).mpl())
+    container = bar(x, height, **{thick: 0.8},
+                    color=_color(element.color, ctx.theme, ctx.series_index).mpl())
+    _label_bars(ctx.parent_axes, container, element, ctx.theme)
+    return container
 
 
 def _render_group_bars(element: Bars, ctx):
@@ -231,11 +257,13 @@ def _render_group_bars(element: Bars, ctx):
         for gi in range(len(gs)):
             artists.append(bar(pos - total_w / 2 + w / 2 + gi * w, mat[gi],
                                **{thick: w * 0.95}, color=swatches[gi].mpl()))
+            _label_bars(ax, artists[-1], element, ctx.theme)
     else:  # stacked
         bases = np.zeros(len(xs))
         for gi in range(len(gs)):
             artists.append(bar(pos, mat[gi], **{thick: 0.6, base_kw: bases},
                                color=swatches[gi].mpl()))
+            _label_bars(ax, artists[-1], element, ctx.theme, inside=True)
             bases = bases + mat[gi]
     if ctx.show_legend:
         legend = Legend(kind="categorical", title=element.group,
@@ -512,9 +540,15 @@ def render_errorbars(element: ErrorBars, ctx):
 
 def render_spread(element: Spread, ctx):
     d = element.data
+    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
+    if element.orient == "h":  # ([D99]) band spans x as a function of y
+        return ctx.parent_axes.fill_betweenx(
+            _col(d, "y"), _col(d, "x_lo"), _col(d, "x_hi"),
+            color=color, alpha=element.alpha,
+        )
     return ctx.parent_axes.fill_between(
         _col(d, "x"), _col(d, "y_lo"), _col(d, "y_hi"),
-        color=_color(element.color, ctx.theme, ctx.series_index).mpl(), alpha=element.alpha,
+        color=color, alpha=element.alpha,
     )
 
 
@@ -526,14 +560,14 @@ def _ref_color(spec, theme) -> Color:
 def render_hline(element: HLine, ctx):
     return ctx.parent_axes.axhline(
         element.y, color=_ref_color(element.color, ctx.theme).mpl(),
-        lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
+        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
     )
 
 
 def render_vline(element: VLine, ctx):
     return ctx.parent_axes.axvline(
         element.x, color=_ref_color(element.color, ctx.theme).mpl(),
-        lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
+        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
     )
 
 
@@ -560,6 +594,28 @@ def render_text(element: Text, ctx):
 
 # Arrow head vocabulary → mpl arrowstyle ([D96]).
 _ARROWSTYLE = {"end": "-|>", "both": "<|-|>", "none": "-"}
+
+
+def _refline_scales_ok(ctx, backend: str) -> bool:
+    if ctx.x_scale in ("log", "symlog") or ctx.y_scale in ("log", "symlog"):
+        import warnings  # noqa: PLC0415
+
+        from ...errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(f"{backend}: RefLine is a straight data-space line and has "
+                      "no log-scale form; it was dropped.", QtvizWarning, stacklevel=2)
+        return False
+    return True
+
+
+def render_refline(element, ctx):
+    if not _refline_scales_ok(ctx, "matplotlib"):
+        return None
+    return ctx.parent_axes.axline(
+        (0.0, element.intercept), slope=element.slope,
+        color=_ref_color(element.color, ctx.theme).mpl(),
+        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
+    )
 
 
 def render_arrow(element: Arrow, ctx):
@@ -695,6 +751,7 @@ RENDERERS: dict[type, Any] = {
     Rect: render_rect,
     Ellipse: render_ellipse,
     Polygon: render_polygon,
+    RefLine: render_refline,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -705,9 +762,9 @@ RENDERERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label", "axis"}),
-    Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
-                      "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "group", "mode", "orient", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "marker",
+                      "marker_every", "step", "alpha", "label", "axis"}),
+    Bars: frozenset({"color", "group", "mode", "orient", "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),
@@ -727,4 +784,5 @@ HONORED: dict[type, frozenset[str]] = {
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
+    RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

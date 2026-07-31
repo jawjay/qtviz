@@ -12,6 +12,27 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Annotation wave ([D96]/[D97], roadmap wave 1).** `Arrow(x0,y0,x1,y1,
+  head=)` — the pointing half of `annotate`; `Text` gains `rotation`
+  (CCW degrees on every backend), `anchor_v`, and `frame=` (a theme-styled
+  box); shape annotations `Rect`/`Ellipse`/`Polygon` (outline-first,
+  `fill=` opt-in, data-space under log via shared core geometry). All
+  [D70]-class chrome: no palette slot, no events; Plotly draws them as
+  layout shapes/annotations — whose coordinates now also follow date axes
+  (epoch-ms) instead of landing in 1970.
+- **Bar value labels ([D98]).** `Bars(bar_labels="auto"|<format-spec>)` —
+  formatted through the tick vocabulary; outside for simple/grouped bars,
+  centered inside stacked segments; all three backends.
+- **Series polish pack ([D99]).** `Spread` gains the horizontal
+  orientation (`y=`/`x_lo=`/`x_hi=` — `fill_betweenx` parity);
+  `RefLine(slope, intercept)` — the `axline` analog (warns-and-drops
+  under log; a long finite segment on webengine); `line_style` accepts
+  on/off dash tuples in points everywhere it exists; `Curve(marker_every=)`
+  thins markers; five new marker shapes (`triangle_down`, `plus`, `star`,
+  `pentagon`, `hexagon`) — and the pre-existing wart where pyqtgraph's
+  `triangle` pointed **down** (pg `"t"`) while mpl/Plotly pointed up is
+  fixed (`"t1"`).
+
 - **Calendar-time axes ([D94] — [D62] reversed by owner, 2026-07-31).** The
   canonical time data-space is **epoch seconds (UTC)** on every backend:
   datetime64 columns pass through the data layer and become seconds at the

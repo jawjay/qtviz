@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .annotations import ANNOTATION_TYPES, Arrow, HLine, Span, Text, VLine
+from .annotations import ANNOTATION_TYPES, Arrow, HLine, RefLine, Span, Text, VLine
 from .area import Area
 from .bars import Bars
 from .contour import Contour
@@ -24,7 +24,7 @@ __all__ = [
     "Heatmap", "Histogram", "ErrorBars", "Spread",
     "RawFigure",
     "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
-    "Arrow", "Rect", "Ellipse", "Polygon",
+    "Arrow", "Rect", "Ellipse", "Polygon", "RefLine",
     "BoxPlot", "Violin",
     "Area", "Ecdf", "Pie", "Contour",
 ]

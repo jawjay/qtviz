@@ -43,6 +43,7 @@ from ...elements import (
     Polygon,
     RawFigure,
     Rect,
+    RefLine,
     Scatter,
     Span,
     Spread,
@@ -54,9 +55,21 @@ from ...errors import IncompatibleOverlayError, RendererMissingError
 
 _SIZE_LO, _SIZE_HI = 5.0, 18.0
 _DASH = {"solid": "solid", "dashed": "dash", "dotted": "dot", "dashdot": "dashdot"}
-# qtviz marker vocabulary → Plotly marker symbols ([D51]).
+
+
+def _dash(style) -> str:
+    """Named style or a dash tuple in points ([D99]) → Plotly dash string."""
+    if isinstance(style, str):
+        return _DASH.get(style, "solid")
+    return ",".join(f"{v:g}px" for v in style)
+
+
+# qtviz marker vocabulary → Plotly marker symbols ([D51]/[D99]; Plotly "cross"
+# is the plus shape, "x" the diagonal one).
 _SYMBOL = {"circle": "circle", "square": "square", "triangle": "triangle-up",
-           "diamond": "diamond", "cross": "x"}
+           "triangle_down": "triangle-down", "diamond": "diamond", "cross": "x",
+           "plus": "cross", "star": "star", "pentagon": "pentagon",
+           "hexagon": "hexagon"}
 
 
 def _css(color) -> str:
@@ -163,20 +176,32 @@ def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
     d = element.data
     color = _css(_element_color(element, theme, idx))
     line = {"color": color, "width": element.line_width,
-            "dash": _DASH.get(element.line_style, "solid")}
+            "dash": _dash(element.line_style)}
     if element.step is not None:
         line["shape"] = _LINE_SHAPE[element.step]
+    every = element.marker_every
+    marked_inline = element.marker is not None and every == 1
     trace = {
         # scattergl only draws linear/hv line shapes — stepped curves take the
         # SVG trace (step charts are small; huge data goes through datashader)
         "type": "scatter" if element.step is not None else "scattergl",
-        "mode": "lines+markers" if element.marker is not None else "lines",
+        "mode": "lines+markers" if marked_inline else "lines",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
         "line": line, "opacity": element.alpha, "name": element.label or element.id,
         "showlegend": element.label is not None,
     }
-    if element.marker is not None:
+    if marked_inline:
         trace["marker"] = {"symbol": _SYMBOL[element.marker], "color": color, "size": 7}
+        return [trace]
+    if element.marker is not None:  # marker_every > 1: a thinned points trace ([D99])
+        dots = {
+            "type": trace["type"], "mode": "markers",
+            "x": _floats(d.series("x"))[::every], "y": _floats(d.series("y"))[::every],
+            "marker": {"symbol": _SYMBOL[element.marker], "color": color, "size": 7},
+            "opacity": element.alpha, "name": element.label or element.id,
+            "showlegend": False, "hoverinfo": "skip",
+        }
+        return [trace, dots]
     return [trace]
 
 
@@ -191,7 +216,19 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
         trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
     else:
         trace["x"], trace["y"] = x, _floats(d.series("y"))
+    _bar_text(trace, np.asarray(d.series("y"), dtype="float64"), element)
     return [trace]
+
+
+def _bar_text(trace: dict, values, element) -> None:
+    """Value labels on a bar trace ([D98]) — formatted via [D86]."""
+    if element.bar_labels is None:
+        return
+    from ...core._ticks import format_tick  # noqa: PLC0415
+
+    spec = element.bar_labels if element.bar_labels != "auto" else "g"
+    trace["text"] = [format_tick(float(v), spec) for v in values]
+    trace["textposition"] = "inside" if element.mode == "stacked" else "outside"
 
 
 def _group_bars_traces(element: Bars, theme) -> list[dict]:
@@ -209,13 +246,16 @@ def _group_bars_traces(element: Bars, theme) -> list[dict]:
     cats = _floats(xs) if numeric else [str(c) for c in xs]
     swatches = category_swatches(gs, theme.palette)
     horizontal = element.orient == "h"  # categories on y, lengths on x ([D85])
-    return [{
+    traces = [{
         "type": "bar",
         **({"x": mat[gi], "y": cats, "orientation": "h"} if horizontal
            else {"x": cats, "y": mat[gi]}),
         "marker": {"color": _css(swatches[gi])},
         "name": str(g), "showlegend": True,
     } for gi, g in enumerate(gs)]
+    for gi, tr in enumerate(traces):
+        _bar_text(tr, mat[gi], element)
+    return traces
 
 
 # qtviz colormap names (matplotlib vocabulary) → Plotly named colorscales.
@@ -317,16 +357,25 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
 
 def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
     d = element.data
-    x = _floats(d.series("x"))
     color = _element_color(element, theme, idx)
     line_css = _css(color)
+    common = {"type": "scatter", "mode": "lines",
+              "line": {"width": 0, "color": line_css},
+              "name": element.label or element.id}
+    if element.orient == "h":  # ([D99]) band spans x as a function of y
+        y = _floats(d.series("y"))
+        lo = {**common, "x": _floats(d.series("x_lo")), "y": y,
+              "showlegend": False, "hoverinfo": "skip"}
+        hi = {**common, "x": _floats(d.series("x_hi")), "y": y, "fill": "tonextx",
+              "fillcolor": _rgba_css(color, element.alpha),
+              "showlegend": element.label is not None}
+        return [lo, hi]
+    x = _floats(d.series("x"))
     # lower edge first (no fill), then upper edge filling down to it.
-    lo = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_lo")),
-          "line": {"width": 0, "color": line_css}, "showlegend": False, "hoverinfo": "skip",
-          "name": element.label or element.id}
-    hi = {"type": "scatter", "mode": "lines", "x": x, "y": _floats(d.series("y_hi")),
-          "line": {"width": 0, "color": line_css}, "fill": "tonexty",
-          "fillcolor": _rgba_css(color, element.alpha), "name": element.label or element.id,
+    lo = {**common, "x": x, "y": _floats(d.series("y_lo")),
+          "showlegend": False, "hoverinfo": "skip"}
+    hi = {**common, "x": x, "y": _floats(d.series("y_hi")), "fill": "tonexty",
+          "fillcolor": _rgba_css(color, element.alpha),
           "showlegend": element.label is not None}
     return [lo, hi]
 
@@ -520,9 +569,9 @@ _TRACE_BUILDERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label", "axis"}),
-    Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
-                      "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "orient", "group", "mode", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "marker",
+                      "marker_every", "step", "alpha", "label", "axis"}),
+    Bars: frozenset({"color", "orient", "group", "mode", "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),
@@ -542,6 +591,7 @@ HONORED: dict[type, frozenset[str]] = {
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
+    RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 
 
@@ -589,7 +639,43 @@ def _line_shape(pos: float | None, axis: str, element, css: str) -> dict | None:
         f"{axis}ref": axis, f"{axis}0": pos, f"{axis}1": pos,
         "opacity": element.alpha,
         "line": {"color": css, "width": element.line_width,
-                 "dash": _DASH.get(element.line_style, "solid")},
+                 "dash": _dash(element.line_style)},
+    }
+
+
+def _refline_shape(element, theme, traces, x_scale: str, y_scale: str) -> dict | None:
+    """`y = slope·x + intercept` as a long segment spanning 3× the data range
+    ([D99]) — Plotly shapes can't be infinite-with-slope, so wide zoom-out can
+    run off its end (documented caveat). No log-scale form (warn + drop)."""
+    if x_scale in ("log", "symlog") or y_scale in ("log", "symlog"):
+        import warnings  # noqa: PLC0415
+
+        from ...errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn("webengine: RefLine is a straight data-space line and has "
+                      "no log-scale form; it was dropped.", QtvizWarning, stacklevel=2)
+        return None
+    lo, hi = 0.0, 1.0
+    xs = [np.asarray(tr["x"], dtype="float64")
+          for tr in traces
+          if isinstance(tr.get("x"), np.ndarray) and np.asarray(tr["x"]).dtype.kind == "f"]
+    if xs:
+        finite = np.concatenate([x[np.isfinite(x)] for x in xs])
+        if len(finite):
+            lo, hi = float(finite.min()), float(finite.max())
+    span = (hi - lo) or 1.0
+    x0, x1 = lo - span, hi + span
+    if x_scale == "time":  # trace arrays are already epoch ms ([D94])
+        x0, x1 = x0 / 1000.0, x1 / 1000.0  # back to data seconds for the maths
+    y0 = element.slope * x0 + element.intercept
+    y1 = element.slope * x1 + element.intercept
+    return {
+        "type": "line", "xref": "x", "yref": "y",
+        "x0": _shape_coord(x0, x_scale), "x1": _shape_coord(x1, x_scale),
+        "y0": _shape_coord(y0, y_scale), "y1": _shape_coord(y1, y_scale),
+        "opacity": element.alpha,
+        "line": {"color": _ref_css(element, theme), "width": element.line_width,
+                 "dash": _dash(element.line_style)},
     }
 
 
@@ -708,6 +794,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
     source_ids: list[str] = []
     shapes: list[dict] = []
     notes: list[dict] = []
+    reflines: list = []  # need the data span — built after the trace loop ([D99])
     idx = 0  # data-series palette slot; annotations excluded
     barmode: str | None = None  # set by a grouped/stacked Bars ([D68])
     y2_active = False  # any child on the twin axis ([D88])
@@ -720,6 +807,9 @@ def build(node, theme) -> tuple[dict, list[str]]:
             element, backend_name="webengine",
             honored=HONORED.get(type(element), frozenset()),
         )
+        if isinstance(element, RefLine):
+            reflines.append(element)
+            continue
         if isinstance(element, (HLine, VLine, Span, Rect, Ellipse, Polygon)):
             shape = _shape(element, theme, x_scale, y_scale)
             if shape is not None:
@@ -760,6 +850,10 @@ def build(node, theme) -> tuple[dict, list[str]]:
             vals = tr.get(key)
             if vals is not None and getattr(vals, "dtype", None) is not None:
                 tr[key] = np.asarray(vals, dtype="float64") * 1000.0
+    for rl in reflines:
+        shape = _refline_shape(rl, theme, traces, x_scale, y_scale)
+        if shape is not None:
+            shapes.append(shape)
     if not surf.legend_enabled:  # the one legend switch silences colorbars too
         for tr in traces:
             if "showscale" in tr:

@@ -62,6 +62,7 @@ from .elements import (
     Polygon,
     RawFigure,
     Rect,
+    RefLine,
     Scatter,
     Span,
     Spread,
@@ -77,6 +78,7 @@ __all__ = [
     "RawFigure",
     # annotation / reference elements ([D70]; wave-1 additions [D96]/[D97])
     "HLine", "VLine", "Span", "Text", "Arrow", "Rect", "Ellipse", "Polygon",
+    "RefLine",
     # statistical elements ([D67])
     "BoxPlot", "Violin",
     # composition vocabulary (parity program increment 3, [D84b]/[D90]/[D91])
