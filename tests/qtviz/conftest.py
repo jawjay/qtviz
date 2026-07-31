@@ -91,6 +91,11 @@ def make_elements(table, grid):
             # statistical elements ([D67], 0.4)
             "BoxPlot": qv.BoxPlot(table, column="y"),
             "Violin": qv.Violin(table, column="y"),
+            # composition vocabulary (parity increment 3, [D84b]/[D90]/[D91])
+            "Area": qv.Area(table, x="x", y="y"),
+            "Ecdf": qv.Ecdf(table, column="y"),
+            "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"]},
+                          values="v", labels="l"),
         }
 
     return build

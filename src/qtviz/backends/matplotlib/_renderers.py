@@ -14,14 +14,17 @@ import numpy as np
 
 from ...core.color import Color
 from ...elements import (
+    Area,
     Bars,
     BoxPlot,
     Curve,
+    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
+    Pie,
     Scatter,
     Span,
     Spread,
@@ -375,6 +378,72 @@ def render_heatmap(element: Heatmap, ctx):
                      extent=(x0, x1, y0, y1))
 
 
+def render_area(element: Area, ctx):
+    """Filled series ([D84b]): zero-baseline fill, or one band per group —
+    layered (overlay) or cumulatively stacked."""
+    from ...core._stats import group_bars  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
+
+    d = element.data
+    ax = ctx.parent_axes
+    if element.group is None:
+        return ax.fill_between(
+            _col(d, "x"), 0.0, _col(d, "y"),
+            color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
+            alpha=element.alpha,
+        )
+    xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
+                             np.asarray(d.series("group")))
+    numeric = np.issubdtype(xs.dtype, np.number)
+    pos = xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")
+    if not numeric:
+        ax.set_xticks(pos, [str(c) for c in xs])
+    swatches = category_swatches(gs, ctx.theme.palette)
+    artists = []
+    bases = np.zeros(len(xs))
+    for gi in range(len(gs)):
+        top = bases + mat[gi] if element.mode == "stacked" else mat[gi]
+        artists.append(ax.fill_between(pos, bases, top, color=swatches[gi].mpl(),
+                                       alpha=element.alpha))
+        if element.mode == "stacked":
+            bases = top
+    if ctx.show_legend:
+        legend = Legend(kind="categorical", title=element.group,
+                        entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
+        _add_legend(ax, legend, ctx.theme, ctx.legend_position)
+    return artists
+
+
+def render_ecdf(element: Ecdf, ctx):
+    from ...core._stats import ecdf  # noqa: PLC0415
+
+    xs, fr = ecdf(_col(element.data, "column"))
+    (line,) = ctx.parent_axes.plot(
+        xs, fr, color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
+        lw=element.line_width, alpha=element.alpha, drawstyle="steps-post",
+    )
+    return line
+
+
+def render_pie(element: Pie, ctx):
+    d = element.data
+    vals = _col(d, "values")
+    labels = ([str(v) for v in np.asarray(d.series("labels"))]
+              if element.labels is not None else None)
+    palette = ctx.theme.palette
+    ax = ctx.parent_axes
+    ax.set_axis_off()  # wedges have no axes; the surface title still draws
+    wedgeprops = {"alpha": element.alpha}
+    if element.hole:
+        wedgeprops["width"] = 1.0 - element.hole  # annular wedges → donut
+    wedges, _texts = ax.pie(
+        vals, labels=labels,
+        colors=[palette[i % len(palette)].mpl() for i in range(len(vals))],
+        wedgeprops=wedgeprops, textprops={"color": ctx.theme.foreground.mpl()},
+    )
+    return wedges
+
+
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
     lo, hi = _col(d, "err_lo"), _col(d, "err_hi")
@@ -509,6 +578,9 @@ RENDERERS: dict[type, Any] = {
     Text: render_text,
     BoxPlot: render_boxplot,
     Violin: render_violin,
+    Area: render_area,
+    Ecdf: render_ecdf,
+    Pie: render_pie,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -533,4 +605,7 @@ HONORED: dict[type, frozenset[str]] = {
     Text: frozenset({"color", "size", "anchor"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
+    Area: frozenset({"group", "mode", "color", "alpha", "label"}),
+    Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
+    Pie: frozenset({"labels", "hole", "alpha"}),
 }

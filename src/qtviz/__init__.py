@@ -45,14 +45,17 @@ from .data import (
     tabular,
 )
 from .elements import (
+    Area,
     Bars,
     BoxPlot,
     Curve,
+    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
+    Pie,
     RawFigure,
     Scatter,
     Span,
@@ -71,6 +74,8 @@ __all__ = [
     "HLine", "VLine", "Span", "Text",
     # statistical elements ([D67])
     "BoxPlot", "Violin",
+    # composition vocabulary (parity program increment 3, [D84b]/[D90]/[D91])
+    "Area", "Ecdf", "Pie",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)

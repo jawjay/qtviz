@@ -28,6 +28,15 @@ def histogram(values, bins: int | str = "auto", *,
     return np.histogram(a, bins=bins, density=density)
 
 
+def ecdf(values) -> tuple[np.ndarray, np.ndarray]:
+    """Empirical CDF ([D91]): the sorted finite sample points and the fraction
+    of data ≤ each point. Drawn as a `post` step curve — one implementation so
+    every backend draws the same staircase."""
+    a = np.asarray(values, dtype="float64")
+    a = np.sort(a[np.isfinite(a)])
+    return a, np.arange(1, len(a) + 1, dtype="float64") / max(len(a), 1)
+
+
 def cell_extent(centers) -> tuple[float, float]:
     """Outer edges spanned by a row of grid-cell centers (end cells extend half
     the adjacent spacing) — where an image drawn over those centers sits in

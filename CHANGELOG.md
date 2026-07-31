@@ -12,6 +12,14 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Three new elements ([D84b]/[D90]/[D91]).** `Area` — zero-baseline filled
+  series; with `group=` one palette band per category, layered
+  (`mode="overlay"`) or cumulatively stacked (the [D68] grouping pattern) —
+  all three backends. `Ecdf` — the empirical CDF of a column, computed in
+  core ([D67] shared numbers) and drawn as a post-step curve — all three
+  backends. `Pie` — proportional wedges with optional `labels` and a `hole`
+  for donuts — matplotlib + webengine; pyqtgraph has no pie primitive, so
+  negotiation routes around it (the `RawFigure` precedent).
 - **Step curves and curve markers ([D84]).** `Curve(step="pre"|"mid"|"post")`
   renders stepped lines and `Curve(marker=...)` puts point symbols on the line
   (the 5-marker vocabulary), on all three backends.

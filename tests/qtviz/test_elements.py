@@ -24,6 +24,8 @@ def test_curated_vocabulary_constructs(make_elements):
         "HLine", "VLine", "Span", "Text",
         # the 0.4 statistical elements ([D67])
         "BoxPlot", "Violin",
+        # the parity-increment-3 composition vocabulary ([D84b]/[D90]/[D91])
+        "Area", "Ecdf", "Pie",
     }
 
 

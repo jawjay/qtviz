@@ -21,6 +21,9 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Spread
         - BoxPlot
         - Violin
+        - Area
+        - Ecdf
+        - Pie
         - RawFigure
 
 ## Annotation & reference elements

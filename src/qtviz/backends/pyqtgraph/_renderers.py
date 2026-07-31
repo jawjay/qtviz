@@ -20,9 +20,11 @@ from PySide6.QtCore import Qt
 from ...core._scales import logify
 from ...core.color import Color
 from ...elements import (
+    Area,
     Bars,
     BoxPlot,
     Curve,
+    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
@@ -467,6 +469,77 @@ def render_errorbars(element: ErrorBars, ctx):
     return item
 
 
+def render_area(element: Area, ctx):
+    """Filled series ([D84b]): zero-baseline `fillLevel` fill, or one band per
+    group — layered (overlay) or cumulatively stacked via `FillBetweenItem`.
+    Under log-y the zero baseline follows the bar convention (data 1)."""
+    from ...core._stats import group_bars  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
+
+    d = element.data
+    x_log, y_log = _xy_log(ctx)
+
+    def _band(x, y, sw):
+        c = sw.qt()
+        c.setAlphaF(element.alpha)
+        return pg.PlotDataItem(x=x, y=y, pen=pg.mkPen(sw.qt()), fillLevel=0.0,
+                               brush=pg.mkBrush(c))
+
+    if element.group is None:
+        item = _band(logify(_col(d, "x"), x_log), logify(_col(d, "y"), y_log),
+                     _color(element.color, ctx.theme, ctx.series_index))
+        ctx.parent_axes.addItem(item)
+        return item
+    xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
+                             np.asarray(d.series("group")))
+    pos, numeric = _bar_positions(xs)
+    if not numeric:
+        ctx.parent_axes.getAxis("bottom").setTicks(
+            [[(float(i), str(c)) for i, c in enumerate(xs)]])
+    lp = logify(pos, x_log)
+    swatches = category_swatches(gs, ctx.theme.palette)
+    items = []
+    bases = np.zeros(len(xs))
+    for gi in range(len(gs)):
+        if element.mode == "stacked":
+            tops = bases + mat[gi]
+            lo = pg.PlotDataItem(lp, logify(bases, y_log) if y_log else bases)
+            hi = pg.PlotDataItem(lp, logify(tops, y_log))
+            c = swatches[gi].qt()
+            c.setAlphaF(element.alpha)
+            fill = pg.FillBetweenItem(lo, hi, brush=pg.mkBrush(c))
+            for it in (lo, hi, fill):
+                ctx.parent_axes.addItem(it)
+            items.append(fill)
+            bases = tops
+        else:
+            item = _band(lp, logify(mat[gi], y_log), swatches[gi])
+            ctx.parent_axes.addItem(item)
+            items.append(item)
+    if ctx.show_legend:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        legend = Legend(kind="categorical", title=element.group,
+                        entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
+        add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+    return items
+
+
+def render_ecdf(element: Ecdf, ctx):
+    from ...core._stats import ecdf  # noqa: PLC0415
+
+    xs, fr = ecdf(_col(element.data, "column"))
+    x_log, y_log = _xy_log(ctx)
+    color = _color(element.color, ctx.theme, ctx.series_index).qt()
+    color.setAlphaF(element.alpha)
+    item = pg.PlotCurveItem(
+        x=logify(xs, x_log), y=logify(fr, y_log), stepMode="left",  # post-step
+        pen=pg.mkPen(color, width=element.line_width), connect="finite",
+    )
+    ctx.parent_axes.addItem(item)
+    return item
+
+
 def render_spread(element: Spread, ctx):
     d = element.data
     x_log, y_log = _xy_log(ctx)
@@ -674,6 +747,9 @@ RENDERERS: dict[type, Any] = {
     Text: render_text,
     BoxPlot: render_boxplot,
     Violin: render_violin,
+    Area: render_area,
+    Ecdf: render_ecdf,
+    # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -696,4 +772,6 @@ HONORED: dict[type, frozenset[str]] = {
     Text: frozenset({"color", "size", "anchor"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
+    Area: frozenset({"group", "mode", "color", "alpha", "label"}),
+    Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
 }

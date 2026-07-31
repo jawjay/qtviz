@@ -26,14 +26,17 @@ from ...core._scales import log_lim, logify
 from ...core.compose import Overlay, effective_scales, surface_of
 from ...data import resolve_node
 from ...elements import (
+    Area,
     Bars,
     BoxPlot,
     Curve,
+    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
+    Pie,
     RawFigure,
     Scatter,
     Span,
@@ -388,6 +391,74 @@ def _violin_trace(element: Violin, theme, idx: int) -> list[dict]:
     return traces
 
 
+def _area_traces(element: Area, theme, idx: int) -> list[dict]:
+    """Filled series ([D84b]): tozeroy fill, or per-group bands (Plotly's
+    stackgroup does the stacking — same sums as the native cumulative bases)."""
+    from ...core._stats import group_bars  # noqa: PLC0415
+    from ...core.encoding import category_swatches  # noqa: PLC0415
+
+    d = element.data
+    if element.group is None:
+        color = _element_color(element, theme, idx)
+        return [{
+            "type": "scatter", "mode": "lines",
+            "x": _floats(d.series("x")), "y": _floats(d.series("y")),
+            "line": {"color": _css(color), "width": 1.5}, "fill": "tozeroy",
+            "fillcolor": _rgba_css(color, element.alpha),
+            "name": element.label or element.id,
+            "showlegend": element.label is not None,
+        }]
+    xs, gs, mat = group_bars(np.asarray(d.series("x")),
+                             np.asarray(d.series("y"), dtype="float64"),
+                             np.asarray(d.series("group")))
+    numeric = np.issubdtype(xs.dtype, np.number)
+    x = _floats(xs) if numeric else [str(c) for c in xs]
+    swatches = category_swatches(gs, theme.palette)
+    traces = []
+    for gi, g in enumerate(gs):
+        tr = {
+            "type": "scatter", "mode": "lines", "x": x, "y": _floats(mat[gi]),
+            "line": {"color": _css(swatches[gi]), "width": 1.5},
+            "fillcolor": _rgba_css(swatches[gi], element.alpha),
+            "name": str(g), "showlegend": True,
+        }
+        if element.mode == "stacked":
+            tr["stackgroup"] = "qtviz"  # Plotly stacks + fills to the band below
+        else:
+            tr["fill"] = "tozeroy"
+        traces.append(tr)
+    return traces
+
+
+def _ecdf_trace(element: Ecdf, theme, idx: int) -> list[dict]:
+    from ...core._stats import ecdf  # noqa: PLC0415
+
+    xs, fr = ecdf(element.data.series("column"))
+    return [{
+        "type": "scatter", "mode": "lines", "x": _floats(xs), "y": _floats(fr),
+        "line": {"color": _css(_element_color(element, theme, idx)),
+                 "width": element.line_width, "shape": "hv"},  # post-step
+        "opacity": element.alpha, "name": element.label or element.id,
+        "showlegend": element.label is not None,
+    }]
+
+
+def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
+    d = element.data
+    vals = _floats(d.series("values"))
+    trace = {
+        "type": "pie", "values": vals, "hole": element.hole,
+        "opacity": element.alpha,
+        "marker": {"colors": [_css(theme.palette[i % len(theme.palette)])
+                              for i in range(len(vals))]},
+        "name": element.id, "showlegend": element.labels is not None,
+        "sort": False,  # keep row order so slice colors match the native pie
+    }
+    if element.labels is not None:
+        trace["labels"] = [str(v) for v in np.asarray(d.series("labels"))]
+    return [trace]
+
+
 _TRACE_BUILDERS: dict[type, Any] = {
     Scatter: _scatter_trace,
     Curve: _curve_trace,
@@ -399,6 +470,9 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Spread: _spread_trace,
     BoxPlot: _boxplot_trace,
     Violin: _violin_trace,
+    Area: _area_traces,
+    Ecdf: _ecdf_trace,
+    Pie: _pie_trace,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -420,6 +494,9 @@ HONORED: dict[type, frozenset[str]] = {
     Text: frozenset({"color", "size", "anchor"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
+    Area: frozenset({"group", "mode", "color", "alpha", "label"}),
+    Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
+    Pie: frozenset({"labels", "hole", "alpha"}),
 }
 
 
