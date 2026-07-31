@@ -14,6 +14,7 @@ from .histogram import Histogram
 from .image import Image
 from .mesh import Mesh
 from .pie import Pie
+from .quiver import Quiver
 from .raw_figure import RawFigure
 from .scatter import Scatter
 from .shapes import Ellipse, Polygon, Rect
@@ -27,5 +28,5 @@ __all__ = [
     "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
     "Arrow", "Rect", "Ellipse", "Polygon", "RefLine",
     "BoxPlot", "Violin",
-    "Area", "Ecdf", "Pie", "Contour", "Mesh",
+    "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
 ]

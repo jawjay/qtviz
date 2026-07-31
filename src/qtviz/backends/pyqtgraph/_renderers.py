@@ -35,6 +35,7 @@ from ...elements import (
     Image,
     Mesh,
     Polygon,
+    Quiver,
     Rect,
     RefLine,
     Scatter,
@@ -614,6 +615,23 @@ def _pg_colormap(name: str):
     return pg.colormap.get("viridis")
 
 
+def render_quiver(element: Quiver, ctx):
+    """Shared core geometry ([D107]) — two NaN-separated curves (positions
+    logify like any polyline; a log-warped field warps consistently)."""
+    (sx, sy), (hx, hy) = element.resolved_segments()
+    x_log, y_log = _xy_log(ctx)
+    color = _color(element.color, ctx.theme, ctx.series_index).qt()
+    color.setAlphaF(element.alpha)
+    pen = pg.mkPen(color, width=element.line_width)
+    items = []
+    for xs, ys in ((sx, sy), (hx, hy)):
+        item = pg.PlotCurveItem(x=logify(xs, x_log), y=logify(ys, y_log),
+                                pen=pen, connect="finite")
+        ctx.parent_axes.addItem(item)
+        items.append(item)
+    return items
+
+
 def render_mesh(element: Mesh, ctx):
     """Non-uniform rectilinear grid ([D106]) via `PColorMeshItem` (spiked:
     edge-corner meshgrids, explicit levels). Shares the [D105] norm path."""
@@ -1070,6 +1088,7 @@ RENDERERS: dict[type, Any] = {
     Ecdf: render_ecdf,
     Contour: render_contour,
     Mesh: render_mesh,
+    Quiver: render_quiver,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -1107,5 +1126,7 @@ HONORED: dict[type, frozenset[str]] = {
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
+    Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
+                       "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

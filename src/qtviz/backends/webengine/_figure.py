@@ -42,6 +42,7 @@ from ...elements import (
     Mesh,
     Pie,
     Polygon,
+    Quiver,
     RawFigure,
     Rect,
     RefLine,
@@ -586,6 +587,21 @@ def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
     return [trace]
 
 
+def _quiver_traces(element: Quiver, theme, idx: int) -> list[dict]:
+    """Shared core geometry ([D107]) — two NaN-gapped line traces."""
+    (sx, sy), (hx, hy) = element.resolved_segments()
+    color = _css(_element_color(element, theme, idx))
+    line = {"color": color, "width": element.line_width}
+    common = {"type": "scattergl", "mode": "lines", "line": line,
+              "opacity": element.alpha, "hoverinfo": "skip"}
+    return [
+        {**common, "x": sx, "y": sy, "name": element.label or element.id,
+         "showlegend": element.label is not None},
+        {**common, "x": hx, "y": hy, "name": element.label or element.id,
+         "showlegend": False},
+    ]
+
+
 def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
     """Non-uniform grid ([D106]): a Plotly heatmap whose x/y carry one more
     entry than z — Plotly reads them as block boundaries (the edges)."""
@@ -647,6 +663,7 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Pie: _pie_trace,
     Contour: _contour_trace,
     Mesh: _mesh_trace,
+    Quiver: _quiver_traces,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -678,6 +695,8 @@ HONORED: dict[type, frozenset[str]] = {
     Pie: frozenset({"labels", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
+    Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
+                       "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 

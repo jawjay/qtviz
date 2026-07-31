@@ -24,7 +24,7 @@ FROZEN_1_0 = frozenset({
     "BoxPlot", "Violin",                          # statistics ([D67])
     "Area", "Ecdf", "Pie",                        # parity increment 3 ([D84b]/[D90]/[D91])
     "Contour",                                    # parity increment 6 ([D89])
-    "Mesh",                                       # wave 3 ([D106])
+    "Mesh", "Quiver",                             # wave 3 ([D106]/[D107])
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters

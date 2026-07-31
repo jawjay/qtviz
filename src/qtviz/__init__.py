@@ -61,6 +61,7 @@ from .elements import (
     Mesh,
     Pie,
     Polygon,
+    Quiver,
     RawFigure,
     Rect,
     RefLine,
@@ -83,7 +84,7 @@ __all__ = [
     # statistical elements ([D67])
     "BoxPlot", "Violin",
     # composition vocabulary (parity program increment 3, [D84b]/[D90]/[D91])
-    "Area", "Ecdf", "Pie", "Contour", "Mesh",
+    "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)

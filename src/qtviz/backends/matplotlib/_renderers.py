@@ -30,6 +30,7 @@ from ...elements import (
     Mesh,
     Pie,
     Polygon,
+    Quiver,
     Rect,
     RefLine,
     Scatter,
@@ -579,6 +580,18 @@ def render_pie(element: Pie, ctx):
     return wedges
 
 
+def render_quiver(element: Quiver, ctx):
+    """Vector field ([D107]) from the shared core geometry — two polylines,
+    identical on every backend (no native `quiver`: one geometry, one meaning)."""
+    (sx, sy), (hx, hy) = element.resolved_segments()
+    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
+    (shafts,) = ctx.parent_axes.plot(sx, sy, color=color, lw=element.line_width,
+                                     alpha=element.alpha)
+    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=element.line_width,
+                                    alpha=element.alpha)
+    return [shafts, heads]
+
+
 def render_mesh(element: Mesh, ctx):
     """Non-uniform rectilinear grid ([D106]) — edges straight to pcolormesh;
     the [D105] norm surface shared with Image/Heatmap."""
@@ -835,6 +848,7 @@ RENDERERS: dict[type, Any] = {
     Pie: render_pie,
     Contour: render_contour,
     Mesh: render_mesh,
+    Quiver: render_quiver,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -874,5 +888,7 @@ HONORED: dict[type, frozenset[str]] = {
     Pie: frozenset({"labels", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
+    Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
+                       "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

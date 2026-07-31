@@ -26,6 +26,7 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Pie
         - Contour
         - Mesh
+        - Quiver
         - RawFigure
 
 ## Annotation & reference elements

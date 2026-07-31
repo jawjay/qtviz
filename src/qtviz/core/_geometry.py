@@ -35,3 +35,47 @@ def svg_path(points) -> str:
     pts = np.asarray(points, dtype="float64")
     body = " L ".join(f"{x:g},{y:g}" for x, y in pts)
     return f"M {body} Z"
+
+
+_HEAD_ANGLE = np.deg2rad(25.0)
+
+
+def quiver_scale(x, y, u, v) -> float:
+    """The "auto" arrow scale ([D107]): the typical cell of the field
+    (√(span_area / n)) should hold the largest arrow at ~90%."""
+    x = np.asarray(x, dtype="float64")
+    y = np.asarray(y, dtype="float64")
+    mag = np.hypot(np.asarray(u, dtype="float64"), np.asarray(v, dtype="float64"))
+    max_mag = float(np.nanmax(mag)) if len(mag) else 0.0
+    if max_mag == 0.0:
+        return 1.0
+    span_x = (float(np.nanmax(x)) - float(np.nanmin(x))) or 1.0
+    span_y = (float(np.nanmax(y)) - float(np.nanmin(y))) or 1.0
+    cell = np.sqrt(span_x * span_y / max(len(x), 1))
+    return 0.9 * cell / max_mag
+
+
+def quiver_segments(x, y, u, v, scale: float, head_scale: float = 1.0):
+    """Shared arrow geometry ([D107]/[D110]): `(shaft_xy, head_xy)` as
+    NaN-separated polylines every backend draws with two cheap primitives —
+    pixel-identical fields everywhere, and no thousand arrow items. Heads are
+    two barbs at ±25° whose length is 30% of each arrow (× `head_scale`),
+    in data space (they zoom with the field)."""
+    x = np.asarray(x, dtype="float64")
+    y = np.asarray(y, dtype="float64")
+    dx = np.asarray(u, dtype="float64") * scale
+    dy = np.asarray(v, dtype="float64") * scale
+    tip_x, tip_y = x + dx, y + dy
+    n = len(x)
+    nan = np.full(n, np.nan)
+    shaft_x = np.column_stack([x, tip_x, nan]).ravel()
+    shaft_y = np.column_stack([y, tip_y, nan]).ravel()
+    theta = np.arctan2(dy, dx)
+    barb = 0.3 * np.hypot(dx, dy) * head_scale
+    left_x = tip_x - barb * np.cos(theta - _HEAD_ANGLE)
+    left_y = tip_y - barb * np.sin(theta - _HEAD_ANGLE)
+    right_x = tip_x - barb * np.cos(theta + _HEAD_ANGLE)
+    right_y = tip_y - barb * np.sin(theta + _HEAD_ANGLE)
+    head_x = np.column_stack([left_x, tip_x, right_x, nan]).ravel()
+    head_y = np.column_stack([left_y, tip_y, right_y, nan]).ravel()
+    return (shaft_x, shaft_y), (head_x, head_y)
