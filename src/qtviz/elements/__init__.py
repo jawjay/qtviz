@@ -5,6 +5,7 @@ from __future__ import annotations
 from .annotations import ANNOTATION_TYPES, HLine, Span, Text, VLine
 from .area import Area
 from .bars import Bars
+from .contour import Contour
 from .curve import Curve
 from .ecdf import Ecdf
 from .errorbars import ErrorBars
@@ -23,5 +24,5 @@ __all__ = [
     "RawFigure",
     "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
     "BoxPlot", "Violin",
-    "Area", "Ecdf", "Pie",
+    "Area", "Ecdf", "Pie", "Contour",
 ]

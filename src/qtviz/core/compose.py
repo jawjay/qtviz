@@ -119,9 +119,9 @@ def effective_scales(node: Node, surf: OverlayOptions, available, backend: str) 
     y_scale = resolve_scale(surf.y.scale, available, axis="y", backend=backend)
     if x_scale == y_scale == "linear":
         return (x_scale, y_scale)
-    from ..elements import Heatmap, Image  # noqa: PLC0415 — avoid a core→elements cycle
+    from ..elements import Contour, Heatmap, Image  # noqa: PLC0415 — avoid a core→elements cycle
 
-    if any(isinstance(e, (Image, Heatmap)) for e in _elements_of(node)):
+    if any(isinstance(e, (Image, Heatmap, Contour)) for e in _elements_of(node)):
         import warnings  # noqa: PLC0415
 
         from ..errors import QtvizWarning  # noqa: PLC0415

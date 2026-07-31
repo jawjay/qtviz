@@ -73,7 +73,7 @@ def test_supports_the_data_vocabulary():
     assert names == {
         "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars", "Spread",
         "BoxPlot", "Violin",
-        "Area", "Ecdf", "Pie",                    # parity increment 3
+        "Area", "Ecdf", "Pie", "Contour",         # parity increments 3+6
     }
 
 

@@ -94,6 +94,7 @@ def make_elements(table, grid):
             # composition vocabulary (parity increment 3, [D84b]/[D90]/[D91])
             "Area": qv.Area(table, x="x", y="y"),
             "Ecdf": qv.Ecdf(table, column="y"),
+            "Contour": qv.Contour(values, bounds=bounds),
             "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"]},
                           values="v", labels="l"),
         }

@@ -12,6 +12,13 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **`Contour` ([D89]).** Iso-value contours over a 2-D grid (the `Image`
+  data contract): `levels` (count or explicit values — computed once in core
+  so every backend draws the same lines), `filled`, `colormap`,
+  `line_width`. matplotlib `contour/contourf` (+ colorbar when filled),
+  Plotly `contour` traces, pyqtgraph `IsocurveItem` per level mapped onto
+  `bounds` (`filled` warns there — no pg primitive). Contour surfaces join
+  the raster force-linear scale gate.
 - **Three new elements ([D84b]/[D90]/[D91]).** `Area` — zero-baseline filled
   series; with `group=` one palette band per category, layered
   (`mode="overlay"`) or cumulatively stacked (the [D68] grouping pattern) —

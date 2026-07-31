@@ -17,6 +17,7 @@ from ...elements import (
     Area,
     Bars,
     BoxPlot,
+    Contour,
     Curve,
     Ecdf,
     ErrorBars,
@@ -444,6 +445,26 @@ def render_pie(element: Pie, ctx):
     return wedges
 
 
+def render_contour(element: Contour, ctx):
+    """Iso-lines / filled bands over a grid ([D89]) — level values come from
+    core (`contour_levels`) so every backend draws the same lines."""
+    from ...core._stats import contour_levels  # noqa: PLC0415
+
+    values = np.asarray(element.data.grid().values, dtype="float64")
+    lv = contour_levels(values, element.levels)
+    x0, y0, x1, y1 = element.bounds
+    ax = ctx.parent_axes
+    if element.filled:
+        cs = ax.contourf(values, levels=lv, extent=(x0, x1, y0, y1),
+                         origin="lower", cmap=element.colormap, extend="both")
+        if ctx.show_legend:
+            bar = ax.figure.colorbar(cs, ax=ax)
+            bar.ax.tick_params(colors=ctx.theme.foreground.mpl())
+        return cs
+    return ax.contour(values, levels=lv, extent=(x0, x1, y0, y1), origin="lower",
+                      cmap=element.colormap, linewidths=element.line_width)
+
+
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
     lo, hi = _col(d, "err_lo"), _col(d, "err_hi")
@@ -581,6 +602,7 @@ RENDERERS: dict[type, Any] = {
     Area: render_area,
     Ecdf: render_ecdf,
     Pie: render_pie,
+    Contour: render_contour,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -608,4 +630,5 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
+    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
 }

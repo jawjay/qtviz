@@ -28,6 +28,18 @@ def histogram(values, bins: int | str = "auto", *,
     return np.histogram(a, bins=bins, density=density)
 
 
+def contour_levels(values, levels) -> np.ndarray:
+    """Shared contour level values ([D89]): an int becomes that many uniform
+    *interior* levels across the finite data range; an explicit sequence passes
+    through sorted — every backend draws the same lines."""
+    if not isinstance(levels, int):
+        return np.asarray(sorted(float(v) for v in levels), dtype="float64")
+    a = np.asarray(values, dtype="float64")
+    finite = a[np.isfinite(a)]
+    lo, hi = float(finite.min()), float(finite.max())
+    return np.linspace(lo, hi, levels + 2)[1:-1]
+
+
 def ecdf(values) -> tuple[np.ndarray, np.ndarray]:
     """Empirical CDF ([D91]): the sorted finite sample points and the fraction
     of data ≤ each point. Drawn as a `post` step curve — one implementation so

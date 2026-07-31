@@ -29,6 +29,7 @@ from ...elements import (
     Area,
     Bars,
     BoxPlot,
+    Contour,
     Curve,
     Ecdf,
     ErrorBars,
@@ -459,6 +460,37 @@ def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
     return [trace]
 
 
+def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
+    """Iso-lines / filled bands ([D89]). Plotly takes uniform start/end/size
+    levels — exactly what the shared core levels are for an int `levels`; a
+    non-uniform explicit sequence approximates and warns."""
+    from ...core._stats import contour_levels  # noqa: PLC0415
+
+    values = np.asarray(element.data.grid().values, dtype="float64")
+    lv = contour_levels(values, element.levels)
+    step = float(lv[1] - lv[0]) if len(lv) > 1 else 1.0
+    if len(lv) > 2 and not np.allclose(np.diff(lv), step):
+        import warnings  # noqa: PLC0415
+
+        from ...errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn("webengine: Plotly contours are uniformly spaced; the "
+                      "non-uniform `levels` sequence was approximated.",
+                      QtvizWarning, stacklevel=2)
+    x0, y0, x1, y1 = element.bounds
+    ny, nx = values.shape
+    return [{
+        "type": "contour", "z": values,
+        "x": np.linspace(x0, x1, nx), "y": np.linspace(y0, y1, ny),
+        "colorscale": _colorscale(element.colormap),
+        "contours": {"coloring": "fill" if element.filled else "lines",
+                     "start": float(lv[0]), "end": float(lv[-1]), "size": step},
+        "line": {"width": element.line_width},
+        "showscale": element.filled,  # colorbar for filled, like matplotlib
+        "name": element.label or element.id, "showlegend": False,
+    }]
+
+
 _TRACE_BUILDERS: dict[type, Any] = {
     Scatter: _scatter_trace,
     Curve: _curve_trace,
@@ -473,6 +505,7 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Area: _area_traces,
     Ecdf: _ecdf_trace,
     Pie: _pie_trace,
+    Contour: _contour_trace,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -497,6 +530,7 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
+    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
 }
 
 
@@ -641,6 +675,10 @@ def build(node, theme) -> tuple[dict, list[str]]:
         y2_spec = surf.y2 if surf.y2 is not None else AxisSpec()
         y2 = (y2_spec, resolve_scale(y2_spec.scale, _SUPPORTED_SCALES,
                                      axis="y2", backend="webengine"))
+    if not surf.legend_enabled:  # the one legend switch silences colorbars too
+        for tr in traces:
+            if "showscale" in tr:
+                tr["showscale"] = False
     layout = plotly_layout(theme, surf, x_scale, y_scale, y2=y2)
     if barmode is not None:
         layout["barmode"] = barmode

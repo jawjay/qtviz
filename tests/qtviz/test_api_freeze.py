@@ -21,6 +21,7 @@ FROZEN_1_0 = frozenset({
     "HLine", "VLine", "Span", "Text",            # annotations ([D70])
     "BoxPlot", "Violin",                          # statistics ([D67])
     "Area", "Ecdf", "Pie",                        # parity increment 3 ([D84b]/[D90]/[D91])
+    "Contour",                                    # parity increment 6 ([D89])
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters

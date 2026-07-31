@@ -24,6 +24,7 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Area
         - Ecdf
         - Pie
+        - Contour
         - RawFigure
 
 ## Annotation & reference elements

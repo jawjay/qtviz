@@ -23,6 +23,7 @@ from ...elements import (
     Area,
     Bars,
     BoxPlot,
+    Contour,
     Curve,
     Ecdf,
     ErrorBars,
@@ -452,6 +453,37 @@ def _log_deltas(center, lo, hi, is_log: bool, lc):
     return lc - logify(center - lo, True), logify(center + hi, True) - lc
 
 
+def render_contour(element: Contour, ctx):
+    """Iso-lines over a grid ([D89]) via `IsocurveItem` — one item per shared
+    core level, colormap-colored, index coords mapped onto `bounds` the way
+    matplotlib's `extent` maps them (first/last sample on the edges). `filled`
+    is not honored here (no pg primitive) and warns."""
+    from PySide6.QtGui import QColor, QTransform  # noqa: PLC0415
+
+    from ...core._stats import contour_levels  # noqa: PLC0415
+
+    values = np.asarray(element.data.grid().values, dtype="float64")
+    lv = contour_levels(values, element.levels)
+    x0, y0, x1, y1 = element.bounds
+    ny, nx = values.shape
+    tr = QTransform()
+    tr.translate(x0, y0)
+    tr.scale((x1 - x0) / max(nx - 1, 1), (y1 - y0) / max(ny - 1, 1))
+    lut = _pg_lut(element.colormap)
+    lo, hi = float(lv[0]), float(lv[-1])
+    span = (hi - lo) or 1.0
+    items = []
+    for v in lv:
+        row = lut[int((float(v) - lo) / span * (len(lut) - 1))]
+        pen = pg.mkPen(QColor(*(int(c) for c in row[:3])), width=element.line_width)
+        # IsocurveItem walks axis 0 as x — our grids are [row=y, col=x], so .T
+        item = pg.IsocurveItem(data=values.T, level=float(v), pen=pen)
+        item.setTransform(tr)
+        ctx.parent_axes.addItem(item)
+        items.append(item)
+    return items
+
+
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
     x_log, y_log = _xy_log(ctx)
@@ -749,6 +781,7 @@ RENDERERS: dict[type, Any] = {
     Violin: render_violin,
     Area: render_area,
     Ecdf: render_ecdf,
+    Contour: render_contour,
     # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
 }
 
@@ -774,4 +807,5 @@ HONORED: dict[type, frozenset[str]] = {
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
+    Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
 }
