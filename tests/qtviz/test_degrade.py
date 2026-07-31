@@ -81,8 +81,3 @@ def test_distinct_backends_warn_independently():
     assert len(warned) == 1 and "pyqtgraph" in str(warned[0].message)
 
 
-def test_options_type_is_deprecated():
-    """The orphaned `Options` type warns on construction ([D51]/R4) — deprecated,
-    not deleted (non-breaking; removed after 1.0)."""
-    with pytest.warns(DeprecationWarning, match="per-element"):
-        qv.Options(color="#ff0000", alpha=0.5)

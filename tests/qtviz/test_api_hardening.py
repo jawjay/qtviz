@@ -53,12 +53,6 @@ def test_bad_input_still_caught_as_value_error(table):
         qv.Scatter(table, x="x", y="y", alpha=9.0)
 
 
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_options_alpha_validated():
-    with pytest.raises(errors.ValidationError):
-        qv.Options(alpha=1.5)
-
-
 def test_rawfigure_bad_kind_raises_validation_error():
     with pytest.raises(errors.ValidationError):
         qv.RawFigure(object(), kind="bogus")

@@ -74,3 +74,73 @@ def reset() -> None:
     """Clear the warn-once registry. For tests that assert the warning fires; in
     normal use the once-per-process semantics are the point."""
     _warned.clear()
+
+
+# ── surface / layout option honesty ([D109]) ─────────────────────────────────
+# Honor-or-warn covered *element* options only; surface-level silent no-ops
+# kept slipping through (LayoutOptions.rows/spacing/title, pre-[D86]
+# tick_format). Consumers declare what they honor; anything set non-default
+# and unhonored warns once per (consumer, option).
+
+_AXIS_FIELDS = ("label", "scale", "lim", "invert", "tick_format")
+_SURFACE_FIELDS = ("title", "aspect", "legend", "legend_position", "background", "grid")
+_LAYOUT_FIELDS = ("rows", "cols", "spacing", "link_x", "link_y",
+                  "tab_labels", "dock_areas", "title")
+
+
+def surface_overrides(surf) -> list[str]:
+    """The `OverlayOptions` fields set to non-default values, axis fields
+    prefixed (`x.lim`, `y.scale`, …); `y2` reported as one option."""
+    from .options import AxisSpec, OverlayOptions  # noqa: PLC0415
+
+    default = OverlayOptions()
+    daxis = AxisSpec()
+    out = [name for name in _SURFACE_FIELDS
+           if getattr(surf, name) != getattr(default, name)]
+    for ax_name in ("x", "y"):
+        spec = getattr(surf, ax_name)
+        out += [f"{ax_name}.{f}" for f in _AXIS_FIELDS
+                if getattr(spec, f) != getattr(daxis, f)]
+    if surf.y2 is not None:
+        out.append("y2")
+    return out
+
+
+def _check_options(overrides, *, consumer: str, honored, kind: str) -> None:
+    for opt in overrides:
+        if opt in honored:
+            continue
+        key = (consumer, kind, opt)
+        if key in _warned:
+            continue
+        _warned.add(key)
+        warnings.warn(
+            f"{consumer}: {kind} option '{opt}' is not honored here and was "
+            f"ignored. ([D109] surface honor-or-warn)",
+            QtvizWarning,
+            stacklevel=3,
+        )
+
+
+def check_surface(surf, *, consumer: str, honored) -> None:
+    """Warn once per set-but-unhonored `OverlayOptions`/`AxisSpec` field."""
+    _check_options(surface_overrides(surf), consumer=consumer, honored=honored,
+                   kind="surface")
+
+
+def check_layout(opts, *, consumer: str, honored) -> None:
+    """Warn once per set-but-unhonored `LayoutOptions` field."""
+    from .options import LayoutOptions  # noqa: PLC0415
+
+    default = LayoutOptions()
+    overrides = [name for name in _LAYOUT_FIELDS
+                 if getattr(opts, name) != getattr(default, name)]
+    _check_options(overrides, consumer=consumer, honored=honored, kind="layout")
+
+
+# Every OverlayOptions/AxisSpec field the three built-in backends honor today
+# (the parity program wired them all); a third-party backend declares its own.
+FULL_SURFACE = frozenset(
+    {*_SURFACE_FIELDS, "y2",
+     *(f"x.{f}" for f in _AXIS_FIELDS), *(f"y.{f}" for f in _AXIS_FIELDS)}
+)

@@ -51,7 +51,7 @@ Before the item list, the four structural observations that shape it:
 
 | Release | Theme | Items | Gallery yield (≈) |
 |---|---|---|---|
-| **1.1 — Annotation & dressing** | the supporting cast of every real figure | [D96] Arrow + richer Text · [D97] Rect/Ellipse/Polygon · [D98] data labels · [D99] series polish pack · [D100] per-point channels · [D109] surface-option honesty · promised removals (`Options`, `pyqtgraph_use_opengl`) | ~45 examples ❌/◑ → ✅/◑ |
+| **1.1 — Annotation & dressing** ✅ (shipped 2026-07-31) | the supporting cast of every real figure | [D96] Arrow + richer Text · [D97] Rect/Ellipse/Polygon · [D98] data labels · [D99] series polish pack · [D100] per-point channels · [D109] surface-option honesty · promised removals (`Options`, `pyqtgraph_use_opengl`) | ~45 examples ❌/◑ → ✅/◑ |
 | **1.2 — Axis & tick control** (+ capability-track interleave) | ticks users actually ask for; time axes finished | [D101] explicit ticks/labels · [D102] format templates · [D103] minor ticks + rotation · [D104] calendar-aligned mpl time ticks · [D105] raster color norms · *interleave: streaming×datashader* | ~20 examples |
 | **1.3 — Meshes, fields & layout composition** | scientific 2-D + real dashboards | [D106] `Mesh` (pcolormesh) · [D107] `Quiver` · [D108] mosaic layouts + ratios + suptitle | ~20 examples |
 | **Parked register** | demand-gated subsystems | §5 | — |

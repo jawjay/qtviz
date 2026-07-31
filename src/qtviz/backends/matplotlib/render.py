@@ -13,7 +13,7 @@ os.environ.setdefault("QT_API", "pyside6")  # bind matplotlib's Qt to PySide6
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
-from ...core._degrade import check_recommended
+from ...core._degrade import FULL_SURFACE, check_layout, check_recommended, check_surface
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.compose import (
@@ -160,8 +160,13 @@ class MatplotlibBackend:
         return MplRenderHandle(canvas, fig, bus, surfaces, node, self, natives)
 
     # ── internal ──
+    # LayoutOptions this backend's single-figure grid honors ([D109]):
+    # shape derives from cols; spacing/title/tabs/docks are host concerns.
+    LAYOUT_HONORED = frozenset({"cols", "link_x", "link_y"})
+
     def _render_into(self, node, fig, theme, bus, surfaces, natives) -> None:
         if isinstance(node, Layout):
+            check_layout(node.options, consumer=self.name, honored=self.LAYOUT_HONORED)
             n = len(node.children)
             ncols = node.options.cols or n
             nrows = ceil(n / ncols)
@@ -180,6 +185,7 @@ class MatplotlibBackend:
     def _render_cell(self, node, ax, theme, bus, surfaces, natives) -> None:
         apply_theme_ax(ax, theme)
         surf = surface_of(node)
+        check_surface(surf, consumer=self.name, honored=FULL_SURFACE)  # ([D109])
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
         apply_surface(ax, surf, theme, x_scale, y_scale)
         surface_id = uuid.uuid4().hex

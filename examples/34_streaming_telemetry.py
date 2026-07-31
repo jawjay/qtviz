@@ -48,7 +48,7 @@ def build():
     t_hist, v_hist = _batch(-36_000.0, 400_000)
     history = {"t": t_hist, "v": v_hist}
     shaded = qv.Scatter(history, x="t", y="v", scale="datashader")
-    main_view = qv.View(qv.Layout([live, shaded], options=qv.LayoutOptions(rows=2)),
+    main_view = qv.View(qv.Layout([live, shaded], options=qv.LayoutOptions(cols=1)),
                         theme=theme)
 
     # 3 — brush the raster → true source rows → a Signal drives the detail panel

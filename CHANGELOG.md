@@ -12,6 +12,15 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Surface-option honor-or-warn ([D109]).** The anti-silent-drop contract
+  now covers `OverlayOptions`/`AxisSpec`/`LayoutOptions` too: consumers
+  declare what they honor (the three backends honor the full surface —
+  the parity program wired it all; backend-hosted grids honor
+  `cols`/`link_*`; the Qt layout host honors `cols`/`spacing`/tab/dock
+  chrome) and anything set-but-unhonored warns once. `LayoutOptions.rows`
+  and `.title` — the audit's recurring silent no-ops — now warn everywhere
+  until [D108] wires them.
+
 - **Per-point style channels ([D100], the wave's architectural item).**
   `Bars(color_by=)` colors each bar — categorical palette + key, or a
   continuous ramp + colorbar — on all three backends. `Curve(color_by=)`
@@ -127,10 +136,17 @@ the popular libraries, declaratively" ([D83]).
   additionally **transposed** (col-major default) relative to the other
   backends — fixed with row-major orientation.
 
+### Removed
+
+- **`qtviz.Options`** — deprecated in 0.2, promised "importable through
+  1.0", removed this cycle exactly as `docs/stability.md` scheduled. Set
+  styling on elements (`Scatter(color=…, alpha=…)`).
+
 ### Deprecated
 
-- `Scatter(pyqtgraph_use_opengl=...)` — never wired to anything; warns now,
-  removed with `qtviz.Options` (owner ruling, 2026-07-31). pyqtgraph's
+- `Scatter(pyqtgraph_use_opengl=...)` — never wired to anything; warns now
+  (owner ruling, 2026-07-31). Removal follows the ≥2-minor warning policy
+  (it cannot ride the same release its warning first ships in). pyqtgraph's
   default raster path covers large scatters; huge data goes through
   `scale="datashader"`.
 

@@ -87,7 +87,6 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Palette
         - palettes
         - Theme
-        - Options
         - OverlayOptions
         - LayoutOptions
         - AxisSpec

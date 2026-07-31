@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pyqtgraph as pg
 
-from ...core._degrade import check_recommended
+from ...core._degrade import FULL_SURFACE, check_layout, check_recommended, check_surface
 from ...core._scales import delog, log_lim, logify
 from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
@@ -217,8 +217,11 @@ class PyQtGraphBackend:
         return PgRenderHandle(widget, bus, plots, node, self, natives)
 
     # ── internal ──
+    LAYOUT_HONORED = frozenset({"cols", "link_x", "link_y"})  # ([D109])
+
     def _render_into(self, node, widget, theme, bus, plots, natives) -> None:
         if isinstance(node, Layout):
+            check_layout(node.options, consumer=self.name, honored=self.LAYOUT_HONORED)
             ncols = node.options.cols or len(node.children)
             for i, child in enumerate(node.children):
                 r, c = divmod(i, ncols)
@@ -231,6 +234,7 @@ class PyQtGraphBackend:
 
     def _render_cell(self, node, widget, theme, bus, plots, natives, row, col) -> None:
         surf = surface_of(node)
+        check_surface(surf, consumer=self.name, honored=FULL_SURFACE)  # ([D109])
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
         vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex,
                           x_log=(x_scale == "log"), y_log=(y_scale == "log"))

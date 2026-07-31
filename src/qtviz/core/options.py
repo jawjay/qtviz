@@ -1,56 +1,23 @@
-"""Options containers (spec §2.2, §2.3).
+"""Options containers (spec §2.3).
 
-`Options` is small and universal. Per-element styling lives on the Element
-subclass, not here. `OverlayOptions` / `LayoutOptions` carry the
-shared-surface concerns for the two composition operators.
+Per-element styling lives on the Element subclass. `OverlayOptions` /
+`LayoutOptions` carry the shared-surface concerns for the two composition
+operators. (`Options` — spec §2.2, never wired — was deprecated in 0.2 and
+removed here, as `docs/stability.md` promised.)
 """
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Mapping, Sequence
 
 from ..errors import ValidationError
 from ._immutable import Immutable
-from ._validate import check_alpha
 from .color import ColorSpec
-from .palette import Palette
 
 # The axis-scale vocabulary (semantic, backend-agnostic; feasibility §2.1). A backend
 # renders the subset it declares in `Capabilities.scales`; the rest warn-and-degrade
 # to linear ([D59]). `time` is reserved (gated on the data layer carrying datetime).
 _SCALES = ("linear", "log", "symlog", "time")
-
-
-class Options(Immutable):
-    """Deprecated, unused universal style options ([D51] / weakness-root-causes R4).
-
-    Specified in §2.2 but never wired: no Element accepts an `options=` argument and
-    no renderer reads it — per-element styling lives on the Element subclass instead
-    (`Scatter(color=..., alpha=...)`). Kept importable through 1.0 with a
-    `DeprecationWarning` (non-breaking, honor-or-warn), removed thereafter.
-    `OverlayOptions` / `LayoutOptions` are live and unaffected."""
-
-    def __init__(
-        self,
-        *,
-        color: ColorSpec | None = None,
-        alpha: float | None = None,
-        palette: Palette | None = None,
-        label: str | None = None,
-    ) -> None:
-        warnings.warn(
-            "qtviz.Options is unused and deprecated; set styling via per-element "
-            "fields (e.g. Scatter(color=..., alpha=...)). It will be removed after 1.0.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.color = color
-        self.alpha = alpha
-        self.palette = palette
-        self.label = label
-        check_alpha(alpha, who="Options")
-        self._freeze()
 
 
 class AxisSpec(Immutable):

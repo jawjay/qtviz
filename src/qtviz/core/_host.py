@@ -62,10 +62,20 @@ def _resolve_layout(layout: Layout, view_backend) -> tuple[bool, str | None]:
     return False, chosen
 
 
+# LayoutOptions the Qt host honors ([D109]): grid shape from cols, spacing,
+# tab/dock chrome. rows/title are unhonored (mosaic + suptitle are [D108]);
+# link_x/link_y don't cross mixed-backend panes.
+_HOST_LAYOUT_HONORED = frozenset({"cols", "spacing", "tab_labels", "dock_areas"})
+
+
 class LayoutHost:
     @staticmethod
     @require_gui_thread
     def render(layout: Layout, *, view_backend, theme, parent=None) -> CompositeRenderHandle:
+        from ._degrade import check_layout  # noqa: PLC0415
+
+        check_layout(layout.options, consumer="layout-host",
+                     honored=_HOST_LAYOUT_HONORED)
         child_handles = [
             render_root(child, view_backend=view_backend, theme=theme)
             for child in layout.children

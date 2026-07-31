@@ -34,7 +34,6 @@ FROZEN_1_0 = frozenset({
     "stream", "StreamRef",                        # live sources ([D76])
     # styling
     "Color", "ColorSpec", "Palette", "palettes", "Theme",
-    "Options",                                    # deprecated; removal: 1.1 ([D79])
     "OverlayOptions", "LayoutOptions", "AxisSpec",
     # backends + capabilities
     "Capabilities", "set_default_backend", "set_backend_priority",
@@ -69,8 +68,8 @@ def test_qtwebplot_shim_is_gone():
         import qtwebplot  # noqa: F401
 
 
-def test_options_still_warns_through_1_0():
-    """[D79]: 0.2 promised Options 'kept importable through 1.0' — it is; 1.1
-    removes it."""
-    with pytest.warns(DeprecationWarning):
-        qv.Options()
+def test_options_is_removed():
+    """[D79]: 0.2 promised Options 'importable through 1.0'; the 1.1 cycle
+    removes it (docs/stability.md kept to the letter)."""
+    assert not hasattr(qv, "Options")
+    assert "Options" not in qv.__all__

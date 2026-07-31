@@ -21,7 +21,7 @@ from typing import Any
 
 import numpy as np
 
-from ...core._degrade import check_recommended
+from ...core._degrade import FULL_SURFACE, check_recommended, check_surface
 from ...core._scales import log_lim, logify
 from ...core.compose import Overlay, effective_scales, surface_of
 from ...data import resolve_node
@@ -831,6 +831,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
     events) — and do not consume a palette slot (`series_index_map` rule).
     """
     surf = surface_of(node)  # before resolve — the shared-surface options (title/labels)
+    check_surface(surf, consumer="webengine", honored=FULL_SURFACE)  # ([D109])
     node = resolve_node(node)
     # effective scales need the *resolved* node — a datashaded Scatter is an Image
     # by now, and the raster gate must see it ([D59]).

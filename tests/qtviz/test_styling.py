@@ -1,9 +1,9 @@
-"""Tier-1 — Color, Palette, Options (spec §2.11–§2.13).
+"""Tier-1 — Color, Palette (spec §2.11–§2.13).
 
 Color is the canonical, immutable, context-free color type (a value, never a
 column — §2.11/Q-A). Palette wraps ordered colors with discrete/continuous
 semantics. Built-in palettes must register without the optional matplotlib
-extra (§2.12). Options stays small, universal, and hashable.
+extra (§2.12). (`Options` was removed in the 1.1 cycle, [D79].)
 """
 
 from __future__ import annotations
@@ -63,20 +63,3 @@ def test_builtin_palettes_register_without_matplotlib():
     # viridis must be vendored as hex, not built via from_matplotlib (§2.12).
     assert "viridis" in qv.palettes.list()
     assert qv.palettes.get("viridis") is not None
-
-
-# ── Options (deprecated [D51]; these guard it still behaves until removal) ─────
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_options_alpha_validation():
-    qv.Options(alpha=0.5)  # ok
-    with pytest.raises(ValueError):
-        qv.Options(alpha=2.0)
-
-
-@pytest.mark.filterwarnings("ignore::DeprecationWarning")
-def test_options_immutable_and_value_equal():
-    o = qv.Options(color="red", alpha=0.5)
-    assert o == qv.Options(color="red", alpha=0.5)
-    assert hash(o) == hash(qv.Options(color="red", alpha=0.5))
-    with pytest.raises(AttributeError):
-        o.alpha = 0.1  # type: ignore[misc]

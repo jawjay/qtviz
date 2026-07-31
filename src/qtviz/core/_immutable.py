@@ -1,6 +1,6 @@
 """`Immutable` — frozen-by-convention mixin (spec §2.1).
 
-Shared by Element, Options, Overlay, Layout, Palette. State is set in
+Shared by Element, the options containers, Overlay, Layout, Palette. State is set in
 `__init__`; subclasses call `self._freeze()` at the end to lock it. Mutations
 return new instances via `.with_()`.
 

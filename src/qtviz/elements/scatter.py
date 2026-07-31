@@ -54,7 +54,8 @@ class Scatter(Element):
 
             warnings.warn(
                 "Scatter(pyqtgraph_use_opengl=...) was never wired and is deprecated "
-                "(owner ruling, 2026-07-31); it will be removed with qtviz.Options. "
+                "(owner ruling, 2026-07-31); removal follows the >=2-minor warning "
+                "policy (docs/stability.md). "
                 "pyqtgraph's default raster path already handles large scatters, and "
                 "huge data routes through scale='datashader'.",
                 DeprecationWarning,
