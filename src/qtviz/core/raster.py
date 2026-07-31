@@ -89,6 +89,13 @@ class RasterController(QObject):
         self._sub: Disposable | None = target.connect_viewport(self._schedule)
         self._schedule()  # render once at the true widget resolution
 
+    def refresh(self) -> None:
+        """Re-aggregate the current viewport (debounced, off-thread) — the
+        streaming fast path: the source ref's contents changed underneath us
+        (a `qv.stream` append), so re-reading it IS the update. Rung 1 of the
+        [D77] ladder for datashaded elements."""
+        self._schedule()
+
     def _schedule(self) -> None:
         if not self._disposed:
             self._timer.start()  # debounce: each viewport change restarts the countdown

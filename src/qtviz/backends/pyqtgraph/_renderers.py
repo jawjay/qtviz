@@ -470,6 +470,7 @@ def _wire_dynamic_raster(element, item, ctx) -> None:
         parent=vb, on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
         on_legend=refresh_legend,
     )
+    controller.element_id = element.id  # streaming refresh routes by id ([D77])
     if not hasattr(vb, "_qtviz_rasters"):
         vb._qtviz_rasters = []
     vb._qtviz_rasters.append(controller)

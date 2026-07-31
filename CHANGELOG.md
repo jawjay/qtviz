@@ -12,6 +12,32 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Axis & tick control (roadmap wave 2).** `AxisSpec` gains explicit
+  `ticks`/`tick_labels` (data-space everywhere — pyqtgraph logifies them,
+  date axes convert to ms; labels optional, the active format still
+  applies without them), `minor=` ticks, and `tick_rotation` (matplotlib +
+  Plotly; pyqtgraph has no stable rotation API and warns via [D109]).
+  `tick_format` accepts one-field templates (`"${:,.0f}"`, `"{:.0f} ms"`),
+  translated to Plotly prefix/format/suffix. Time axes get
+  **calendar-aligned ticks on matplotlib** from one core ladder
+  (seconds→minutes→hours→days→months→1/2/5-scaled years), with the
+  formatter using the same strftime spec so positions and labels agree.
+- **Raster color norms ([D105]).** `Image`/`Heatmap` gain
+  `norm="linear"|"log"|"power"`, `vmin`/`vmax`, `gamma` — normalized once
+  in core so backends color bit-identically. Colorbars appear only when
+  the norm surface is engaged: matplotlib's ticks denormalize back to
+  data values; pyqtgraph shows a gradient bar (linear) or the
+  [D48]-honest endpoints key (non-linear); Plotly keeps its native
+  colorbar for linear and hides the scale for non-linear.
+- **Streaming × datashader composes ([D77] ladder, retrospective §4.2).**
+  A `scale="datashader"` element over a `qv.stream` no longer rebuilds
+  the world on every append: its `RasterController` — which reads the
+  live source at each aggregation — exposes `refresh()`, and
+  `set_element_data` routes datashaded elements to it. Appends now
+  re-aggregate the current viewport off-thread (debounced, stale-dropped)
+  with the native raster item kept in place, on pyqtgraph *and*
+  matplotlib (its first streaming fast path).
+
 - **Surface-option honor-or-warn ([D109]).** The anti-silent-drop contract
   now covers `OverlayOptions`/`AxisSpec`/`LayoutOptions` too: consumers
   declare what they honor (the three backends honor the full surface —

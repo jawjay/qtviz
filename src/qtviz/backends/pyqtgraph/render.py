@@ -127,6 +127,15 @@ class PgRenderHandle(RenderHandle):
         item types return False → the caller falls back."""
         import numpy as np  # noqa: PLC0415
 
+        # streaming × datashader (retrospective §4.2): the element's live ref
+        # already holds the new rows — re-aggregating the current viewport IS
+        # the in-place update, through the controller's debounce/off-thread/
+        # stale-drop machinery. No rebuild.
+        for plot in self._plots:
+            for controller in getattr(plot.getViewBox(), "_qtviz_rasters", ()):
+                if getattr(controller, "element_id", None) == element_id:
+                    controller.refresh()
+                    return True
         item = self._natives.get(element_id)
         if not isinstance(item, (pg.ScatterPlotItem, pg.PlotCurveItem, pg.PlotDataItem)):
             return False

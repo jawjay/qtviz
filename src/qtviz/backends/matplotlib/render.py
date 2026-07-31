@@ -91,6 +91,19 @@ class MplRenderHandle(RenderHandle):
         _events.emit_bounds_select(self._surfaces[ax_index]["selectables"],
                                    self.event_bus, xmin, ymin, xmax, ymax)
 
+    @require_gui_thread
+    def set_element_data(self, element_id: str, arrays: dict) -> bool:
+        """Streaming rung 1 for datashaded elements ([D77] ladder): their live
+        ref already holds the new rows, so a viewport re-aggregation through
+        the RasterController is the in-place update — matplotlib's only fast
+        path (plain artists still rebuild; `streaming=False` stays honest)."""
+        for s in self._surfaces:
+            for controller in getattr(s["ax"], "_qtviz_rasters", ()):
+                if getattr(controller, "element_id", None) == element_id:
+                    controller.refresh()
+                    return True
+        return False
+
     def toolbar(self):
         """matplotlib's navigation toolbar ([D95]) — mouse pan/zoom for the
         static backend; limit changes flow into RangeEvents as usual."""

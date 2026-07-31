@@ -423,6 +423,7 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
         on_aggregate=lambda agg: setattr(holder, "aggregate", agg),
         on_legend=refresh_legend,
     )
+    controller.element_id = element.id  # streaming refresh routes by id ([D77])
     if not hasattr(ax, "_qtviz_rasters"):
         ax._qtviz_rasters = []
     ax._qtviz_rasters.append(controller)
