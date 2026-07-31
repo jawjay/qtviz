@@ -95,6 +95,12 @@ class RenderHandle:
         `update()` / a backend switch, so this always reflects the current render."""
         return self._natives.get(element_id)
 
+    def toolbar(self) -> Any | None:
+        """A backend-native toolbar QWidget for this render, or `None` when the
+        backend's interaction is already native ([D95]). The View adds it above
+        the canvas when constructed with `toolbar=True`."""
+        return None
+
     def update(self, new_root) -> None:
         raise NotImplementedError
 

@@ -140,11 +140,14 @@ class _StreamBinding(QObject):
 
 
 class View(QWidget):
-    def __init__(self, root, *, backend="auto", theme: Theme | None = None, parent=None) -> None:
+    def __init__(self, root, *, backend="auto", theme: Theme | None = None,
+                 toolbar: bool = False, parent=None) -> None:
         super().__init__(parent)
         self._theme = theme or Theme.light()
         self._backend_choice = backend
         self._subs: list[tuple] = []          # (event_type, cb, throttle_ms)
+        self._want_toolbar = toolbar          # backend-native toolbar ([D95])
+        self._toolbar_widget = None
         self._handle = None
         self._binding: _StreamBinding | None = None  # live-data glue ([D77])
         self._superseded = None               # prior render kept visible during async rebuild
@@ -204,8 +207,18 @@ class View(QWidget):
         self._install(self._render(resolved))
 
     def _install(self, handle) -> None:
+        if self._toolbar_widget is not None:  # belongs to the outgoing canvas
+            self._layout.removeWidget(self._toolbar_widget)
+            self._toolbar_widget.setParent(None)
+            self._toolbar_widget.deleteLater()
+            self._toolbar_widget = None
         self._drop_superseded()
         self._handle = handle
+        if self._want_toolbar:
+            tb = handle.toolbar()
+            if tb is not None:
+                self._layout.addWidget(tb)
+                self._toolbar_widget = tb
         self._layout.addWidget(handle.widget)
         for event_type, cb, ms in self._subs:
             handle.event_bus.subscribe(event_type, cb, throttle_ms=ms)

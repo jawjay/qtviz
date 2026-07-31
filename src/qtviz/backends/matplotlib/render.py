@@ -10,7 +10,6 @@ from pathlib import Path
 
 os.environ.setdefault("QT_API", "pyside6")  # bind matplotlib's Qt to PySide6
 
-import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
@@ -25,7 +24,7 @@ from ...core.compose import (
     surface_of,
 )
 from ...core.element import Element
-from ...core.event import EventBus, SelectEvent
+from ...core.event import EventBus
 from ...core.threading import require_gui_thread
 from ...data import resolve_node
 from ...errors import RendererMissingError
@@ -87,14 +86,17 @@ class MplRenderHandle(RenderHandle):
 
     def select_bounds(self, ax_index: int, xmin, ymin, xmax, ymax) -> None:
         """Programmatic brush (approximate) — emits one SelectEvent per
-        selectable element on the axes (element id + indices + bounds)."""
-        bounds = (float(xmin), float(ymin), float(xmax), float(ymax))
-        for source_id, x, y in self._surfaces[ax_index]["selectables"]:
-            if x is None:  # bounds-only ([D78]): the bounds ARE the selection
-                self.event_bus.emit(SelectEvent(source_id, [], bounds))
-                continue
-            mask = (x >= xmin) & (x <= xmax) & (y >= ymin) & (y <= ymax)
-            self.event_bus.emit(SelectEvent(source_id, np.nonzero(mask)[0].tolist(), bounds))
+        selectable element on the axes (element id + indices + bounds); the
+        interactive rubber band ([D95]) drives the same helper."""
+        _events.emit_bounds_select(self._surfaces[ax_index]["selectables"],
+                                   self.event_bus, xmin, ymin, xmax, ymax)
+
+    def toolbar(self):
+        """matplotlib's navigation toolbar ([D95]) — mouse pan/zoom for the
+        static backend; limit changes flow into RangeEvents as usual."""
+        from matplotlib.backends.backend_qtagg import NavigationToolbar2QT  # noqa: PLC0415
+
+        return NavigationToolbar2QT(self.widget, None)
 
     def export(self, fmt: str, path, *, dpi: float | None = None,
                transparent: bool = False) -> Path:
@@ -204,6 +206,7 @@ class MatplotlibBackend:
                              parent_axes=ax2 if on_y2 else ax,
                              y_scale=y2_scale if on_y2 else y_scale)
             self._render_element(element, el_ctx, selectables, natives)
+        _events.connect_brush(ax, selectables, bus)  # rubber band ([D95])
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:

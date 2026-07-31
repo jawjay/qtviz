@@ -44,6 +44,12 @@ the popular libraries, declaratively" ([D83]).
   grows an additive `y2_range` so twin ranges survive rebuilds and backend
   switches; events stay primary-axes (y2 elements are not brush-selectable —
   documented). `axis="y2"` with `scale="datashader"` raises.
+- **Interaction ease ([D95]).** `View(..., toolbar=True)` shows the
+  backend's native toolbar where one exists (matplotlib's pan/zoom
+  navigation bar; pyqtgraph/webengine already interact natively → no-op),
+  recreated across rebuilds and backend switches. matplotlib gains an
+  interactive rubber-band brush: drag on any surface with brushable elements
+  emits the same `SelectEvent`s as the programmatic `select_bounds`.
 - **Tick formatting wired ([D86]).** `AxisSpec(tick_format=…)` — reserved
   since 0.3 — now formats ticks on all three backends: a Python format-spec
   string (`".2f"`, `",d"`, `".0%"`, …) or `"eng"` (SI prefixes). matplotlib
