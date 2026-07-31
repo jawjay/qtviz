@@ -394,9 +394,17 @@ def render_image(element: Image, ctx):
         if values.ndim == 3:  # RGBA raster (e.g. a user-built image): row 0 = ymin
             item = pg.ImageItem(values, axisOrder="row-major")
         else:
-            item = pg.ImageItem(np.asarray(values, dtype="float64"),
-                                axisOrder="row-major")
+            display, levels, norm_legend = _norm_display(  # ([D105])
+                element, np.asarray(values, dtype="float64"), ctx)
+            item = pg.ImageItem(display, axisOrder="row-major")
             item.setLookupTable(_pg_lut(element.colormap))  # ([D92])
+            if levels is not None:
+                item.setLevels(levels)
+            if norm_legend is not None and ctx.show_legend:
+                from ._legend import add_legend  # noqa: PLC0415
+
+                add_legend(ctx.parent_axes, norm_legend, ctx.theme,
+                           ctx.legend_position)
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
@@ -519,6 +527,25 @@ def _pg_lut(name: str):
     return pg.colormap.get("viridis").getLookupTable(nPts=256)
 
 
+def _norm_display(element, values, ctx):
+    """[D105] for pg: normalized values with (0, 1) levels + the [D48]-honest
+    legend (gradient colorbar for a linear norm, endpoints-only key for
+    log/power — pg's gradient ticks interpolate linearly, which would lie)."""
+    from ...core.encoding import Legend, norm_engaged, normalize_values  # noqa: PLC0415
+
+    if not norm_engaged(element):
+        return values, None, None
+    normed, lo, hi = normalize_values(values, norm=element.norm, vmin=element.vmin,
+                                      vmax=element.vmax, gamma=element.gamma)
+    lut = _pg_lut(element.colormap)
+    step = max(len(lut) // 8, 1)
+    ramp = tuple(Color(f"#{r:02x}{g:02x}{b:02x}") for r, g, b in
+                 (row[:3] for row in lut[::step]))
+    legend = Legend(kind="continuous", vmin=lo, vmax=hi, ramp=ramp,
+                    linear=element.norm == "linear")
+    return normed, (0.0, 1.0), legend
+
+
 def _heat_extent(plot, centers, axis: str) -> tuple[float, float]:
     """Data-space extent for one heatmap axis ([D92]) — the pg sibling of the
     matplotlib helper: numeric centers place cells at their values; categorical
@@ -541,10 +568,17 @@ def render_heatmap(element: Heatmap, ctx):
     d = element.data
     xs, ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
                                element.aggregator)  # real reduction ([D69])
+    grid, levels, norm_legend = _norm_display(element, grid, ctx)  # ([D105])
     # row-major: grid[j, i] is (ys[j], xs[i]) — the pg default (col-major) drew
     # every heatmap transposed relative to matplotlib/webengine ([D92]).
     item = pg.ImageItem(grid, axisOrder="row-major")
     item.setLookupTable(_pg_lut(element.colormap))
+    if levels is not None:
+        item.setLevels(levels)
+    if norm_legend is not None and ctx.show_legend:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        add_legend(ctx.parent_axes, norm_legend, ctx.theme, ctx.legend_position)
     x0, x1 = _heat_extent(ctx.parent_axes, xs, "x")
     y0, y1 = _heat_extent(ctx.parent_axes, ys, "y")
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
@@ -1017,8 +1051,8 @@ HONORED: dict[type, frozenset[str]] = {
     Bars: frozenset({"color", "color_by", "group", "mode", "orient",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap"}),                                # interpolation unwired
-    Heatmap: frozenset({"colormap", "aggregator"}),
+    Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),  # interpolation unwired
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma"}),
     ErrorBars: frozenset({"color", "direction", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

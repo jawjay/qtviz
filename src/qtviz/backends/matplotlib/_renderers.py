@@ -365,10 +365,12 @@ def render_image(element: Image, ctx):
         )
         _wire_dynamic_raster(element, artist, ctx)
         return artist
+    display, norm_kw = _norm_display(  # ([D105])
+        element, np.asarray(values, dtype="float64"), ctx, ctx.parent_axes)
     return ctx.parent_axes.imshow(
-        np.asarray(values, dtype="float64"),
-        extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+        display, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
         cmap=_mpl_cmap(element.colormap), interpolation=element.interpolation,
+        **norm_kw,
     )
 
 
@@ -470,6 +472,30 @@ def _heat_extent(ax, centers, axis: str) -> tuple[float, float]:
     return (-0.5, n - 0.5)
 
 
+def _norm_display(element, values, ctx, ax):
+    """[D105]: normalize in core when the norm surface is engaged; a colorbar
+    with denormalized tick labels (honest — the analytic inverse) appears
+    only then, so plain rasters keep their exact pre-[D105] look. Returns
+    `(display_values, imshow_kwargs)`."""
+    from ...core.encoding import denormalize, norm_engaged, normalize_values  # noqa: PLC0415
+
+    if not norm_engaged(element):
+        return values, {}
+    normed, lo, hi = normalize_values(values, norm=element.norm, vmin=element.vmin,
+                                      vmax=element.vmax, gamma=element.gamma)
+    if ctx.show_legend:
+        from matplotlib.cm import ScalarMappable  # noqa: PLC0415
+        from matplotlib.colors import Normalize  # noqa: PLC0415
+        from matplotlib.ticker import FuncFormatter  # noqa: PLC0415
+
+        sm = ScalarMappable(norm=Normalize(0.0, 1.0), cmap=_mpl_cmap(element.colormap))
+        bar = ax.figure.colorbar(sm, ax=ax)
+        bar.ax.yaxis.set_major_formatter(FuncFormatter(
+            lambda t, _p: format(denormalize(t, lo, hi, element.norm, element.gamma), "g")))
+        bar.ax.tick_params(colors=ctx.theme.foreground.mpl())
+    return normed, {"vmin": 0.0, "vmax": 1.0}
+
+
 def render_heatmap(element: Heatmap, ctx):
     from ...core._stats import grid_reduce  # noqa: PLC0415
 
@@ -479,8 +505,10 @@ def render_heatmap(element: Heatmap, ctx):
     ax = ctx.parent_axes
     x0, x1 = _heat_extent(ax, xs, "x")
     y0, y1 = _heat_extent(ax, ys, "y")
+    grid, norm_kw = _norm_display(element, grid, ctx, ax)  # ([D105])
     return ax.imshow(grid, origin="lower", aspect="auto",
-                     cmap=_mpl_cmap(element.colormap), extent=(x0, x1, y0, y1))
+                     cmap=_mpl_cmap(element.colormap), extent=(x0, x1, y0, y1),
+                     **norm_kw)
 
 
 def render_area(element: Area, ctx):
@@ -814,8 +842,8 @@ HONORED: dict[type, frozenset[str]] = {
     Bars: frozenset({"color", "color_by", "group", "mode", "orient",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap", "interpolation"}),
-    Heatmap: frozenset({"colormap", "aggregator"}),
+    Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma"}),
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

@@ -32,6 +32,7 @@ _NON_DEFAULT = {
     "step": "post", "hole": 0.4, "axis": "y2", "levels": 4, "filled": True,
     "head": "both", "fill": True, "rotation": 30.0, "anchor_v": "top", "frame": True,
     "bar_labels": "auto", "marker_every": 3,
+    "norm": "power", "vmin": 0.2, "vmax": 0.9,  # ("gamma" needs norm="power")
     # ("mode" is skipped: stacking requires group=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
     "group": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,

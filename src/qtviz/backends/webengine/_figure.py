@@ -357,14 +357,16 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
     x0, y0, x1, y1 = element.bounds
     if values.ndim == 2:
         nrows, ncols = values.shape
-        return [{
+        trace = {
             "type": "heatmap", "z": values,
             "x": np.linspace(x0, x1, ncols),
             "y": np.linspace(y0, y1, nrows),
             "colorscale": _colorscale(element.colormap),
             "zsmooth": "best" if element.interpolation == "bilinear" else False,
             "name": element.id,
-        }]
+        }
+        _apply_norm(trace, element, values)
+        return [trace]
     return [{"type": "image", "z": values, "name": element.id}]  # RGBA raster (user-built)
 
 
@@ -375,10 +377,33 @@ def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
     xs, ys, grid = grid_reduce(d.series("x"), d.series("y"),
                                np.asarray(d.series("z"), dtype="float64"),
                                element.aggregator)  # real reduction ([D69])
-    return [{
+    trace = {
         "type": "heatmap", "x": xs, "y": ys, "z": grid,
         "colorscale": _colorscale(element.colormap), "name": element.id,
-    }]
+    }
+    _apply_norm(trace, element, grid)
+    return [trace]
+
+
+def _apply_norm(trace: dict, element, values) -> None:
+    """[D105] on Plotly: a linear norm keeps raw z with zmin/zmax (the native
+    colorbar stays honest); log/power replace z with the core-normalized grid
+    and hide the scale — a linear Plotly colorbar over a non-linear mapping
+    would lie ([D48]), and webengine raster keys are a standing soft spot."""
+    from ...core.encoding import norm_engaged, normalize_values  # noqa: PLC0415
+
+    if not norm_engaged(element):
+        return
+    if element.norm == "linear":
+        normed, lo, hi = normalize_values(values, norm="linear", vmin=element.vmin,
+                                          vmax=element.vmax)
+        trace["zmin"], trace["zmax"] = lo, hi
+        return
+    normed, _lo, _hi = normalize_values(values, norm=element.norm, vmin=element.vmin,
+                                        vmax=element.vmax, gamma=element.gamma)
+    trace["z"] = normed
+    trace["zmin"], trace["zmax"] = 0.0, 1.0
+    trace["showscale"] = False
 
 
 def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
@@ -618,8 +643,8 @@ HONORED: dict[type, frozenset[str]] = {
     Bars: frozenset({"color", "color_by", "orient", "group", "mode",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap", "interpolation"}),
-    Heatmap: frozenset({"colormap", "aggregator"}),
+    Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma"}),
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

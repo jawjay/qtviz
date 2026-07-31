@@ -126,3 +126,57 @@ def _continuous(arr, palette: Palette, vmin, vmax, title,
         legend = Legend(kind="continuous", title=title, vmin=lo, vmax=hi,
                         ramp=continuous_ramp(palette))
     return rgba, legend
+
+
+RASTER_NORMS = ("linear", "log", "power")
+
+
+def normalize_values(values, *, norm: str = "linear", vmin=None, vmax=None,
+                     gamma: float = 1.0):
+    """Raster color normalization ([D105]), computed once in core so every
+    backend colors identically: → `(normed [0,1] float64, lo, hi)`. NaN is
+    preserved; under `log`, non-positive values become NaN (blank cells) with
+    one warning — the masked-image convention."""
+    a = np.asarray(values, dtype="float64")
+    finite = a[np.isfinite(a)]
+    if norm == "log":
+        if np.any(finite <= 0):
+            import warnings  # noqa: PLC0415
+
+            from ..errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn("norm='log': non-positive values render blank",
+                          QtvizWarning, stacklevel=2)
+            a = np.where(a > 0, a, np.nan)
+        finite = finite[finite > 0]
+    lo = float(vmin) if vmin is not None else (float(finite.min()) if len(finite) else 0.0)
+    hi = float(vmax) if vmax is not None else (float(finite.max()) if len(finite) else 1.0)
+    span = (hi - lo) or 1.0
+    if norm == "log":
+        lspan = (np.log10(hi) - np.log10(lo)) or 1.0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            normed = (np.log10(a) - np.log10(lo)) / lspan
+    elif norm == "power":
+        normed = np.clip((a - lo) / span, 0.0, 1.0) ** gamma
+    else:
+        normed = (a - lo) / span
+    return np.clip(normed, 0.0, 1.0), lo, hi
+
+
+def denormalize(t: float, lo: float, hi: float, norm: str = "linear",
+                gamma: float = 1.0) -> float:
+    """The inverse of `normalize_values` for one tick position in [0, 1] —
+    colorbar ticks label true data values."""
+    if norm == "log":
+        return float(10.0 ** (np.log10(lo) + t * (np.log10(hi) - np.log10(lo))))
+    if norm == "power":
+        return float(lo + (t ** (1.0 / gamma)) * (hi - lo))
+    return float(lo + t * (hi - lo))
+
+
+def norm_engaged(element) -> bool:
+    """Whether the [D105] norm surface is in use — legends/limits only then,
+    so pre-existing plain rasters keep their exact look."""
+    return (getattr(element, "norm", "linear") != "linear"
+            or getattr(element, "vmin", None) is not None
+            or getattr(element, "vmax", None) is not None)
