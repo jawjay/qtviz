@@ -53,6 +53,11 @@ dressing* is not.
 
 ## 2. Defects DISCOVERED by this audit (not gaps — bugs/warts in what exists)
 
+> **Status:** #1–#3 were fixed the same day (commit `fix(audit)`, suite
+> 640 passing; the date-axis recreation re-rendered correct). #4 is
+> expressible today (per-cell `Text(color=…)` chosen by the caller) and is
+> queued as an ergonomics item; #5 joins the roadmap's annotation wave.
+
 1. **P1 — the [D95] rubber-band selector corrupts autoscale.** The
    `RectangleSelector` parked on every brushable matplotlib surface adds its
    0×0 rectangle at (0, 0) to the Axes' `dataLim`, so autoscale includes the

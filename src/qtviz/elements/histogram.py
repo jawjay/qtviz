@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ..core._stats import BIN_RULES
+from ..core._validate import check_alpha
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -15,7 +16,7 @@ class Histogram(Element):
     computed once in core so every backend draws the same bars ([D93])."""
 
     REQUIRED_OPTIONS = ("column",)
-    RECOMMENDED_OPTIONS = ("bins", "density", "color", "label")
+    RECOMMENDED_OPTIONS = ("bins", "density", "color", "alpha", "label")
     CHANNELS = ("column",)
 
     def __init__(
@@ -26,11 +27,13 @@ class Histogram(Element):
         bins: int | str = "auto",
         density: bool = False,
         color: ColorSpec | None = None,
+        alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        check_alpha(alpha, who="Histogram")
         if isinstance(bins, str):
             if bins not in BIN_RULES:
                 raise ValidationError(
@@ -43,6 +46,7 @@ class Histogram(Element):
         self.bins = bins
         self.density = density
         self.color = color
+        self.alpha = alpha
         self.label = label
         self._validate_tabular()
         self._freeze()

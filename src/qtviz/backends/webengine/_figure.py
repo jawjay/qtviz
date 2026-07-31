@@ -251,6 +251,7 @@ def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
         "x": _floats((edges[:-1] + edges[1:]) / 2.0), "y": _floats(counts),
         "width": _floats(np.diff(edges)),
         "marker": {"color": _css(_element_color(element, theme, idx))},
+        "opacity": element.alpha,
         "name": element.label or element.id, "showlegend": element.label is not None,
     }]
 
@@ -518,7 +519,7 @@ HONORED: dict[type, frozenset[str]] = {
     Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
                       "alpha", "label", "axis"}),
     Bars: frozenset({"color", "orient", "group", "mode", "label"}),
-    Histogram: frozenset({"bins", "density", "color", "label"}),
+    Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),
     ErrorBars: frozenset({"direction", "color", "label"}),

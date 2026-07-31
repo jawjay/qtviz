@@ -41,6 +41,28 @@ _MARKER = {"circle": "o", "square": "s", "triangle": "^", "diamond": "D", "cross
 _STEP = {"pre": "steps-pre", "mid": "steps-mid", "post": "steps-post"}
 
 
+def _mpl_cmap(name: str):
+    """Case-insensitive colormap resolution with the same warn-fallback
+    contract as the other backends (gallery-audit §2: 'greys' raised from
+    inside mpl while webengine lowercased — one vocabulary, one behavior)."""
+    import matplotlib  # noqa: PLC0415
+
+    registry = matplotlib.colormaps
+    if name in registry:
+        return registry[name]
+    lower = name.lower()
+    for known in registry:
+        if known.lower() == lower:
+            return registry[known]
+    import warnings  # noqa: PLC0415
+
+    from ...errors import QtvizWarning  # noqa: PLC0415
+
+    warnings.warn(f"matplotlib: no colormap named {name!r}; using 'viridis'",
+                  QtvizWarning, stacklevel=2)
+    return registry["viridis"]
+
+
 def _color(spec, theme, idx: int = 0) -> Color:
     if spec is None:
         return theme.palette[idx % len(theme.palette)]
@@ -226,6 +248,7 @@ def render_histogram(element: Histogram, ctx):
     return ctx.parent_axes.bar(
         edges[:-1], counts, width=np.diff(edges), align="edge",
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
+        alpha=element.alpha,
     )
 
 
@@ -265,8 +288,8 @@ def render_image(element: Image, ctx):
         return artist
     return ctx.parent_axes.imshow(
         np.asarray(values, dtype="float64"),
-        extent=(x0, x1, y0, y1), origin="lower", aspect="auto", cmap=element.colormap,
-        interpolation=element.interpolation,
+        extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+        cmap=_mpl_cmap(element.colormap), interpolation=element.interpolation,
     )
 
 
@@ -377,8 +400,8 @@ def render_heatmap(element: Heatmap, ctx):
     ax = ctx.parent_axes
     x0, x1 = _heat_extent(ax, xs, "x")
     y0, y1 = _heat_extent(ax, ys, "y")
-    return ax.imshow(grid, origin="lower", aspect="auto", cmap=element.colormap,
-                     extent=(x0, x1, y0, y1))
+    return ax.imshow(grid, origin="lower", aspect="auto",
+                     cmap=_mpl_cmap(element.colormap), extent=(x0, x1, y0, y1))
 
 
 def render_area(element: Area, ctx):
@@ -458,13 +481,14 @@ def render_contour(element: Contour, ctx):
     ax = ctx.parent_axes
     if element.filled:
         cs = ax.contourf(values, levels=lv, extent=(x0, x1, y0, y1),
-                         origin="lower", cmap=element.colormap, extend="both")
+                         origin="lower", cmap=_mpl_cmap(element.colormap),
+                         extend="both")
         if ctx.show_legend:
             bar = ax.figure.colorbar(cs, ax=ax)
             bar.ax.tick_params(colors=ctx.theme.foreground.mpl())
         return cs
     return ax.contour(values, levels=lv, extent=(x0, x1, y0, y1), origin="lower",
-                      cmap=element.colormap, linewidths=element.line_width)
+                      cmap=_mpl_cmap(element.colormap), linewidths=element.line_width)
 
 
 def render_errorbars(element: ErrorBars, ctx):
@@ -618,7 +642,7 @@ HONORED: dict[type, frozenset[str]] = {
     Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
                       "alpha", "label", "axis"}),
     Bars: frozenset({"color", "group", "mode", "orient", "label"}),
-    Histogram: frozenset({"bins", "density", "color", "label"}),
+    Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),
     ErrorBars: frozenset({"direction", "color", "label"}),

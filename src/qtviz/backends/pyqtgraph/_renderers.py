@@ -256,12 +256,13 @@ def render_histogram(element: Histogram, ctx):
 
     counts, edges = histogram(_col(element.data, "column"), element.bins,
                               density=element.density)  # shared binning ([D93])
+    hist_color = _color(element.color, ctx.theme, ctx.series_index).qt()
+    hist_color.setAlphaF(element.alpha)
     centers = (edges[:-1] + edges[1:]) / 2.0
     width = float(edges[1] - edges[0]) if len(edges) > 1 else 1.0
     x_log, y_log = _xy_log(ctx)
     item = pg.BarGraphItem(x=logify(centers, x_log), height=logify(counts, y_log),
-                           width=width * 0.95,
-                           brush=_color(element.color, ctx.theme, ctx.series_index).qt())
+                           width=width * 0.95, brush=pg.mkBrush(hist_color))
     ctx.parent_axes.addItem(item)
     return item
 
@@ -796,7 +797,7 @@ HONORED: dict[type, frozenset[str]] = {
     Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
                       "alpha", "label", "axis"}),
     Bars: frozenset({"color", "group", "mode", "orient", "label"}),
-    Histogram: frozenset({"bins", "density", "color", "label"}),
+    Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap"}),                                # interpolation unwired
     Heatmap: frozenset({"colormap", "aggregator"}),
     ErrorBars: frozenset({"color", "direction", "label"}),

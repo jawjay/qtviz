@@ -48,10 +48,23 @@ def connect_brush(ax, selectables, bus) -> None:
         y0, y1 = sorted((eclick.ydata, erelease.ydata))
         emit_bounds_select(selectables, bus, x0, y0, x1, y1)
 
+    # The selector parks a 0×0 rectangle at (0, 0) which joins `dataLim` at
+    # add time, dragging autoscale out to the origin — a 2026 time series
+    # rendered zoomed to 1970 (gallery-audit P1). Snapshot the data limits the
+    # rendered elements produced and restore them after (a plain `relim()`
+    # would drop collections), then re-run autoscale: the selector's __init__
+    # unstales the view limits, so the polluted range is already baked by the
+    # time the restore runs. `autoscale_view` is a no-op on axes with explicit
+    # limits (set_xlim/ylim turn autoscale off), so `lim=` surfaces are safe.
+    from matplotlib.transforms import Bbox  # noqa: PLC0415
+
+    saved = Bbox(ax.dataLim.get_points().copy())
     ax._qtviz_brush = RectangleSelector(  # parked on the Axes to stay alive
         ax, on_select, useblit=False, button=[MouseButton.LEFT], interactive=False,
         minspanx=2, minspany=2, spancoords="pixels",
     )
+    ax.dataLim.set(saved)
+    ax.autoscale_view()
 
 
 def connect_range(ax, surface_id: str, bus) -> None:

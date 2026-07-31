@@ -104,6 +104,22 @@ the popular libraries, declaratively" ([D83]).
 
 ### Fixed
 
+Defects surfaced by the matplotlib-gallery audit
+([`design/matplotlib-gallery-audit.md`](design/matplotlib-gallery-audit.md) §2):
+
+- **The interactive brush no longer corrupts matplotlib autoscale (P1).**
+  The [D95] `RectangleSelector` parks a 0×0 rectangle at (0, 0) whose extent
+  joined `Axes.dataLim` — and the selector's construction unstales the view
+  limits, baking the polluted range in — so any autoscaled data far from the
+  origin (every epoch-seconds time axis) rendered zoomed out to 1970. The
+  data limits are now snapshotted around selector creation and autoscale is
+  re-run.
+- **`Histogram` gains `alpha=`** (honored on all three backends) — overlaid
+  translucent histograms no longer need the 8-digit-hex color workaround.
+- **matplotlib colormap names resolve case-insensitively** with the same
+  warn-fallback-to-viridis contract as the other backends
+  (`colormap="greys"` used to raise from inside matplotlib).
+
 Three silent-drop warts surfaced by the matplotlib support audit
 (`design/matplotlib-support-matrix.md` §11):
 
