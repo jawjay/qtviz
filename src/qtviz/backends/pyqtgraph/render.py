@@ -226,16 +226,32 @@ class PyQtGraphBackend:
         return PgRenderHandle(widget, bus, plots, node, self, natives)
 
     # ── internal ──
-    LAYOUT_HONORED = frozenset({"cols", "link_x", "link_y"})  # ([D109])
+    # ([D109]/[D108]): shape (rows/cols incl. mosaic spans), ratios, linking,
+    # and the container title (a spanning label row).
+    LAYOUT_HONORED = frozenset({"rows", "cols", "link_x", "link_y", "title",
+                                "width_ratios", "height_ratios"})
 
     def _render_into(self, node, widget, theme, bus, plots, natives) -> None:
         if isinstance(node, Layout):
-            check_layout(node.options, consumer=self.name, honored=self.LAYOUT_HONORED)
-            ncols = node.options.cols or len(node.children)
-            for i, child in enumerate(node.children):
-                r, c = divmod(i, ncols)
-                self._render_cell(child, widget, theme, bus, plots, natives, r, c)
+            from ...core.compose import grid_geometry  # noqa: PLC0415
+
             opts = node.options
+            check_layout(opts, consumer=self.name, honored=self.LAYOUT_HONORED)
+            cells, nrows, ncols = grid_geometry(node)
+            row0 = 0
+            if opts.title:  # suptitle: a label row above the grid ([D108])
+                widget.addLabel(opts.title, row=0, col=0, colspan=ncols,
+                                color=theme.foreground.hex(),
+                                size=f"{theme.title_size}pt")
+                row0 = 1
+            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
+                self._render_cell(child, widget, theme, bus, plots, natives,
+                                  r + row0, c, rowspan=rs, colspan=cs)
+            grid = widget.ci.layout  # QGraphicsGridLayout: integer stretches
+            for c, ratio in enumerate(opts.width_ratios or ()):
+                grid.setColumnStretchFactor(c, max(1, round(ratio * 100)))
+            for r, ratio in enumerate(opts.height_ratios or ()):
+                grid.setRowStretchFactor(r + row0, max(1, round(ratio * 100)))
             if opts.link_x or opts.link_y:
                 link_axes(plots, link_x=opts.link_x, link_y=opts.link_y)
         else:
@@ -244,13 +260,15 @@ class PyQtGraphBackend:
     # [D109]: everything except tick label rotation (no stable AxisItem API).
     SURFACE_HONORED = FULL_SURFACE - {"x.tick_rotation", "y.tick_rotation"}
 
-    def _render_cell(self, node, widget, theme, bus, plots, natives, row, col) -> None:
+    def _render_cell(self, node, widget, theme, bus, plots, natives, row, col,
+                     *, rowspan: int = 1, colspan: int = 1) -> None:
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=self.SURFACE_HONORED)
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
         vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex,
                           x_log=(x_scale == "log"), y_log=(y_scale == "log"))
-        plot = widget.addPlot(row=row, col=col, viewBox=vb)
+        plot = widget.addPlot(row=row, col=col, rowspan=rowspan, colspan=colspan,
+                              viewBox=vb)
         style_plot(plot, theme)
         apply_surface(plot, surf, theme, x_scale, y_scale)
         plots.append(plot)

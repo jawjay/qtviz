@@ -53,7 +53,11 @@ scatter * curve                 # Overlay: same axes, layered
 scatter + histogram             # Layout: side-by-side panels
 qv.Layout([a, b, c], kind="tabs")                                  # grid | splitter | tabs | dock
 qv.Layout([a, b], options=qv.LayoutOptions(cols=2, link_x=True))   # shared X axis
+qv.Layout.mosaic("AAB\nCCB", A=a, B=b, C=c)                        # spanning panes from an ASCII plan
 ```
+
+Mosaic grids take `LayoutOptions(width_ratios=…, height_ratios=…)` for track
+sizes and `title=` for a figure-level suptitle.
 
 ## Views & backends
 

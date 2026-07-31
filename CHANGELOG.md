@@ -12,6 +12,22 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Meshes & vector fields (roadmap wave 3).** `Mesh(values, x_edges=,
+  y_edges=)` — pcolormesh with non-uniform cell edges, sharing the [D105]
+  norm pipeline (`colormap`/`norm`/`vmin`/`vmax`/`gamma`) — and
+  `Quiver(data, x=, y=, u=, v=)` — arrow fields whose geometry (auto
+  scale, ±25° barb heads) is computed once in core and drawn as two cheap
+  polylines on every backend ([D106]/[D107]).
+- **Mosaic layouts, ratios, and a real suptitle ([D108]).**
+  `Layout.mosaic("AAB\nCCB", A=…, B=…, C=…)` builds grids with spanning
+  panes from an ASCII plan (the `subplot_mosaic` precedent; `.` is a
+  hole). `LayoutOptions` gains `width_ratios`/`height_ratios`, and the
+  long-dead `LayoutOptions.title` now renders as the container suptitle.
+  Grid shape is decided in one core helper (`grid_geometry`) shared by
+  the matplotlib figure, the pyqtgraph layout, and the Qt host — which
+  also makes `rows` honored everywhere. rows/title graduate out of the
+  [D109] warning set on every grid consumer.
+
 - **Axis & tick control (roadmap wave 2).** `AxisSpec` gains explicit
   `ticks`/`tick_labels` (data-space everywhere — pyqtgraph logifies them,
   date axes convert to ms; labels optional, the active format still
@@ -177,6 +193,13 @@ the popular libraries, declaratively" ([D83]).
   `scale="datashader"`.
 
 ### Fixed
+
+- **Teardown lifecycle hygiene.** Views now release their final render
+  handle on destruction (previously only replaced handles were disposed),
+  matplotlib canvases can no longer run a queued idle-draw after deletion,
+  and live-stream plumbing was moved off churned per-rebuild QObjects onto
+  the View — eliminating a long-standing intermittent teardown segfault
+  and a "Slot not found" flake under rapid rebuilds.
 
 Defects surfaced by the matplotlib-gallery audit
 ([`design/matplotlib-gallery-audit.md`](design/matplotlib-gallery-audit.md) §2):

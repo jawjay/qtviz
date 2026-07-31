@@ -18,6 +18,48 @@ from .options import LayoutOptions, OverlayOptions
 
 Node = Union[Element, "Overlay", "Layout"]
 
+Cell = tuple[int, int, int, int]  # (row, col, rowspan, colspan)
+
+
+def parse_mosaic(spec: str) -> dict[str, Cell]:
+    """Parse a `subplot_mosaic`-style string ([D108]) into per-label
+    `(row, col, rowspan, colspan)` cells, ordered by first appearance.
+
+    Rows are newline- (or `;`-) separated; each character is one grid cell;
+    `.` (or a space) is a hole. Every label's cells must form one solid
+    rectangle — anything else is ambiguous and raises `ValidationError`."""
+    from ..errors import ValidationError  # noqa: PLC0415
+
+    rows = [r for r in spec.replace(";", "\n").splitlines() if r.strip()]
+    if not rows:
+        raise ValidationError("mosaic spec is empty")
+    width = len(rows[0])
+    if any(len(r) != width for r in rows):
+        raise ValidationError(
+            f"mosaic rows must be equal length, got {[len(r) for r in rows]}")
+    boxes: dict[str, list[int]] = {}          # label → [r0, c0, r1, c1]
+    order: list[str] = []
+    for r, line in enumerate(rows):
+        for c, ch in enumerate(line):
+            if ch in ". ":
+                continue
+            if ch not in boxes:
+                boxes[ch] = [r, c, r, c]
+                order.append(ch)
+            else:
+                b = boxes[ch]
+                b[0], b[1] = min(b[0], r), min(b[1], c)
+                b[2], b[3] = max(b[2], r), max(b[3], c)
+    for label in order:  # solid-rectangle check: every cell in the bbox is `label`
+        r0, c0, r1, c1 = boxes[label]
+        for r in range(r0, r1 + 1):
+            for c in range(c0, c1 + 1):
+                if rows[r][c] != label:
+                    raise ValidationError(
+                        f"mosaic label {label!r} does not form a solid rectangle")
+    return {label: (b[0], b[1], b[2] - b[0] + 1, b[3] - b[1] + 1)
+            for label, b in ((lb, boxes[lb]) for lb in order)}
+
 
 class Overlay(Immutable):
     """Same axes, layered. Built by `*`. Single-surface → single backend."""
@@ -45,21 +87,32 @@ class Overlay(Immutable):
 
 class Layout(Immutable):
     """Side-by-side / grid / splitter / tabs / dock. Built by `+`. Children
-    may use different backends."""
+    may use different backends. A grid built by `Layout.mosaic` additionally
+    carries per-child `cells` — `(row, col, rowspan, colspan)` — so panes can
+    span ([D108])."""
 
     def __init__(self, children: Sequence[Node], *,
                  kind: Literal["grid", "splitter", "tabs", "dock"] = "grid",
                  options: LayoutOptions | None = None,
-                 backend_hint: str | None = None) -> None:
+                 backend_hint: str | None = None,
+                 cells: Sequence[Cell] | None = None) -> None:
         self.children = tuple(children)
         self.kind = kind
         self.options = options or LayoutOptions()
         self.backend_hint = backend_hint
+        self.cells: tuple[Cell, ...] | None = (
+            tuple((int(r), int(c), int(rs), int(cs)) for r, c, rs, cs in cells)
+            if cells else None)
         if not self.children:
             raise ValueError("Layout requires at least one child")
+        if self.cells is not None and len(self.cells) != len(self.children):
+            raise ValueError(
+                f"cells ({len(self.cells)}) must match children ({len(self.children)})")
         self._freeze()
 
     def __add__(self, other: Node) -> Layout:
+        if self.cells is not None:  # a mosaic is a sealed shape — nest, don't append
+            return Layout((self, other))
         return Layout(self.children + (other,), kind=self.kind, options=self.options,
                       backend_hint=self.backend_hint)
 
@@ -71,12 +124,55 @@ class Layout(Immutable):
         return cls(children, kind="grid", **kw)
 
     @classmethod
+    def mosaic(cls, spec: str, *, options: LayoutOptions | None = None,
+               backend_hint: str | None = None, **panes: Node) -> Layout:
+        """A grid from an ASCII plan ([D108], the `subplot_mosaic` precedent):
+
+            Layout.mosaic("AAB\\nCCB", A=curve, B=sidebar, C=table)
+
+        Each distinct character is one pane (spanning its rectangle); `.` is a
+        hole. Every label in the spec must be passed as a keyword, and vice
+        versa."""
+        from ..errors import ValidationError  # noqa: PLC0415
+
+        cells_by_label = parse_mosaic(spec)
+        missing = [lb for lb in cells_by_label if lb not in panes]
+        extra = [k for k in panes if k not in cells_by_label]
+        if missing or extra:
+            raise ValidationError(
+                f"mosaic panes must match the spec labels exactly; "
+                f"missing={missing}, unknown={extra}")
+        return cls([panes[lb] for lb in cells_by_label], kind="grid",
+                   options=options, backend_hint=backend_hint,
+                   cells=list(cells_by_label.values()))
+
+    @classmethod
     def tabs(cls, children, **kw) -> Layout:
         return cls(children, kind="tabs", **kw)
 
     @classmethod
     def splitter(cls, children, **kw) -> Layout:
         return cls(children, kind="splitter", **kw)
+
+
+def grid_geometry(layout: Layout) -> tuple[list[Cell], int, int]:
+    """`(cells, nrows, ncols)` for a grid Layout — the one place grid shape is
+    decided, shared by every consumer (mpl figure, pg layout, Qt host) so a
+    given Layout has the same shape everywhere ([D108]). Mosaic cells pass
+    through; otherwise children flow row-major into `cols` columns (or into
+    `ceil(n / rows)` columns when only `rows` is set)."""
+    from math import ceil  # noqa: PLC0415
+
+    if layout.cells is not None:
+        cells = list(layout.cells)
+        nrows = max(r + rs for r, _, rs, _ in cells)
+        ncols = max(c + cs for _, c, _, cs in cells)
+        return cells, nrows, ncols
+    n = len(layout.children)
+    opts = layout.options
+    ncols = opts.cols or (ceil(n / opts.rows) if opts.rows else n)
+    nrows = ceil(n / ncols)
+    return [(i // ncols, i % ncols, 1, 1) for i in range(n)], nrows, ncols
 
 
 def surface_of(node: Node) -> OverlayOptions:

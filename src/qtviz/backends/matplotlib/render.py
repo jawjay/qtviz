@@ -5,7 +5,6 @@ from __future__ import annotations
 import os
 import uuid
 from dataclasses import replace
-from math import ceil
 from pathlib import Path
 
 os.environ.setdefault("QT_API", "pyside6")  # bind matplotlib's Qt to PySide6
@@ -189,25 +188,33 @@ class MatplotlibBackend:
         return MplRenderHandle(canvas, fig, bus, surfaces, node, self, natives)
 
     # ── internal ──
-    # LayoutOptions this backend's single-figure grid honors ([D109]):
-    # shape derives from cols; spacing/title/tabs/docks are host concerns.
-    LAYOUT_HONORED = frozenset({"cols", "link_x", "link_y"})
+    # LayoutOptions this backend's single-figure grid honors ([D109]/[D108]):
+    # shape (rows/cols incl. mosaic spans), ratios, linking, and the suptitle;
+    # spacing/tabs/docks stay host concerns.
+    LAYOUT_HONORED = frozenset({"rows", "cols", "link_x", "link_y", "title",
+                                "width_ratios", "height_ratios"})
 
     def _render_into(self, node, fig, theme, bus, surfaces, natives) -> None:
         if isinstance(node, Layout):
-            check_layout(node.options, consumer=self.name, honored=self.LAYOUT_HONORED)
-            n = len(node.children)
-            ncols = node.options.cols or n
-            nrows = ceil(n / ncols)
+            from ...core.compose import grid_geometry  # noqa: PLC0415
+
             opts = node.options
-            for i, child in enumerate(node.children):
+            check_layout(opts, consumer=self.name, honored=self.LAYOUT_HONORED)
+            cells, nrows, ncols = grid_geometry(node)
+            gs = fig.add_gridspec(nrows, ncols,
+                                  width_ratios=opts.width_ratios,
+                                  height_ratios=opts.height_ratios)
+            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
                 base = surfaces[0]["ax"] if surfaces else None
                 ax = fig.add_subplot(
-                    nrows, ncols, i + 1,
+                    gs[r:r + rs, c:c + cs],
                     sharex=base if opts.link_x else None,
                     sharey=base if opts.link_y else None,
                 )
                 self._render_cell(child, ax, theme, bus, surfaces, natives)
+            if opts.title:
+                fig.suptitle(opts.title, color=theme.foreground.mpl(),
+                             fontsize=theme.title_size)
         else:
             self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces, natives)
 

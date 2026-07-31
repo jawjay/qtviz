@@ -62,10 +62,13 @@ def _resolve_layout(layout: Layout, view_backend) -> tuple[bool, str | None]:
     return False, chosen
 
 
-# LayoutOptions the Qt host honors ([D109]): grid shape from cols, spacing,
-# tab/dock chrome. rows/title are unhonored (mosaic + suptitle are [D108]);
-# link_x/link_y don't cross mixed-backend panes.
-_HOST_LAYOUT_HONORED = frozenset({"cols", "spacing", "tab_labels", "dock_areas"})
+# LayoutOptions the Qt host honors ([D109]/[D108]): grid shape (rows/cols
+# incl. mosaic spans), ratios, spacing, tab/dock chrome, and the container
+# title (a header label on any kind). link_x/link_y don't cross mixed-backend
+# panes.
+_HOST_LAYOUT_HONORED = frozenset({"rows", "cols", "spacing", "tab_labels",
+                                  "dock_areas", "title",
+                                  "width_ratios", "height_ratios"})
 
 
 class LayoutHost:
@@ -82,9 +85,29 @@ class LayoutHost:
         ]
         widgets = [h.widget for h in child_handles]
         container = _build_container(layout, widgets)
+        if layout.options.title:
+            container = _titled(container, layout.options.title, theme)
         if parent is not None:
             container.setParent(parent)
         return CompositeRenderHandle(container, child_handles)
+
+
+def _titled(inner: QWidget, title: str, theme) -> QWidget:
+    """Wrap any container with a header label — the host's suptitle ([D108])."""
+    from PySide6.QtWidgets import QLabel, QVBoxLayout  # noqa: PLC0415
+
+    outer = QWidget()
+    box = QVBoxLayout(outer)
+    box.setContentsMargins(0, 0, 0, 0)
+    box.setSpacing(0)
+    label = QLabel(title)
+    label.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+    label.setStyleSheet(
+        f"color: {theme.foreground.css()}; background: {theme.background.css()}; "
+        f"font-size: {theme.title_size}pt; padding: 4px;")
+    box.addWidget(label)
+    box.addWidget(inner, stretch=1)
+    return outer
 
 
 def _build_container(layout: Layout, widgets: list) -> QWidget:
@@ -103,15 +126,20 @@ def _build_container(layout: Layout, widgets: list) -> QWidget:
         return tabs
     if kind == "dock":
         return _build_docks(widgets, opts)
-    # grid (mixed-backend)
+    # grid (mixed-backend), with mosaic spans and stretch ratios ([D108])
+    from .compose import grid_geometry  # noqa: PLC0415
+
     host = QWidget()
     grid = QGridLayout(host)
     grid.setContentsMargins(0, 0, 0, 0)
     grid.setSpacing(opts.spacing)
-    ncols = opts.cols or len(widgets)
-    for i, w in enumerate(widgets):
-        r, c = divmod(i, ncols)
-        grid.addWidget(w, r, c)
+    cells, nrows, ncols = grid_geometry(layout)
+    for w, (r, c, rs, cs) in zip(widgets, cells, strict=True):
+        grid.addWidget(w, r, c, rs, cs)
+    for c, ratio in enumerate(opts.width_ratios or ()):
+        grid.setColumnStretch(c, max(1, round(ratio * 100)))
+    for r, ratio in enumerate(opts.height_ratios or ()):
+        grid.setRowStretch(r, max(1, round(ratio * 100)))
     return host
 
 

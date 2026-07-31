@@ -65,12 +65,13 @@ def test_fully_wired_surface_does_not_warn(backend, qtbot):
 @pytest.mark.tier2
 @pytest.mark.parametrize("backend", ["pyqtgraph", "matplotlib"])
 def test_unhonored_layout_options_warn(backend, qtbot):
-    """`rows` and `title` are honored by no grid consumer today — they must
-    warn instead of silently vanishing (the audit's recurring finding)."""
+    """Layout options a backend grid can't render (tab chrome, host spacing)
+    must warn instead of silently vanishing (the audit's recurring finding).
+    rows/title/ratios graduated to honored in [D108]."""
     b = _backend(backend)
     node = qv.Layout(
         [qv.Curve(_T, x="x", y="y"), qv.Curve(_T, x="x", y="y")],
-        options=qv.LayoutOptions(rows=2, title="Dash"),
+        options=qv.LayoutOptions(spacing=20, tab_labels=("a", "b")),
     )
     _degrade.reset()
     with pytest.warns(QtvizWarning) as caught:
@@ -78,7 +79,7 @@ def test_unhonored_layout_options_warn(backend, qtbot):
         qtbot.addWidget(handle.widget)
         handle.dispose()
     msgs = " | ".join(str(w.message) for w in caught)
-    assert "'rows'" in msgs and "'title'" in msgs
+    assert "'spacing'" in msgs and "'tab_labels'" in msgs
 
 
 @pytest.mark.tier2

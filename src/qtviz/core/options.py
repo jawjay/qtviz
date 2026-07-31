@@ -140,9 +140,20 @@ def _as_pairs(m) -> tuple | None:
     return tuple((int(k), str(v)) for k, v in items)
 
 
+def _as_ratios(v, name: str) -> tuple[float, ...] | None:
+    if v is None:
+        return None
+    out = tuple(float(x) for x in v)
+    if not out or any(x <= 0 for x in out):
+        raise ValidationError(f"{name} must be positive numbers, got {v!r}")
+    return out
+
+
 class LayoutOptions(Immutable):
     """Arrangement options for a `Layout`: rows/cols, spacing, axis linking
-    (`link_x`/`link_y`), and tab/dock labels."""
+    (`link_x`/`link_y`), tab/dock labels, relative column/row sizes
+    (`width_ratios`/`height_ratios`, [D108]), and a container `title`
+    (the figure suptitle)."""
 
     def __init__(
         self,
@@ -155,6 +166,8 @@ class LayoutOptions(Immutable):
         tab_labels: Sequence[str] | None = None,
         dock_areas: Mapping[int, str] | Sequence[tuple] | None = None,
         title: str | None = None,
+        width_ratios: Sequence[float] | None = None,
+        height_ratios: Sequence[float] | None = None,
     ) -> None:
         self.rows = rows
         self.cols = cols
@@ -164,4 +177,6 @@ class LayoutOptions(Immutable):
         self.tab_labels = tuple(tab_labels) if tab_labels is not None else None
         self.dock_areas = _as_pairs(dock_areas)
         self.title = title
+        self.width_ratios = _as_ratios(width_ratios, "width_ratios")
+        self.height_ratios = _as_ratios(height_ratios, "height_ratios")
         self._freeze()
