@@ -12,8 +12,11 @@ resolves the *effective* scales (capability gate + raster gate) via
 
 from __future__ import annotations
 
-from ...core._scales import log_lim
+import numpy as np
+
+from ...core._scales import log_lim, logify
 from ...core._ticks import format_tick
+from ...core._time import auto_time_spec, format_time
 from ...core.color import Color
 
 
@@ -41,6 +44,28 @@ def apply_surface(plot, surf, theme, x_scale: str, y_scale: str) -> None:
         vb.setAspectLocked(True, surf.aspect)
     if not surf.grid:
         plot.showGrid(x=False, y=False)  # override the themed default ([D87])
+
+
+def _tick_pairs(spec, eff_scale: str, is_log: bool) -> list[tuple[float, str]]:
+    """`(position, label)` pairs for `AxisItem.setTicks` from explicit data-space
+    ticks: labels come from `tick_labels`, else `tick_format`, else a time-aware
+    or `%g` default."""
+    span = (max(spec.ticks) - min(spec.ticks)) if len(spec.ticks) > 1 else 1.0
+    pairs: list[tuple[float, str]] = []
+    for i, v in enumerate(spec.ticks):
+        pos = logify(np.array([v], dtype="float64"), is_log)[0]
+        if not np.isfinite(pos):
+            continue  # non-positive under log — logify already warned
+        if spec.tick_labels is not None:
+            label = spec.tick_labels[i]
+        elif spec.tick_format != "auto":
+            label = format_tick(v, spec.tick_format)
+        elif eff_scale == "time":
+            label = format_time(v, auto_time_spec(span))
+        else:
+            label = format(v, "g")
+        pairs.append((float(pos), label))
+    return pairs
 
 
 class _Y2Host:
@@ -110,6 +135,11 @@ def _apply_axis(plot, vb, axis: str, side: str, spec, eff_scale: str, color) -> 
         plot.getAxis(side).setLogMode(True)  # tick labels only; data is pre-log10'd
     if spec.tick_format != "auto":  # ([D86]) instance override shadows the method
         plot.getAxis(side).tickStrings = _tick_strings(spec.tick_format, is_log)
+    if spec.ticks is not None:  # explicit ticks ([D101]); positions logify (R1)
+        plot.getAxis(side).setTicks([_tick_pairs(spec, eff_scale, is_log)])
+    # spec.minor is a trivial honor: pg's AxisItem draws minor tick levels by
+    # default. tick_rotation is NOT honored here (no stable AxisItem API) — it
+    # is excluded from this backend's [D109] surface set and warns.
     lim = spec.lim
     if lim is not None and is_log:
         lim = log_lim(lim, axis=axis, backend="pyqtgraph")  # exponent space (or warn+skip)

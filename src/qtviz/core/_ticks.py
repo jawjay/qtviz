@@ -22,6 +22,9 @@ _INT_TYPES = set("bcdoxXn")
 # trailing "%" (the ".0%" percent format-spec) does not.
 _STRFTIME = re.compile(r"%[a-zA-Z]")
 
+# A one-field str.format template ([D102]): "${:,.0f}", "{:.0f} ms", "{}".
+_TEMPLATE = re.compile(r"^([^{}]*)\{(?::([^{}]*))?\}([^{}]*)$")
+
 # SI prefixes for 10**-24 … 10**24 (index offset +8 in steps of 10**3).
 _SI = ("y", "z", "a", "f", "p", "n", "µ", "m", "", "k", "M", "G", "T", "P", "E", "Z", "Y")
 
@@ -45,6 +48,12 @@ def format_tick(value: float, spec: str) -> str:
     seconds ([D94])."""
     if spec == "eng":
         return _eng(value)
+    if "{" in spec:  # one-field template ([D102])
+        m = _TEMPLATE.match(spec)
+        if m is None:
+            raise ValueError(f"template must contain exactly one {{...}} field: {spec!r}")
+        prefix, inner, suffix = m.group(1), m.group(2) or "", m.group(3)
+        return f"{prefix}{format_tick(value, inner) if inner else format(value, 'g')}{suffix}"
     if _STRFTIME.search(spec):
         from ._time import format_time  # noqa: PLC0415
 
@@ -61,7 +70,28 @@ def _eng(v: float) -> str:
     return f"{v / 10 ** (3 * exp3):g}{_SI[exp3 + 8]}"
 
 
+def plotly_tick_parts(spec: str) -> tuple[str, str, str] | None:
+    """Plotly's `(tickprefix, tickformat, ticksuffix)` for a spec ([D102]):
+    `eng` → d3 `~s`; a plain format spec passes through (the d3 mini-language
+    is modeled on Python's); a one-field template splits into prefix/suffix
+    around its d3 core. `None` = untranslatable (strftime handled by the date
+    axis itself; anything else the caller warns about)."""
+    if spec == "eng":
+        return ("", "~s", "")
+    if "{" in spec:
+        m = _TEMPLATE.match(spec)
+        if m is None:
+            return None
+        inner = m.group(2) or ""
+        if inner and (_STRFTIME.search(inner) or "{" in inner):
+            return None
+        return (m.group(1), inner, m.group(3))
+    if _STRFTIME.search(spec):
+        return None  # the Plotly date axis formats calendar ticks natively
+    return ("", spec, "")
+
+
 def plotly_tick_format(spec: str) -> str:
-    """The d3-format equivalent Plotly needs: `eng` → `~s` (SI suffix); Python
-    format specs pass through (the d3 mini-language is modeled on Python's)."""
-    return "~s" if spec == "eng" else spec
+    """Back-compat shim over `plotly_tick_parts` (format field only)."""
+    parts = plotly_tick_parts(spec)
+    return parts[1] if parts else spec

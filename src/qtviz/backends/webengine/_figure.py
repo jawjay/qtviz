@@ -933,7 +933,7 @@ def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -
     title = {"font": {"color": fg}}
     if spec is not None and spec.label:
         title["text"] = spec.label
-    d = {
+    d: dict[str, Any] = {
         "gridcolor": grid,
         "linecolor": fg,
         "zerolinecolor": grid,
@@ -955,10 +955,41 @@ def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -
             d["range"] = [lim[0], lim[1]]
         if spec.invert:
             d["autorange"] = "reversed"
-        if spec.tick_format != "auto":  # ([D86]) d3-format ≈ Python format spec
-            from ...core._ticks import plotly_tick_format  # noqa: PLC0415
+        if spec.tick_format != "auto":  # ([D86]/[D102])
+            from ...core._ticks import _STRFTIME, plotly_tick_parts  # noqa: PLC0415
 
-            d["tickformat"] = plotly_tick_format(spec.tick_format)
+            if _STRFTIME.search(spec.tick_format) and "{" not in spec.tick_format:
+                # d3-time-format shares strftime's %-codes on a date axis
+                d["tickformat"] = spec.tick_format
+            else:
+                parts = plotly_tick_parts(spec.tick_format)
+                if parts is None:
+                    import warnings  # noqa: PLC0415
+
+                    from ...errors import QtvizWarning  # noqa: PLC0415
+
+                    warnings.warn(
+                        f"webengine: tick_format {spec.tick_format!r} has no "
+                        "d3 translation; using the axis default.",
+                        QtvizWarning, stacklevel=2)
+                else:
+                    prefix, fmt, suffix = parts
+                    if prefix:
+                        d["tickprefix"] = prefix
+                    if fmt:
+                        d["tickformat"] = fmt
+                    if suffix:
+                        d["ticksuffix"] = suffix
+        if spec.ticks is not None:  # explicit ticks ([D101]) — data values;
+            # a date axis wants ms, log/linear take them raw
+            scale_ms = 1000.0 if eff_scale == "time" else 1.0
+            d["tickvals"] = [float(v) * scale_ms for v in spec.ticks]
+            if spec.tick_labels is not None:
+                d["ticktext"] = list(spec.tick_labels)
+        if spec.minor:  # ([D103])
+            d["minor"] = {"ticks": "outside", "showgrid": False}
+        if spec.tick_rotation:
+            d["tickangle"] = -spec.tick_rotation  # Plotly rotates clockwise
     return d
 
 

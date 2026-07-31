@@ -82,7 +82,8 @@ def reset() -> None:
 # tick_format). Consumers declare what they honor; anything set non-default
 # and unhonored warns once per (consumer, option).
 
-_AXIS_FIELDS = ("label", "scale", "lim", "invert", "tick_format")
+_AXIS_FIELDS = ("label", "scale", "lim", "invert", "tick_format",
+                "ticks", "tick_labels", "minor", "tick_rotation")
 _SURFACE_FIELDS = ("title", "aspect", "legend", "legend_position", "background", "grid")
 _LAYOUT_FIELDS = ("rows", "cols", "spacing", "link_x", "link_y",
                   "tab_labels", "dock_areas", "title")

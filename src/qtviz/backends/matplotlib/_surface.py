@@ -37,6 +37,23 @@ def _time_formatter(ax, axis: str):
     return FuncFormatter(fmt)
 
 
+def _apply_ticks(ax, axis: str, spec) -> None:
+    """Explicit ticks/labels ([D101]), minor ticks and label rotation ([D103])
+    for one axis. Explicit ticks pin a FixedLocator (labels optional — without
+    them the active formatter still applies)."""
+    axobj = ax.xaxis if axis == "x" else ax.yaxis
+    if spec.ticks is not None:
+        setter = ax.set_xticks if axis == "x" else ax.set_yticks
+        setter(list(spec.ticks),
+               labels=list(spec.tick_labels) if spec.tick_labels is not None else None)
+    if spec.minor:
+        from matplotlib.ticker import AutoMinorLocator  # noqa: PLC0415
+
+        axobj.set_minor_locator(AutoMinorLocator())
+    if spec.tick_rotation:
+        ax.tick_params(axis=axis, labelrotation=spec.tick_rotation)
+
+
 def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
     fg = theme.foreground.mpl()
     if surf.background is not None:
@@ -71,6 +88,8 @@ def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
         ax.xaxis.set_major_formatter(_tick_formatter(surf.x.tick_format))
     if surf.y.tick_format != "auto":
         ax.yaxis.set_major_formatter(_tick_formatter(surf.y.tick_format))
+    _apply_ticks(ax, "x", surf.x)
+    _apply_ticks(ax, "y", surf.y)
 
 
 def apply_y2(ax2, spec, theme, y2_scale: str) -> None:
@@ -93,3 +112,4 @@ def apply_y2(ax2, spec, theme, y2_scale: str) -> None:
         ax2.invert_yaxis()
     if spec.tick_format != "auto":
         ax2.yaxis.set_major_formatter(_tick_formatter(spec.tick_format))
+    _apply_ticks(ax2, "y", spec)

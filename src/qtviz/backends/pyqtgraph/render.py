@@ -232,9 +232,12 @@ class PyQtGraphBackend:
         else:
             self._render_cell(node, widget, theme, bus, plots, natives, 0, 0)
 
+    # [D109]: everything except tick label rotation (no stable AxisItem API).
+    SURFACE_HONORED = FULL_SURFACE - {"x.tick_rotation", "y.tick_rotation"}
+
     def _render_cell(self, node, widget, theme, bus, plots, natives, row, col) -> None:
         surf = surface_of(node)
-        check_surface(surf, consumer=self.name, honored=FULL_SURFACE)  # ([D109])
+        check_surface(surf, consumer=self.name, honored=self.SURFACE_HONORED)
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
         vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex,
                           x_log=(x_scale == "log"), y_log=(y_scale == "log"))
