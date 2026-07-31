@@ -16,9 +16,7 @@ from typing import Any
 
 from PySide6.QtCore import QEventLoop, QTimer
 from PySide6.QtWidgets import QApplication
-
 from qtwebplot import WebBridgeView
-
 
 PAGE = """
 <!doctype html>

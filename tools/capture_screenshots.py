@@ -64,6 +64,7 @@ EXAMPLES: dict[str, dict] = {
     "32_datashader_legends": {"settle": 1500, "size": (1100, 650)},
     "33_native_escape_hatch": {},
     "34_streaming_telemetry": {"settle": 1500, "size": (1200, 640), "splitter": (820, 380)},
+    "35_everyday_figures": {"size": (1500, 760)},
     "dashboard_native": {"size": (1100, 700)},
 }
 

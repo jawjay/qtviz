@@ -95,14 +95,23 @@ ticks_panel = qv.Overlay(
 
 root = qv.Layout(
     [step_panel, area_panel, bars_panel, pie_panel,
-     ecdf_panel, contour_panel, dual_panel, ticks_panel],
-    options=qv.LayoutOptions(cols=4),
+     ecdf_panel, contour_panel, ticks_panel, dual_panel],  # dual last: its right
+    options=qv.LayoutOptions(cols=4),                      # axis gets the margin
 )
 
-if __name__ == "__main__":
+
+def build() -> qv.View:
+    return qv.View(root, backend=BACKEND, toolbar=True)  # ([D95])
+
+
+def main() -> None:
     app = QApplication([])
-    view = qv.View(root, backend=BACKEND, toolbar=True)  # ([D95])
+    view = build()
     view.resize(1600, 800)
     view.setWindowTitle("qtviz — the everyday figures")
     view.show()
     app.exec()
+
+
+if __name__ == "__main__":
+    main()

@@ -67,6 +67,7 @@ Your `render()` returns a `RenderHandle` subclass owning the widget tree:
 | `capture_state()` / `restore_state()` | a data-space `ViewState` — this is what makes backend *switching* seamless |
 | `export(fmt, path, *, dpi=None, transparent=False)` | write what your `capabilities.exports` declares; warn on knobs you can't honor ([D72]) |
 | `native(element_id)` | the live engine primitive for the escape valve ([D53]) |
+| `toolbar()` | a native toolbar QWidget for `View(toolbar=True)`, or `None` when interaction is already native ([D95]) |
 | `dispose()` | tear down everything you created |
 
 ## Events

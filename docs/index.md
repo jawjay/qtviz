@@ -41,6 +41,15 @@ zoom out of the box. Change one keyword — `backend="matplotlib"` or
   so 10M+ points become a screen-resolution raster that re-aggregates on zoom.
 - **No dead ends.** Wrap anything qtviz doesn't natively model in `RawFigure` and host
   it in the same `View`.
+- **The everyday figures, declaratively.** Nineteen elements cover the charts the
+  popular libraries make routinely — step/area/pie/ECDF/contour, grouped and
+  horizontal bars, box/violin with one shared statistics core — plus calendar-time
+  axes, twin y axes, and tick formatting.
+
+![Step, area, bars, donut, ECDF, contour, SI ticks, dual axis in one grid](images/examples/35_everyday_figures.png)
+
+*The everyday figures in one `Layout` grid —
+[`examples/35_everyday_figures.py`](https://github.com/jawjay/qtviz/blob/main/examples/35_everyday_figures.py).*
 
 ## Install
 

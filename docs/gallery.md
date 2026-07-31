@@ -59,6 +59,15 @@ and a brush-driven detail panel wired through a `Signal`.
 
 ![Streaming telemetry with datashaded history](images/examples/34_streaming_telemetry.png)
 
+### `35_everyday_figures` — the parity vocabulary
+
+The everyday figures of the popular libraries in one grid: step curve with
+markers, stacked `Area`, horizontal grouped `Bars`, a `Pie` donut, `Ecdf` with
+percent ticks, filled `Contour`, SI tick formatting with the grid off, and a
+dual-axis pair — under the native toolbar (`View(toolbar=True)`).
+
+![Step, area, bars, donut, ECDF, contour, SI ticks, dual axis in one grid](images/examples/35_everyday_figures.png)
+
 ### `dashboard_native` — linked dashboard
 
 3-panel linked dashboard (shared X, brushing, dark theme) in under sixty lines.

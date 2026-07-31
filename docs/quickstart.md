@@ -5,20 +5,44 @@ composition (`*` / `+`), `View`, `Theme`, typed events — cover everything.
 
 ## Elements
 
-Eight immutable plot types, each pure data:
+Nineteen immutable plot types, each pure data:
 
 ```python
-qv.Scatter(table, x="x", y="y")
-qv.Curve(table,   x="t", y="v")
-qv.Bars(table,    x="category", y="count")
-qv.Histogram(table, column="value", bins=40)
+qv.Scatter(table, x="x", y="y", color_by="category")
+qv.Curve(table,   x="t", y="v", step="post", marker="circle")
+qv.Bars(table,    x="category", y="count", group="region", orient="h")
+qv.Area(table,    x="t", y="load", group="service", mode="stacked")
+qv.Histogram(table, column="value", bins="fd")
+qv.Ecdf(table, column="latency")
 qv.Heatmap(table, x="x", y="y", z="z")
 qv.Image(array2d, bounds=(0, 0, 10, 10))
+qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, filled=True)
+qv.Pie(table, values="share", labels="browser", hole=0.4)
 qv.ErrorBars(table, x="x", y="y", err="sigma")
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
+qv.BoxPlot(table, column="score", by="cohort")
+qv.Violin(table,  column="score", by="cohort")
+qv.HLine(4.5, label="alarm") ; qv.VLine(0.0) ; qv.Span(2, 4) ; qv.Text(5, 2, "peak")
 ```
 
-![All eight element types rendered in one grid](images/examples/08_gallery.png)
+![The everyday figures in one grid](images/examples/35_everyday_figures.png)
+
+## Axes
+
+Per-axis `AxisSpec` on the shared surface; events stay in data space (R1):
+
+```python
+qv.Overlay([a, b], options=qv.OverlayOptions(
+    title="Spectrum",
+    x=qv.AxisSpec(scale="log", lim=(1, 1e4)),
+    y=qv.AxisSpec(tick_format="eng"),        # SI ticks; also ".0%", ",d", "%H:%M"
+    y2=qv.AxisSpec(label="Pa"),              # twin right axis — put a series on it
+    grid=False,                              # with Curve(..., axis="y2")
+))
+
+qv.Curve({"t": dt64_stamps, "v": values}, x="t", y="v")   # datetime64 → calendar
+                                                          # ticks on every backend
+```
 
 ## Composition
 
