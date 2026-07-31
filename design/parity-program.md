@@ -40,14 +40,14 @@ changes a frozen name (`Options` removal stays scheduled for 1.1 as promised).
 
 | # | Increment | Contents | Decisions |
 |---|---|---|---|
-| 1 | **Series power** | `Curve.step`, `Curve.marker`, `Bars.orient="h"` wired, surface `grid=` toggle | [D84] [D85] [D87] |
-| 2 | **Shared-stats honesty** | one binning for `Histogram` everywhere (+ string rules pass through), `Heatmap` in real data coordinates, pyqtgraph parity debts (Image colormap, Heatmap colormap, ErrorBars color/direction) | [D92] [D93] |
-| 3 | **Composition vocabulary** | `Area` (filled/stacked, `group=` per [D68] precedent), `Ecdf` (core-computed, step-drawn), `Pie` (mpl+webengine; pg honestly unsupported) | [D84b] [D90] [D91] |
-| 4 | **Tick formatting** | `AxisSpec.tick_format` wired: Python format-spec mini-language + named formats, all three backends | [D86] |
-| 5 | **Twin axes** | `y2` on the surface + `Element.axis="y2"`; feasibility spike first (R1 for the second axis) | [D88] |
-| 6 | **Fields** | `Contour` (line + filled), gridded like `Image` | [D89] |
-| 7 | **Calendar time** | datetime dtype through the data layer + `scale="time"` honored — **reopens [D62]; owner confirm at this boundary** | [D94] |
-| 8 | **Interaction ease** | `View(toolbar=True)` (native toolbar where the backend has one), mpl interactive brush | [D95] |
+| 1 ✅ | **Series power** | `Curve.step`, `Curve.marker`, `Bars.orient="h"` wired, surface `grid=` toggle | [D84] [D85] [D87] |
+| 2 ✅ | **Shared-stats honesty** | one binning for `Histogram` everywhere (+ string rules pass through), `Heatmap` in real data coordinates, pyqtgraph parity debts (Image colormap, Heatmap colormap, ErrorBars color/direction) | [D92] [D93] |
+| 3 ✅ | **Composition vocabulary** | `Area` (filled/stacked, `group=` per [D68] precedent), `Ecdf` (core-computed, step-drawn), `Pie` (mpl+webengine; pg honestly unsupported) | [D84b] [D90] [D91] |
+| 4 ✅ | **Tick formatting** | `AxisSpec.tick_format` wired: Python format-spec mini-language + named formats, all three backends | [D86] |
+| 5 ✅ | **Twin axes** | `y2` on the surface + `Element.axis="y2"`; feasibility spike first (R1 for the second axis) | [D88] |
+| 6 ✅ | **Fields** | `Contour` (line + filled), gridded like `Image` | [D89] |
+| 7 ⏸ | **Calendar time** | datetime dtype through the data layer + `scale="time"` honored — **reopens [D62]; owner confirm at this boundary** | [D94] |
+| 8 ✅ | **Interaction ease** | `View(toolbar=True)` (native toolbar where the backend has one), mpl interactive brush | [D95] |
 
 Ordering rationale: 1–2 are small, high-frequency wins and pay honesty debts
 before building on them; 3–4 complete "everyday figures"; 5–6 are the two

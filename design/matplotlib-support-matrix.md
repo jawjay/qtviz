@@ -8,7 +8,11 @@
 > silent no-op, escape hatch, or non-goal).
 >
 > Facts are read directly from `src/qtviz/backends/matplotlib/` and the element /
-> options / event sources at **qtviz 1.0.0** (2026-07-31), against
+> options / event sources at **qtviz 1.0.0 + the parity program** (2026-07-31,
+> [`parity-program.md`](parity-program.md) increments 1–6 + 8 — step/marker
+> curves, wired horizontal bars, shared histogram binning, heatmap data
+> coordinates, `Area`/`Ecdf`/`Pie`/`Contour`, tick formatting, twin axes, the
+> grid toggle, `View(toolbar=True)` and the interactive brush), against
 > **matplotlib ≥ 3.11** (the pinned floor in `pyproject.toml`). This supersedes the
 > *coverage* half of [`matplotlib-capability-review.md`](matplotlib-capability-review.md),
 > which was the pre-0.3 gap analysis that drove the improvement plan — most of its
@@ -56,22 +60,26 @@ prefers pyqtgraph (registration priority) — you get matplotlib by asking for i
 
 ## 1. Plot types — the element vocabulary vs `Axes.*`
 
-### 1.1 What qtviz renders through matplotlib (14 of 15 elements)
+### 1.1 What qtviz renders through matplotlib (18 of 19 elements)
 
 | qtviz element | mpl call used | Honored options | Caveats |
 |---|---|---|---|
 | `Scatter` | `Axes.scatter` | `color`, `color_by`, `size`, `size_by`, `alpha`, `marker`, `color_norm`, `label` (+ `matplotlib_rasterized`) | ✅ 5 markers (`circle/square/triangle/diamond/cross` → `o/s/^/D/X`); `size_by` scales point diameters ~5–18 pt; `color_by` draws a categorical key or continuous colorbar (§4); `matplotlib_rasterized=True` rasterizes the collection inside vector exports |
-| `Curve` | `Axes.plot` | `color`, `line_width`, `line_style`, `alpha`, `label` | ✅ 4 dash styles (`solid/dashed/dotted/dashdot`); no markers-on-line, no step mode |
-| `Bars` | `Axes.bar` | `color`, `group`, `label` (+ `mode` works, see §11) | ◑ `group=` gives grouped **or stacked** series with a categorical legend; categorical x → positions + tick labels. **`orient="h"` warns-and-degrades to vertical** ⚠️ |
-| `Histogram` | `Axes.hist` | `bins`, `density`, `color`, `label` | ◑ integer `bins` honored; **any string is coerced to `"auto"`** (so `bins="sturges"` is silently `"auto"` here — §11) |
+| `Curve` | `Axes.plot` | `color`, `line_width`, `line_style`, `marker`, `step`, `alpha`, `label`, `axis` | ✅ 4 dash styles; `step=pre/mid/post` ([D84]), point markers, `axis="y2"` for the twin axis ([D88]) |
+| `Bars` | `Axes.bar`/`barh` | `color`, `group`, `mode`, `orient`, `label` | ✅ grouped/stacked in either orientation with a categorical legend; categorical ticks follow the orientation |
+| `Histogram` | shared core binning + `Axes.bar` | `bins`, `density`, `color`, `label` | ✅ binned once in core ([D93]) so all backends draw the same bars; numpy rule strings (`"fd"`, `"sturges"`, …) pass through, bad ones raise |
 | `Image` | `Axes.imshow` | `colormap`, `interpolation` | ✅ `extent=bounds`, `origin="lower"`; any mpl colormap name; `nearest`/`bilinear`; 3-D arrays render as RGBA; also the render target for datashaded/regridded data (§8) |
-| `Heatmap` | qtviz `grid_reduce` + `imshow` | `colormap`, `aggregator` | ◑ real reduction (`mean/sum/count/max/min/last`, [D69]) — but the axes show **bin indices**, not data x/y coordinates (cross-backend behavior, §11) |
+| `Heatmap` | qtviz `grid_reduce` + `imshow` | `colormap`, `aggregator` | ✅ real reduction ([D69]); cells sit at their **data coordinates** (categorical axes get index positions + tick labels) ([D92]) |
 | `ErrorBars` | `Axes.errorbar` (`fmt="o"`) | `direction`, `color`, `label` | ✅ symmetric or `(lo, hi)`; all three directions (`y`/`x`/`both`) draw the declared whiskers |
 | `Spread` | `Axes.fill_between` | `color`, `alpha`, `label` | ✅ |
 | `HLine` / `VLine` | `axhline` / `axvline` | `color`, `line_width`, `line_style`, `alpha`, `label` | ✅ default color is the theme foreground (chrome, not a palette slot) |
 | `Span` | `axhspan` / `axvspan` | `color`, `alpha`, `label` | ✅ `orient="h"/"v"` |
 | `Text` | `Axes.text` | `color`, `size`, `anchor` | ◑ `anchor` maps to horizontal alignment only; no vertical anchor, no rotation, no arrows/callouts |
 | `BoxPlot` | `Axes.bxp` (stats precomputed) | `by`, `color`, `alpha`, `label` | ✅ qtviz computes the statistics (median, quartiles, 1.5·IQR whiskers, outliers) so all backends draw the *same numbers* ([D67]); `by=` → one box per category + legend |
+| `Area` | `Axes.fill_between` | `group`, `mode`, `color`, `alpha`, `label` | ✅ zero-baseline fill; per-group overlay/stacked bands ([D84b]) |
+| `Ecdf` | core `ecdf` + post-step `plot` | `color`, `line_width`, `alpha`, `label` | ✅ shared numbers ([D91]) |
+| `Pie` | `Axes.pie` | `labels`, `hole`, `alpha` | ✅ donut via annular wedges; axes off; theme-palette slices ([D90]) |
+| `Contour` | `contour`/`contourf` | `levels`, `filled`, `colormap`, `line_width`, `label` | ✅ shared core levels ([D89]); themed colorbar when filled |
 | `Violin` | qtviz KDE + `fill_betweenx` | `by`, `color`, `alpha`, `label` | ✅ Gaussian KDE, Scott's rule — deliberately **not** `Axes.violinplot`, same [D67] rationale |
 | `RawFigure` | — | — | ❌ **webengine-only** by design (it wraps Plotly/Bokeh/HoloViews figures). Notably there is **no passthrough for an existing matplotlib `Figure`** — you cannot hand qtviz a figure you built yourself |
 
@@ -84,12 +92,12 @@ You cannot express these declaratively; the expectation is the `handle.native()`
 escape hatch (draw them onto the qtviz-managed `Axes` yourself, §10), or upstream
 computation + an existing element:
 
-- **Steps & areas:** `step`, `stairs`, `stackplot` (stacked *bars* exist; stacked
-  *areas* don't), `fill` (arbitrary polygons), `broken_barh`, `stem`.
-- **Statistical:** `ecdf`, `pie`, `hexbin`, `hist2d` (the datashader count-raster
-  is the qtviz analog for both 2-D density types), `eventplot`, `acorr`/`xcorr`.
-- **Contours:** `contour`, `contourf`, `clabel` — the most-requested scientific
-  2-D type with no analog.
+- **Areas & shapes:** `fill` (arbitrary polygons), `broken_barh`, `stem`.
+  (`step`/`stairs` → `Curve(step=…)`; `stackplot` → `Area(group=, mode="stacked")`.)
+- **Statistical:** `hexbin`, `hist2d` (the datashader count-raster is the qtviz
+  analog for both 2-D density types), `eventplot`, `acorr`/`xcorr`.
+  (`ecdf` → `Ecdf`; `pie` → `Pie`.)
+- **Contours:** `clabel` (inline level labels) — `contour`/`contourf` are `Contour` now.
 - **Vector fields:** `quiver`, `streamplot`, `barbs`.
 - **Unstructured meshes:** `tripcolor`, `triplot`, `tricontour(f)`.
 - **Gridded variants:** `pcolor`/`pcolormesh` (irregular cell edges), `spy`.
@@ -117,8 +125,8 @@ computation + an existing element:
 | `invert_xaxis/yaxis` | ✅ | `AxisSpec(invert=True)` |
 | `set_aspect` | ✅ | `OverlayOptions(aspect=…)` (float) |
 | `set_title`, `set_xlabel/ylabel` | ✅ | `OverlayOptions(title=…, x_label=…, y_label=…)`; themed color + font size |
-| Tick **formatters/locators** (`FuncFormatter`, `EngFormatter`, date locators, …) | ❌ | `AxisSpec.tick_format` exists but is **reserved** — only `"auto"` is honored, everything else is currently ignored (§11). Use `handle.axes[i].xaxis.set_major_formatter(...)` via the escape hatch |
-| `twinx`/`twiny` (dual y/x) | ❌ | Not modeled anywhere in qtviz — a known vocabulary gap. Escape hatch: `handle.axes[i].twinx()` works but is non-portable |
+| Tick **formatters** | ✅ | `AxisSpec(tick_format=…)`: Python format-spec strings + `"eng"` (SI), wired on every backend ([D86]); custom *locators* remain escape-hatch territory |
+| `twinx` (dual y) | ✅ | `axis="y2"` on `Curve`/`Scatter` + `OverlayOptions(y2=AxisSpec(...))` ([D88]); `ViewState.y2_range` round-trips. `twiny` (dual x) stays unmodeled |
 | `secondary_xaxis/yaxis` | ❌ | Same as above |
 | `sharex`/`sharey` | ✅ | `LayoutOptions(link_x=True, link_y=True)` on a grid `Layout` → real mpl `sharex`/`sharey` against the first axes |
 | Projections (`polar`, geographic, custom) | ❌ | Rectilinear only; non-goal territory |
@@ -168,7 +176,7 @@ First-class since 0.3 ([D60]):
 |---|---|---|
 | `background` | ✅ | figure patch + axes facecolor |
 | `foreground` | ✅ | spines, ticks, axis labels, title, legend text |
-| `grid` | ◑ | grid always **on**, theme color, alpha 0.5 — there is **no API to disable the grid** |
+| `grid` | ✅ | themed color, alpha 0.5; `OverlayOptions(grid=False)` turns it off ([D87]) |
 | `palette` | ✅ | series color cycling + categorical swatches |
 | `font_size` / `title_size` | ✅ | axis labels / title (set via `OverlayOptions`) — **not** tick labels |
 | `font_family` | 🔇 | **not applied on this backend** (webengine applies it; mpl ignores it — §11) |
@@ -207,11 +215,11 @@ five events; here is exactly what matplotlib emits:
 | `SelectEvent` | ◑ | `brush="approximate"`: **programmatic only** — `handle.select_bounds(ax_index, …)` computes row indices per selectable element. **No interactive rubber-band** is wired (no `RectangleSelector`); brushing a datashaded view emits bounds-only events (`indices=[]`, [D78]) |
 | `TapEvent` | ❌ | Never emitted by this backend |
 
-**Pan/zoom expectation:** qtviz does **not** create a navigation toolbar. Out of
-the box the mpl canvas has no mouse pan/zoom; the supported pattern (example
-`11_datashader_matplotlib.py`) is to attach matplotlib's own
-`NavigationToolbar2QT` to `view.handle.widget` yourself — limit changes then flow
-into `RangeEvent`s and drive datashader re-aggregation. mpl's raw event system
+**Pan/zoom expectation:** `qv.View(..., toolbar=True)` attaches matplotlib's
+navigation toolbar ([D95]) — limit changes flow into `RangeEvent`s and drive
+datashader re-aggregation. Surfaces with brushable elements also get an
+interactive rubber-band brush (drag → `SelectEvent`s, same masking as
+`select_bounds`). mpl's raw event system
 (`scroll_event`, `key_press_event`, `draw_event`, …) is not surfaced; connect via
 the escape hatch if needed.
 
@@ -288,24 +296,19 @@ look here first:
 
 | # | Surface | Behavior | Why it escapes honor-or-warn |
 |---|---|---|---|
-| 1 | `AxisSpec(tick_format=…)` | Reserved; anything but `"auto"` is ignored | Documented as reserved, but there's no warning at render |
-| 2 | `LayoutOptions(rows=…)` on an all-mpl grid | Ignored — shape derives from `cols` alone | Layout options aren't capability-gated |
-| 3 | `LayoutOptions(spacing=…)` on an all-mpl grid | Ignored inside a single figure (applies only to the Qt-hosted mixed grid) | Same as #2 |
-| 4 | `Histogram(bins="<any string>")` | Coerced to `"auto"` — `"sturges"`, `"fd"` etc. are not passed through even though mpl supports them | The renderer collapses all non-ints to `"auto"` |
-| 5 | `Heatmap` axis coordinates | Axes show **bin indices**, not the data's x/y values (no `extent`, no tick relabeling) | Cross-backend vocabulary behavior, not mpl-specific |
-| 6 | `Theme(font_family=…)` | Not applied by the mpl backend | Theme fields aren't per-backend gated |
-| 7 | Grid lines | Always on (themed); no off switch in the vocabulary | No `grid=` option exists |
-| 8 | `Text` with `$…$` | Renders as mathtext on this backend (mpl interprets it) but as literal text elsewhere | Incidental engine behavior — don't rely on it |
-| 9 | `Bars(mode=…)` | Works (grouped/stacked) but sits **outside** the honor-or-warn contract — a hypothetical backend ignoring it would do so silently | `mode` isn't in `Bars.RECOMMENDED_OPTIONS` |
-| 10 | `Scatter(pyqtgraph_use_opengl=…)` | Stored, read by no renderer (the pyqtgraph sibling of the fixed `matplotlib_rasterized`) | Not in `RECOMMENDED_OPTIONS`; wiring it has headless/OpenGL risk — open decision |
+| 1 | `LayoutOptions(rows=…)` on an all-mpl grid | Ignored — shape derives from `cols` alone | Layout options aren't capability-gated |
+| 2 | `LayoutOptions(spacing=…)` on an all-mpl grid | Ignored inside a single figure (applies only to the Qt-hosted mixed grid) | Same as #1 |
+| 3 | `Theme(font_family=…)` | Not applied by the mpl backend | Theme fields aren't per-backend gated |
+| 4 | `Text` with `$…$` | Renders as mathtext on this backend (mpl interprets it) but as literal text elsewhere | Incidental engine behavior — don't rely on it |
+| 5 | `Scatter(pyqtgraph_use_opengl=…)` | Stored, read by no renderer (the pyqtgraph sibling of the fixed `matplotlib_rasterized`) | Not in `RECOMMENDED_OPTIONS`; wiring it has headless/OpenGL risk — open decision |
 
-Three former entries were **fixed post-1.0.0** (2026-07-31) and moved out of this
-list: `Scatter(matplotlib_rasterized=True)` now reaches the artist,
-`OverlayOptions.background` is wired on all three backends (§5), and
-`ErrorBars(direction="both")` draws both whisker sets on matplotlib **and**
-webengine (the webengine trace builder had the same `error_y`-only bug). The
-remaining rows are accepted design edges as of 1.0, except #10 — the last dead
-backend-prefixed flag — which needs a wire-or-deprecate call.
+Fixed post-1.0.0 and moved out of this list: `matplotlib_rasterized`,
+`OverlayOptions.background`, `ErrorBars(direction="both")` (the wart-fix
+commit), then the parity program wired `tick_format` ([D86]), string
+histogram-bin rules ([D93]), heatmap data coordinates ([D92]), `Bars.mode`
+into honor-or-warn, and the `grid=` toggle ([D87]). The remaining rows are
+accepted design edges, except #5 — the last dead backend-prefixed flag —
+which needs a wire-or-deprecate call.
 
 ---
 
@@ -321,6 +324,6 @@ twin axes, tick formatters, datetime axes, color norms beyond linear/log,
 annotate-arrows, rcParams control) or its interactivity plumbing (no toolbar by
 default, pick on Scatter only, no interactive brush, no streaming fast path, no
 animation). The boundary is policed by two contracts — capabilities are honest,
-and unsupported *recommended* options warn rather than vanish — with the ten
+and unsupported *recommended* options warn rather than vanish — with the five
 silent exceptions catalogued in §11, and everything outside the vocabulary
 reachable (non-portably) through `handle.native()` / `handle.axes`.
