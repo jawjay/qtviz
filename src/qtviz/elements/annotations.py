@@ -128,10 +128,12 @@ class Span(_Reference):
 
 
 class Text(_Reference):
-    """A text note anchored at data coordinates `(x, y)`."""
+    """A text note anchored at data coordinates `(x, y)`; `rotation` is
+    counter-clockwise degrees, `anchor`/`anchor_v` place the box relative to
+    the point, and `frame=True` draws a theme-styled box behind it ([D96])."""
 
     REQUIRED_OPTIONS = ("x", "y", "text")
-    RECOMMENDED_OPTIONS = ("color", "size", "anchor")
+    RECOMMENDED_OPTIONS = ("color", "size", "anchor", "anchor_v", "rotation", "frame")
 
     def __init__(
         self,
@@ -142,18 +144,71 @@ class Text(_Reference):
         color: ColorSpec | None = None,
         size: float | None = None,
         anchor: Literal["center", "left", "right"] = "center",
+        anchor_v: Literal["center", "top", "bottom"] = "center",
+        rotation: float = 0.0,
+        frame: bool = False,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if anchor not in ("center", "left", "right"):
             raise ValidationError(f"Text anchor must be center|left|right, got {anchor!r}")
+        if anchor_v not in ("center", "top", "bottom"):
+            raise ValidationError(
+                f"Text anchor_v must be center|top|bottom, got {anchor_v!r}"
+            )
         self.x, self.y = float(x), float(y)
         self.text = str(text)
         self.color = color
         self.size = size
         self.anchor = anchor
+        self.anchor_v = anchor_v
+        self.rotation = float(rotation)
+        self.frame = bool(frame)
         self._freeze()
 
 
-ANNOTATION_TYPES: tuple[type, ...] = (HLine, VLine, Span, Text)
+_HEADS = ("end", "both", "none")
+
+
+class Arrow(_Reference):
+    """An arrow between two data points, head at the end point (`head="end"`,
+    or `"both"`/`"none"`) — the pointing half of `annotate` ([D96]); pair with
+    a `Text` for a callout."""
+
+    REQUIRED_OPTIONS = ("x0", "y0", "x1", "y1")
+    RECOMMENDED_OPTIONS = ("head", "color", "line_width", "alpha", "label")
+
+    def __init__(
+        self,
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+        *,
+        head: Literal["end", "both", "none"] = "end",
+        color: ColorSpec | None = None,
+        line_width: float = 1.5,
+        alpha: float = 1.0,
+        label: str | None = None,
+        backend_hint: str | None = None,
+        id=None,
+    ) -> None:
+        super().__init__(backend_hint=backend_hint, id=id)
+        if head not in _HEADS:
+            raise ValidationError(f"Arrow head must be one of {_HEADS}, got {head!r}")
+        check_alpha(alpha, who="Arrow")
+        self.x0, self.y0 = float(x0), float(y0)
+        self.x1, self.y1 = float(x1), float(y1)
+        self.head = head
+        self.color = color
+        self.line_width = line_width
+        self.alpha = alpha
+        self.label = label
+        self._freeze()
+
+
+from .shapes import Ellipse, Polygon, Rect  # noqa: E402 — shapes share the class
+
+ANNOTATION_TYPES: tuple[type, ...] = (HLine, VLine, Span, Text, Arrow,
+                                      Rect, Ellipse, Polygon)

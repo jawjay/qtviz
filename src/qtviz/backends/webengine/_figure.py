@@ -27,18 +27,22 @@ from ...core.compose import Overlay, effective_scales, surface_of
 from ...data import resolve_node
 from ...elements import (
     Area,
+    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
+    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
     Pie,
+    Polygon,
     RawFigure,
+    Rect,
     Scatter,
     Span,
     Spread,
@@ -527,7 +531,11 @@ HONORED: dict[type, frozenset[str]] = {
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Span: frozenset({"color", "alpha", "label"}),
-    Text: frozenset({"color", "size", "anchor"}),
+    Text: frozenset({"color", "size", "anchor", "anchor_v", "rotation", "frame"}),
+    Arrow: frozenset({"head", "color", "line_width", "alpha", "label"}),
+    Rect: frozenset({"color", "line_width", "alpha", "fill", "label"}),
+    Ellipse: frozenset({"color", "line_width", "alpha", "fill", "label"}),
+    Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
@@ -560,8 +568,11 @@ def _ref_css(element, theme) -> str:
 
 
 def _shape_coord(value: float, scale: str) -> float | None:
-    """One annotation coordinate for a Plotly shape: on a log axis Plotly wants
-    log10 values; a non-positive coordinate drops (warned by logify), R1-style."""
+    """One annotation coordinate for a Plotly shape: a log axis wants log10
+    values, a date axis wants epoch **ms** ([D94]); a non-positive coordinate
+    under log drops (warned by logify), R1-style."""
+    if scale == "time":
+        return float(value) * 1000.0
     if scale != "log":
         return float(value)
     v = logify(np.array([value], dtype="float64"), True)[0]
@@ -582,13 +593,53 @@ def _line_shape(pos: float | None, axis: str, element, css: str) -> dict | None:
     }
 
 
+def _outline_shape(points, element, css: str, x_scale: str, y_scale: str) -> dict | None:
+    """A closed data-space outline ([D97]) as a Plotly `path` shape."""
+    from ...core._geometry import svg_path  # noqa: PLC0415
+
+    xs = [_shape_coord(float(x), x_scale) for x, _y in points]
+    ys = [_shape_coord(float(y), y_scale) for _x, y in points]
+    if any(v is None for v in xs) or any(v is None for v in ys):
+        return None
+    shape = {"type": "path", "path": svg_path(list(zip(xs, ys, strict=True))),
+             "xref": "x", "yref": "y", "opacity": element.alpha,
+             "line": {"color": css, "width": element.line_width}}
+    if element.fill:
+        shape["fillcolor"] = css
+    return shape
+
+
 def _shape(element, theme, x_scale: str, y_scale: str) -> dict | None:
-    """An HLine / VLine / Span as a Plotly layout shape ([D70])."""
+    """An HLine / VLine / Span / Rect / Ellipse / Polygon as a Plotly layout
+    shape ([D70]/[D97])."""
     css = _ref_css(element, theme)
     if isinstance(element, HLine):
         return _line_shape(_shape_coord(element.y, y_scale), "y", element, css)
     if isinstance(element, VLine):
         return _line_shape(_shape_coord(element.x, x_scale), "x", element, css)
+    if isinstance(element, Rect):
+        x0, x1 = _shape_coord(element.x0, x_scale), _shape_coord(element.x1, x_scale)
+        y0, y1 = _shape_coord(element.y0, y_scale), _shape_coord(element.y1, y_scale)
+        if None in (x0, x1, y0, y1):
+            return None
+        shape = {"type": "rect", "xref": "x", "yref": "y",
+                 "x0": x0, "x1": x1, "y0": y0, "y1": y1,
+                 "opacity": element.alpha,
+                 "line": {"color": css, "width": element.line_width}}
+        if element.fill:
+            shape["fillcolor"] = css
+        return shape
+    if isinstance(element, Ellipse):
+        from ...core._geometry import ellipse_points  # noqa: PLC0415
+
+        return _outline_shape(
+            ellipse_points(element.cx, element.cy, element.rx, element.ry,
+                           element.angle), element, css, x_scale, y_scale)
+    if isinstance(element, Polygon):
+        from ...core._geometry import close_points  # noqa: PLC0415
+
+        return _outline_shape(close_points(element.points), element, css,
+                              x_scale, y_scale)
     axis = "y" if element.orient == "h" else "x"       # Span
     scale = y_scale if axis == "y" else x_scale
     lo, hi = _shape_coord(element.lo, scale), _shape_coord(element.hi, scale)
@@ -603,16 +654,40 @@ def _shape(element, theme, x_scale: str, y_scale: str) -> dict | None:
     }
 
 
-def _note(element: Text, theme, x_scale: str, y_scale: str) -> dict | None:
-    """A Text element as a Plotly layout annotation."""
+# Arrow head vocabulary → Plotly arrowside ([D96]).
+_ARROWSIDE = {"end": "end", "both": "end+start", "none": "none"}
+_YANCHOR = {"center": "middle", "top": "top", "bottom": "bottom"}
+
+
+def _note(element, theme, x_scale: str, y_scale: str) -> dict | None:
+    """A Text or Arrow element as a Plotly layout annotation ([D96])."""
+    css = _ref_css(element, theme)
+    if isinstance(element, Arrow):
+        x1, y1 = _shape_coord(element.x1, x_scale), _shape_coord(element.y1, y_scale)
+        x0, y0 = _shape_coord(element.x0, x_scale), _shape_coord(element.y0, y_scale)
+        if None in (x0, y0, x1, y1):
+            return None
+        return {"x": x1, "y": y1, "ax": x0, "ay": y0,
+                "axref": "x", "ayref": "y", "text": "", "showarrow": True,
+                "arrowhead": 2, "arrowside": _ARROWSIDE[element.head],
+                "arrowcolor": css, "arrowwidth": max(element.line_width, 0.3),
+                "opacity": element.alpha}
     x, y = _shape_coord(element.x, x_scale), _shape_coord(element.y, y_scale)
     if x is None or y is None:
         return None
-    font: dict = {"color": _ref_css(element, theme)}
+    font: dict = {"color": css}
     if element.size is not None:
         font["size"] = element.size
-    return {"x": x, "y": y, "text": element.text, "showarrow": False,
-            "font": font, "xanchor": element.anchor}
+    note = {"x": x, "y": y, "text": element.text.replace("\n", "<br>"),
+            "showarrow": False, "font": font, "xanchor": element.anchor,
+            "yanchor": _YANCHOR[element.anchor_v],
+            "textangle": -element.rotation}  # Plotly rotates clockwise
+    if element.frame:
+        note["bordercolor"] = css
+        note["borderwidth"] = 1
+        note["bgcolor"] = _css(theme.background)
+        note["borderpad"] = 3
+    return note
 
 
 def build(node, theme) -> tuple[dict, list[str]]:
@@ -645,12 +720,12 @@ def build(node, theme) -> tuple[dict, list[str]]:
             element, backend_name="webengine",
             honored=HONORED.get(type(element), frozenset()),
         )
-        if isinstance(element, (HLine, VLine, Span)):
+        if isinstance(element, (HLine, VLine, Span, Rect, Ellipse, Polygon)):
             shape = _shape(element, theme, x_scale, y_scale)
             if shape is not None:
                 shapes.append(shape)
             continue
-        if isinstance(element, Text):
+        if isinstance(element, (Text, Arrow)):
             note = _note(element, theme, x_scale, y_scale)
             if note is not None:
                 notes.append(note)

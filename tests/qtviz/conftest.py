@@ -88,6 +88,11 @@ def make_elements(table, grid):
             "VLine": qv.VLine(5.0),
             "Span": qv.Span(0.2, 0.8),
             "Text": qv.Text(5.0, 0.5, "note"),
+            # wave-1 annotations ([D96]/[D97])
+            "Arrow": qv.Arrow(1.0, 0.2, 4.0, 0.8),
+            "Rect": qv.Rect(2.0, -0.5, 4.0, 0.5),
+            "Ellipse": qv.Ellipse(5.0, 0.0, 1.5, 0.4, angle=20.0),
+            "Polygon": qv.Polygon([(6.0, 0.0), (7.0, 0.6), (8.0, -0.2)]),
             # statistical elements ([D67], 0.4)
             "BoxPlot": qv.BoxPlot(table, column="y"),
             "Violin": qv.Violin(table, column="y"),

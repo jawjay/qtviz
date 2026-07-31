@@ -30,6 +30,7 @@ _PICKING = {"native", "approximate", "none"}
 _NON_DEFAULT = {
     "marker": "square", "alpha": 0.5, "line_style": "dashed", "line_width": 3.0,
     "step": "post", "hole": 0.4, "axis": "y2", "levels": 4, "filled": True,
+    "head": "both", "fill": True, "rotation": 30.0, "anchor_v": "top", "frame": True,
     # ("mode" is skipped: stacking requires group=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
     "group": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,

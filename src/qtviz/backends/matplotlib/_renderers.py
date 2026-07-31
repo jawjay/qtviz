@@ -15,17 +15,21 @@ import numpy as np
 from ...core.color import Color
 from ...elements import (
     Area,
+    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
+    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
     Pie,
+    Polygon,
+    Rect,
     Scatter,
     Span,
     Spread,
@@ -539,11 +543,69 @@ def render_span(element: Span, ctx):
               color=_ref_color(element.color, ctx.theme).mpl(), alpha=element.alpha)
 
 
+_VA = {"center": "center", "top": "top", "bottom": "bottom"}
+
+
 def render_text(element: Text, ctx):
-    kwargs = {"color": _ref_color(element.color, ctx.theme).mpl(), "ha": element.anchor}
+    fg = _ref_color(element.color, ctx.theme).mpl()
+    kwargs = {"color": fg, "ha": element.anchor, "va": _VA[element.anchor_v],
+              "rotation": element.rotation, "rotation_mode": "anchor"}
     if element.size is not None:
         kwargs["fontsize"] = element.size
+    if element.frame:
+        kwargs["bbox"] = {"boxstyle": "round,pad=0.35",
+                          "facecolor": ctx.theme.background.mpl(), "edgecolor": fg}
     return ctx.parent_axes.text(element.x, element.y, element.text, **kwargs)
+
+
+# Arrow head vocabulary → mpl arrowstyle ([D96]).
+_ARROWSTYLE = {"end": "-|>", "both": "<|-|>", "none": "-"}
+
+
+def render_arrow(element: Arrow, ctx):
+    color = _ref_color(element.color, ctx.theme).mpl()
+    return ctx.parent_axes.annotate(
+        "", xy=(element.x1, element.y1), xytext=(element.x0, element.y0),
+        arrowprops={"arrowstyle": _ARROWSTYLE[element.head], "color": color,
+                    "lw": element.line_width, "alpha": element.alpha,
+                    "shrinkA": 0, "shrinkB": 0},
+        annotation_clip=False,
+    )
+
+
+def _shape_style(element, ctx) -> dict:
+    color = _ref_color(element.color, ctx.theme).mpl()
+    return {"edgecolor": color, "linewidth": element.line_width,
+            "alpha": element.alpha,
+            "facecolor": color if element.fill else "none"}
+
+
+def render_rect(element: Rect, ctx):
+    from matplotlib import patches  # noqa: PLC0415
+
+    patch = patches.Rectangle((element.x0, element.y0),
+                              element.x1 - element.x0, element.y1 - element.y0,
+                              **_shape_style(element, ctx))
+    ctx.parent_axes.add_patch(patch)
+    return patch
+
+
+def render_ellipse(element: Ellipse, ctx):
+    from matplotlib import patches  # noqa: PLC0415
+
+    patch = patches.Ellipse((element.cx, element.cy), 2 * element.rx, 2 * element.ry,
+                            angle=element.angle, **_shape_style(element, ctx))
+    ctx.parent_axes.add_patch(patch)
+    return patch
+
+
+def render_polygon(element: Polygon, ctx):
+    from matplotlib import patches  # noqa: PLC0415
+
+    patch = patches.Polygon(np.asarray(element.points), closed=True,
+                            **_shape_style(element, ctx))
+    ctx.parent_axes.add_patch(patch)
+    return patch
 
 
 
@@ -629,6 +691,10 @@ RENDERERS: dict[type, Any] = {
     Ecdf: render_ecdf,
     Pie: render_pie,
     Contour: render_contour,
+    Arrow: render_arrow,
+    Rect: render_rect,
+    Ellipse: render_ellipse,
+    Polygon: render_polygon,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -650,7 +716,11 @@ HONORED: dict[type, frozenset[str]] = {
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Span: frozenset({"color", "alpha", "label"}),
-    Text: frozenset({"color", "size", "anchor"}),
+    Text: frozenset({"color", "size", "anchor", "anchor_v", "rotation", "frame"}),
+    Arrow: frozenset({"head", "color", "line_width", "alpha", "label"}),
+    Rect: frozenset({"color", "line_width", "alpha", "fill", "label"}),
+    Ellipse: frozenset({"color", "line_width", "alpha", "fill", "label"}),
+    Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),

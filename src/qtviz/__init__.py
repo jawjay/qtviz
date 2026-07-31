@@ -46,18 +46,22 @@ from .data import (
 )
 from .elements import (
     Area,
+    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
+    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
     Pie,
+    Polygon,
     RawFigure,
+    Rect,
     Scatter,
     Span,
     Spread,
@@ -71,8 +75,8 @@ __all__ = [
     # elements
     "Scatter", "Curve", "Bars", "Image", "Heatmap", "Histogram", "ErrorBars", "Spread",
     "RawFigure",
-    # annotation / reference elements ([D70])
-    "HLine", "VLine", "Span", "Text",
+    # annotation / reference elements ([D70]; wave-1 additions [D96]/[D97])
+    "HLine", "VLine", "Span", "Text", "Arrow", "Rect", "Ellipse", "Polygon",
     # statistical elements ([D67])
     "BoxPlot", "Violin",
     # composition vocabulary (parity program increment 3, [D84b]/[D90]/[D91])

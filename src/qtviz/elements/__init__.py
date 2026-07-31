@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .annotations import ANNOTATION_TYPES, HLine, Span, Text, VLine
+from .annotations import ANNOTATION_TYPES, Arrow, HLine, Span, Text, VLine
 from .area import Area
 from .bars import Bars
 from .contour import Contour
@@ -15,6 +15,7 @@ from .image import Image
 from .pie import Pie
 from .raw_figure import RawFigure
 from .scatter import Scatter
+from .shapes import Ellipse, Polygon, Rect
 from .spread import Spread
 from .stats import BoxPlot, Violin
 
@@ -23,6 +24,7 @@ __all__ = [
     "Heatmap", "Histogram", "ErrorBars", "Spread",
     "RawFigure",
     "HLine", "VLine", "Span", "Text", "ANNOTATION_TYPES",
+    "Arrow", "Rect", "Ellipse", "Polygon",
     "BoxPlot", "Violin",
     "Area", "Ecdf", "Pie", "Contour",
 ]

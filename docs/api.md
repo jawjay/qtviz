@@ -38,6 +38,10 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - VLine
         - Span
         - Text
+        - Arrow
+        - Rect
+        - Ellipse
+        - Polygon
 
 ## Composition & View
 

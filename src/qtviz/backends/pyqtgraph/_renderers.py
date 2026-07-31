@@ -21,16 +21,20 @@ from ...core._scales import logify
 from ...core.color import Color
 from ...elements import (
     Area,
+    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
+    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
     HLine,
     Image,
+    Polygon,
+    Rect,
     Scatter,
     Span,
     Spread,
@@ -645,7 +649,8 @@ def render_span(element: Span, ctx):
     return item
 
 
-_TEXT_ANCHOR = {"center": (0.5, 0.5), "left": (0.0, 0.5), "right": (1.0, 0.5)}
+_ANCHOR_H = {"center": 0.5, "left": 0.0, "right": 1.0}
+_ANCHOR_V = {"center": 0.5, "top": 0.0, "bottom": 1.0}
 
 
 def render_text(element: Text, ctx):
@@ -653,8 +658,16 @@ def render_text(element: Text, ctx):
     px, py = _ref_scalar(element.x, x_log), _ref_scalar(element.y, y_log)
     if px is None or py is None:
         return None
-    item = pg.TextItem(element.text, color=_ref_color(element.color, ctx.theme).qt(),
-                       anchor=_TEXT_ANCHOR[element.anchor])
+    fg = _ref_color(element.color, ctx.theme).qt()
+    kwargs: dict = {
+        "color": fg,
+        "anchor": (_ANCHOR_H[element.anchor], _ANCHOR_V[element.anchor_v]),
+        "angle": element.rotation,  # CCW degrees — matches mpl ([D96])
+    }
+    if element.frame:
+        kwargs["border"] = pg.mkPen(fg)
+        kwargs["fill"] = pg.mkBrush(ctx.theme.background.qt())
+    item = pg.TextItem(element.text, **kwargs)
     if element.size is not None:
         font = item.textItem.font()
         font.setPointSizeF(float(element.size))
@@ -662,6 +675,77 @@ def render_text(element: Text, ctx):
     ctx.parent_axes.addItem(item)
     item.setPos(px, py)
     return item
+
+
+def render_arrow(element: Arrow, ctx):
+    """Shaft as a curve, pixel-mode heads via `ArrowItem` ([D96]). The head
+    angle comes from the plotted (logified) direction — under wild aspect
+    ratios it can skew slightly; mpl/plotly compute theirs screen-space."""
+    import math  # noqa: PLC0415
+
+    x_log, y_log = _xy_log(ctx)
+    x0, y0 = _ref_scalar(element.x0, x_log), _ref_scalar(element.y0, y_log)
+    x1, y1 = _ref_scalar(element.x1, x_log), _ref_scalar(element.y1, y_log)
+    if x0 is None or y0 is None or x1 is None or y1 is None:
+        return None
+    color = _ref_color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    pen = pg.mkPen(color, width=element.line_width)
+    shaft = pg.PlotCurveItem(x=np.array([x0, x1]), y=np.array([y0, y1]), pen=pen)
+    ctx.parent_axes.addItem(shaft)
+    items = [shaft]
+    theta = math.degrees(math.atan2(y1 - y0, x1 - x0))
+    head_len = 6.0 + 3.0 * element.line_width
+    heads = {"end": ((x1, y1, 180.0 - theta),),
+             "both": ((x1, y1, 180.0 - theta), (x0, y0, -theta)),
+             "none": ()}[element.head]
+    for hx, hy, angle in heads:
+        head = pg.ArrowItem(pos=(hx, hy), angle=angle, headLen=head_len,
+                            brush=pg.mkBrush(color), pen=None, pxMode=True)
+        ctx.parent_axes.addItem(head)
+        items.append(head)
+    return items
+
+
+def _render_shape_points(pts, element, ctx):
+    """One closed data-space outline as a path item ([D97]): points logify
+    like every annotation; a non-positive point under log drops the shape
+    (logify already warned)."""
+    from PySide6.QtWidgets import QGraphicsPathItem  # noqa: PLC0415
+
+    x_log, y_log = _xy_log(ctx)
+    xs = logify(np.asarray(pts[:, 0], dtype="float64"), x_log)
+    ys = logify(np.asarray(pts[:, 1], dtype="float64"), y_log)
+    if not (np.isfinite(xs).all() and np.isfinite(ys).all()):
+        return None
+    color = _ref_color(element.color, ctx.theme).qt()
+    color.setAlphaF(element.alpha)
+    item = QGraphicsPathItem(pg.arrayToQPath(xs, ys))
+    item.setPen(pg.mkPen(color, width=element.line_width))
+    item.setBrush(pg.mkBrush(color) if element.fill else pg.mkBrush(None))
+    ctx.parent_axes.addItem(item)
+    return item
+
+
+def render_rect(element: Rect, ctx):
+    from ...core._geometry import rect_points  # noqa: PLC0415
+
+    return _render_shape_points(
+        rect_points(element.x0, element.y0, element.x1, element.y1), element, ctx)
+
+
+def render_ellipse(element: Ellipse, ctx):
+    from ...core._geometry import ellipse_points  # noqa: PLC0415
+
+    return _render_shape_points(
+        ellipse_points(element.cx, element.cy, element.rx, element.ry,
+                       element.angle), element, ctx)
+
+
+def render_polygon(element: Polygon, ctx):
+    from ...core._geometry import close_points  # noqa: PLC0415
+
+    return _render_shape_points(close_points(element.points), element, ctx)
 
 
 
@@ -785,6 +869,10 @@ RENDERERS: dict[type, Any] = {
     Area: render_area,
     Ecdf: render_ecdf,
     Contour: render_contour,
+    Arrow: render_arrow,
+    Rect: render_rect,
+    Ellipse: render_ellipse,
+    Polygon: render_polygon,
     # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
 }
 
@@ -805,7 +893,11 @@ HONORED: dict[type, frozenset[str]] = {
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     Span: frozenset({"color", "alpha", "label"}),
-    Text: frozenset({"color", "size", "anchor"}),
+    Text: frozenset({"color", "size", "anchor", "anchor_v", "rotation", "frame"}),
+    Arrow: frozenset({"head", "color", "line_width", "alpha", "label"}),
+    Rect: frozenset({"color", "line_width", "alpha", "fill", "label"}),
+    Ellipse: frozenset({"color", "line_width", "alpha", "fill", "label"}),
+    Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
