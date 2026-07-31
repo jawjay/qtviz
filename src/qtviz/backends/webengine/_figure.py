@@ -172,8 +172,41 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
 _LINE_SHAPE = {"pre": "vh", "mid": "hvh", "post": "hv"}
 
 
+def _curve_color_by_traces(element: Curve, theme) -> list[dict] | None:
+    """Categorical per-segment coloring ([D100]) — one NaN-gapped trace per
+    category from the shared core split; a continuous column warns (no
+    per-segment gradient line in Plotly either) and falls through."""
+    from ...core._stats import categorical_line_split  # noqa: PLC0415
+    from ...core.encoding import category_swatches, is_categorical  # noqa: PLC0415
+
+    d = element.data
+    values = np.asarray(d.series("color"))
+    if not is_categorical(values):
+        import warnings  # noqa: PLC0415
+
+        from ...errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn("webengine: continuous Curve color_by (a per-segment "
+                      "gradient line) is matplotlib-only; drawing a "
+                      "single-color line.", QtvizWarning, stacklevel=2)
+        return None
+    cats, parts = categorical_line_split(_floats(d.series("x")),
+                                         _floats(d.series("y")), values)
+    swatches = category_swatches(cats, theme.palette)
+    return [{
+        "type": "scattergl", "mode": "lines", "x": xs, "y": ys,
+        "line": {"color": _css(sw), "width": element.line_width,
+                 "dash": _dash(element.line_style)},
+        "opacity": element.alpha, "name": str(c), "showlegend": True,
+    } for (xs, ys), sw, c in zip(parts, swatches, cats, strict=True)]
+
+
 def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
     d = element.data
+    if element.color_by is not None:
+        traces = _curve_color_by_traces(element, theme)
+        if traces is not None:
+            return traces
     color = _css(_element_color(element, theme, idx))
     line = {"color": color, "width": element.line_width,
             "dash": _dash(element.line_style)}
@@ -210,7 +243,18 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
     if element.group is not None:
         return _group_bars_traces(element, theme)
     x = list(np.asarray(d.series("x")))            # keep categorical labels as-is
-    trace = {"type": "bar", "marker": {"color": _css(_element_color(element, theme, idx))},
+    if element.color_by is not None:  # per-bar colors ([D100])
+        from ...core.encoding import is_categorical  # noqa: PLC0415
+
+        values = np.asarray(d.series("color"))
+        marker: dict = {}
+        if is_categorical(values):
+            marker["color"] = _color_by_list(element, d, theme)
+        else:
+            _continuous_marker_color(element, values, marker)
+    else:
+        marker = {"color": _css(_element_color(element, theme, idx))}
+    trace = {"type": "bar", "marker": marker,
              "name": element.label or element.id, "showlegend": element.label is not None}
     if element.orient == "h":
         trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
@@ -569,9 +613,10 @@ _TRACE_BUILDERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label", "axis"}),
-    Curve: frozenset({"color", "line_width", "line_style", "marker",
+    Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "orient", "group", "mode", "bar_labels", "label"}),
+    Bars: frozenset({"color", "color_by", "orient", "group", "mode",
+                     "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),

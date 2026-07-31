@@ -145,6 +145,26 @@ def grid_reduce(xv, yv, zv, agg: str = "mean") -> tuple[np.ndarray, np.ndarray, 
     return xs, ys, grid.reshape(len(ys), len(xs))
 
 
+def categorical_line_split(x, y, cats) -> tuple[np.ndarray, list]:
+    """Split one polyline into per-category sub-lines ([D100]): segment
+    i→i+1 belongs to `cats[i]`; each category keeps its segments' endpoints
+    and NaNs elsewhere, so runs stay visually continuous and every backend
+    draws the same split. Categories come out in `np.unique` order (the
+    `category_swatches` rule)."""
+    xa = np.asarray(x, dtype="float64")
+    ya = np.asarray(y, dtype="float64")
+    ca = np.asarray(cats)
+    uniq = np.unique(ca)
+    out = []
+    for c in uniq:
+        seg = ca[:-1] == c                     # segment i → i+1
+        keep = np.zeros(len(xa), dtype=bool)
+        keep[:-1] |= seg
+        keep[1:] |= seg
+        out.append((np.where(keep, xa, np.nan), np.where(keep, ya, np.nan)))
+    return uniq, out
+
+
 def split_by(values, by=None) -> tuple[np.ndarray | None, list[np.ndarray]]:
     """Split `values` into per-category arrays by the `by` column (np.unique
     order — the same canonical order `category_swatches` colors by), or one

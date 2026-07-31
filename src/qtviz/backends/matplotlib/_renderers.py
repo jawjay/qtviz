@@ -183,7 +183,48 @@ def _add_legend(ax, legend, theme, position: str = "auto") -> None:
         bar.ax.tick_params(colors=fg)
 
 
+def _curve_color_by(element: Curve, ctx):
+    """Per-point Curve coloring ([D100]): categorical → the shared core split
+    into per-category sub-lines; continuous → a LineCollection colored per
+    segment through the same `map_colors` ramp as everything else."""
+    from ...core._stats import categorical_line_split  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches, is_categorical  # noqa: PLC0415
+
+    d = element.data
+    ax = ctx.parent_axes
+    x, y = _col(d, "x"), _col(d, "y")
+    values = np.asarray(d.series("color"))
+    if is_categorical(values):
+        cats, parts = categorical_line_split(x, y, values)
+        swatches = category_swatches(cats, ctx.theme.palette)
+        lines = []
+        for (xs, ys), sw in zip(parts, swatches, strict=True):
+            (line,) = ax.plot(xs, ys, color=sw.mpl(), lw=element.line_width,
+                              ls=_ls(element.line_style), alpha=element.alpha)
+            lines.append(line)
+        if ctx.show_legend:
+            legend = Legend(kind="categorical", title=element.color_by,
+                            entries=tuple((str(c), sw)
+                                          for c, sw in zip(cats, swatches, strict=True)))
+            _add_legend(ax, legend, ctx.theme, ctx.legend_position)
+        return lines
+    from matplotlib.collections import LineCollection  # noqa: PLC0415
+
+    rgba, legend = _color_mapping(element, d, ctx.theme)
+    pts = np.column_stack([x, y]).reshape(-1, 1, 2)
+    segments = np.concatenate([pts[:-1], pts[1:]], axis=1)
+    lc = LineCollection(list(segments), colors=rgba[:-1],
+                        linewidths=element.line_width, alpha=element.alpha)
+    ax.add_collection(lc)
+    ax.autoscale_view()
+    if ctx.show_legend:
+        _add_legend(ax, legend, ctx.theme, ctx.legend_position)
+    return lc
+
+
 def render_curve(element: Curve, ctx):
+    if element.color_by is not None:
+        return _curve_color_by(element, ctx)
     (line,) = ctx.parent_axes.plot(
         _col(element.data, "x"), _col(element.data, "y"),
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
@@ -226,8 +267,14 @@ def render_bars(element: Bars, ctx):
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")
     bar, thick, _ticks = _bar_fns(ctx.parent_axes, element.orient)
-    container = bar(x, height, **{thick: 0.8},
-                    color=_color(element.color, ctx.theme, ctx.series_index).mpl())
+    if element.color_by is not None:  # per-bar colors ([D100])
+        rgba, legend = _color_mapping(element, element.data, ctx.theme)
+        container = bar(x, height, **{thick: 0.8}, color=list(rgba))
+        if ctx.show_legend:
+            _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+    else:
+        container = bar(x, height, **{thick: 0.8},
+                        color=_color(element.color, ctx.theme, ctx.series_index).mpl())
     _label_bars(ctx.parent_axes, container, element, ctx.theme)
     return container
 
@@ -762,9 +809,10 @@ RENDERERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label", "axis"}),
-    Curve: frozenset({"color", "line_width", "line_style", "marker",
+    Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "group", "mode", "orient", "bar_labels", "label"}),
+    Bars: frozenset({"color", "color_by", "group", "mode", "orient",
+                     "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),

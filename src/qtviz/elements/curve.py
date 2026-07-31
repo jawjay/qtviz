@@ -54,7 +54,7 @@ class Curve(Element):
     puts it on the twin right-hand axis ([D88])."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("color", "line_width", "line_style", "marker",
+    RECOMMENDED_OPTIONS = ("color", "color_by", "line_width", "line_style", "marker",
                            "marker_every", "step", "alpha", "label", "axis")
     CHANNELS = ("x", "y")
 
@@ -65,6 +65,7 @@ class Curve(Element):
         x: Accessor,
         y: Accessor,
         color: ColorSpec | None = None,
+        color_by: str | None = None,
         line_width: float = 1.5,
         line_style: str | tuple[float, ...] = "solid",
         marker: str | None = None,
@@ -80,6 +81,15 @@ class Curve(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Curve")
         check_line_style(line_style, who="Curve")
+        from ..core._validate import check_exclusive  # noqa: PLC0415
+
+        check_exclusive(color, color_by, names=("color", "color_by"), who="Curve")
+        if color_by is not None and (marker is not None or step is not None
+                                     or scale == "datashader"):
+            raise ValidationError(
+                "Curve color_by is a plain-line encoding (no marker/step/datashader) "
+                "in this release ([D100])"
+            )
         if step is not None and step not in _STEPS:
             raise ValidationError(f"Curve step must be one of {_STEPS} or None, got {step!r}")
         if marker is not None and marker not in _MARKERS:
@@ -93,6 +103,7 @@ class Curve(Element):
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color = color
+        self.color_by = color_by
         self.line_width = line_width
         self.line_style = line_style if isinstance(line_style, str) \
             else tuple(float(v) for v in line_style)
@@ -105,3 +116,16 @@ class Curve(Element):
         self.scale = scale
         self._validate_tabular()
         self._freeze()
+
+    def legend_entry(self, theme, index: int = 0):
+        """A `color_by` Curve emits its own categorical/continuous key —
+        contributing a swatch too would double-legend ([D60] risk #3)."""
+        if self.color_by is not None:
+            return None
+        return super().legend_entry(theme, index)
+
+    def channels(self) -> dict:
+        ch = {"x": self.x, "y": self.y}
+        if self.color_by is not None:
+            ch["color"] = self.color_by
+        return ch

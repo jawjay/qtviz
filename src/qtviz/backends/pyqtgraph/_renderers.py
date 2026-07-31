@@ -150,7 +150,56 @@ def _mid_edges(x: np.ndarray) -> np.ndarray:
     return np.concatenate(([2 * x[0] - mid[0]], mid, [2 * x[-1] - mid[-1]]))
 
 
+def _warn_continuous_curve(backend: str) -> None:
+    import warnings  # noqa: PLC0415
+
+    from ...errors import QtvizWarning  # noqa: PLC0415
+
+    warnings.warn(f"{backend}: continuous Curve color_by (a per-segment gradient "
+                  "line) is matplotlib-only; drawing a single-color line.",
+                  QtvizWarning, stacklevel=2)
+
+
+def _curve_color_by(element: Curve, ctx):
+    """Categorical per-segment coloring via the shared core split ([D100]);
+    a continuous column warns (no pg gradient-polyline primitive) and draws
+    the palette color."""
+    from ...core._stats import categorical_line_split  # noqa: PLC0415
+    from ...core.encoding import Legend, category_swatches, is_categorical  # noqa: PLC0415
+
+    d = element.data
+    values = np.asarray(d.series("color"))
+    if not is_categorical(values):
+        _warn_continuous_curve("pyqtgraph")
+        return None  # fall through to the plain-line path
+    x_log, y_log = _xy_log(ctx)
+    x, y = _col(d, "x"), _col(d, "y")
+    cats, parts = categorical_line_split(x, y, values)
+    swatches = category_swatches(cats, ctx.theme.palette)
+    items = []
+    for (xs, ys), sw in zip(parts, swatches, strict=True):
+        c = sw.qt()
+        c.setAlphaF(element.alpha)
+        item = pg.PlotCurveItem(x=logify(xs, x_log), y=logify(ys, y_log),
+                                pen=_mk_pen(c, element.line_width, element.line_style),
+                                connect="finite")
+        ctx.parent_axes.addItem(item)
+        items.append(item)
+    if ctx.show_legend:
+        from ._legend import add_legend  # noqa: PLC0415
+
+        legend = Legend(kind="categorical", title=element.color_by,
+                        entries=tuple((str(c), sw)
+                                      for c, sw in zip(cats, swatches, strict=True)))
+        add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+    return items
+
+
 def render_curve(element: Curve, ctx):
+    if element.color_by is not None:
+        items = _curve_color_by(element, ctx)
+        if items is not None:
+            return items
     d = element.data
     color = _color(element.color, ctx.theme, ctx.series_index).qt()
     color.setAlphaF(element.alpha)
@@ -217,13 +266,23 @@ def render_bars(element: Bars, ctx):
     x_log, y_log = _xy_log(ctx)
     # under log the bar *lengths* are log10'd (baseline sits at data 1); a proper
     # clipped-baseline treatment is deferred with the rest of the bar vocabulary.
-    if element.orient == "h":  # positions on y, lengths on x ([D85])
-        item = pg.BarGraphItem(y=logify(x, y_log), x0=0.0, x1=logify(height, x_log),
-                               height=0.6, brush=brush)
+    brushes = None
+    if element.color_by is not None:  # per-bar colors ([D100])
+        rgba, legend = _color_mapping(element, d, ctx.theme)
+        brushes = [pg.mkBrush(*_u8(c)) for c in rgba]
+        if ctx.show_legend:
+            from ._legend import add_legend  # noqa: PLC0415
+
+            add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
+    geo = ({"y": logify(x, y_log), "x0": 0.0, "x1": logify(height, x_log),
+            "height": 0.6} if element.orient == "h"
+           else {"x": logify(x, x_log), "height": logify(height, y_log),
+                 "width": 0.6})
+    item = pg.BarGraphItem(**geo, **({"brushes": brushes} if brushes is not None
+                                     else {"brush": brush}))
+    if element.orient == "h":
         _bar_label_items(ctx, logify(x, y_log), height, logify(height, x_log), element)
     else:
-        item = pg.BarGraphItem(x=logify(x, x_log), height=logify(height, y_log),
-                               width=0.6, brush=brush)
         _bar_label_items(ctx, logify(x, x_log), height, logify(height, y_log), element)
     ctx.parent_axes.addItem(item)
     return item
@@ -953,9 +1012,10 @@ RENDERERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label", "axis"}),
-    Curve: frozenset({"color", "line_width", "line_style", "marker",
+    Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "group", "mode", "orient", "bar_labels", "label"}),
+    Bars: frozenset({"color", "color_by", "group", "mode", "orient",
+                     "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap"}),                                # interpolation unwired
     Heatmap: frozenset({"colormap", "aggregator"}),

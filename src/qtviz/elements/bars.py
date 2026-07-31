@@ -20,7 +20,8 @@ class Bars(Element):
     ([D68]); `mode` is meaningful only with `group`."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("group", "mode", "color", "orient", "bar_labels", "label")
+    RECOMMENDED_OPTIONS = ("group", "mode", "color", "color_by", "orient",
+                           "bar_labels", "label")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -33,6 +34,7 @@ class Bars(Element):
         mode: Literal["grouped", "stacked"] = "grouped",
         orient: Literal["v", "h"] = "v",
         color: ColorSpec | None = None,
+        color_by: str | None = None,
         bar_labels: str | None = None,
         label: str | None = None,
         backend_hint: str | None = None,
@@ -48,12 +50,15 @@ class Bars(Element):
 
             validate_tick_format(bar_labels, who="Bars(bar_labels=)")
         check_exclusive(color, group, names=("color", "group"), who="Bars")
+        check_exclusive(color, color_by, names=("color", "color_by"), who="Bars")
+        check_exclusive(group, color_by, names=("group", "color_by"), who="Bars")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.group = group
         self.mode = mode
         self.orient = orient
         self.color = color
+        self.color_by = color_by
         self.bar_labels = bar_labels
         self.label = label
         self._validate_tabular()
@@ -66,4 +71,12 @@ class Bars(Element):
         ch = {"x": self.x, "y": self.y}
         if self.group is not None:
             ch["group"] = self.group
+        if self.color_by is not None:
+            ch["color"] = self.color_by
         return ch
+
+    def legend_entry(self, theme, index: int = 0):
+        """A `color_by` Bars emits its own key ([D60] risk #3 rule)."""
+        if self.color_by is not None:
+            return None
+        return super().legend_entry(theme, index)

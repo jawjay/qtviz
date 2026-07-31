@@ -12,6 +12,17 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Per-point style channels ([D100], the wave's architectural item).**
+  `Bars(color_by=)` colors each bar — categorical palette + key, or a
+  continuous ramp + colorbar — on all three backends. `Curve(color_by=)`
+  colors per *segment*: a categorical column splits into per-category
+  sub-lines through one shared core split (identical on every backend,
+  with a categorical key); a continuous column renders as a matplotlib
+  `LineCollection` with the shared ramp + colorbar, and warns down to a
+  single-color line on pyqtgraph/webengine (neither engine has a
+  gradient-polyline primitive — value-level honesty). `color_by` elements
+  emit their own key and opt out of the swatch legend ([D60] rule).
+
 - **Annotation wave ([D96]/[D97], roadmap wave 1).** `Arrow(x0,y0,x1,y1,
   head=)` — the pointing half of `annotate`; `Text` gains `rotation`
   (CCW degrees on every backend), `anchor_v`, and `frame=` (a theme-styled
