@@ -39,6 +39,11 @@ def wire_pick(artist, source_id: str, bus) -> None:
 
 
 def attach(element, artist, ctx, selectables: list) -> None:
+    if getattr(element, "axis", "y") == "y2":
+        # y2 rides its own scale; brush bounds are primary-axes data space, so
+        # a y2 element is not brush-selectable ([D88]). Pick stays off too —
+        # the PathCollection picker reports primary-axes coordinates.
+        return
     if isinstance(element, (Scatter, Curve)):
         x = np.asarray(element.data.series("x"), dtype="float64")  # resolved role
         y = np.asarray(element.data.series("y"), dtype="float64")

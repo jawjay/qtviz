@@ -757,9 +757,9 @@ RENDERERS: dict[type, Any] = {
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "color_norm", "label"}),
+                        "color_norm", "label", "axis"}),
     Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
-                      "alpha", "label"}),
+                      "alpha", "label", "axis"}),
     Bars: frozenset({"color", "group", "mode", "orient", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset({"colormap"}),                                # interpolation unwired

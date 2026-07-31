@@ -24,11 +24,13 @@ BackendPrimitive = Any
 @dataclass(frozen=True)
 class ViewState:
     """Portable interaction state — preserved across rebuilds and backend
-    switches (dev-plan [D2]). Each backend maps it to/from native ranges."""
+    switches (dev-plan [D2]). Each backend maps it to/from native ranges.
+    `y2_range` is the twin axis ([D88]); `None` when the surface has none."""
 
     x_range: tuple[float, float] | None = None
     y_range: tuple[float, float] | None = None
     selection: tuple[int, ...] | None = None
+    y2_range: tuple[float, float] | None = None
 
 
 @dataclass

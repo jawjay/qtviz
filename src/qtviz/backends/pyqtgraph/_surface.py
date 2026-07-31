@@ -43,6 +43,50 @@ def apply_surface(plot, surf, theme, x_scale: str, y_scale: str) -> None:
         plot.showGrid(x=False, y=False)  # override the themed default ([D87])
 
 
+class _Y2Host:
+    """PlotItem look-alike handed to renderers for y2 children ([D88]): items
+    land in the twin ViewBox; axis/legend chrome still reaches the real plot."""
+
+    def __init__(self, plot, vb2) -> None:
+        self._plot, self._vb2 = plot, vb2
+
+    def addItem(self, item, *args, **kwargs) -> None:
+        self._vb2.addItem(item)
+
+    def getViewBox(self):
+        return self._vb2
+
+    def __getattr__(self, name):
+        return getattr(self._plot, name)
+
+
+def make_y2(plot, vb, spec, theme, x_scale: str, y2_scale: str):
+    """Build the twin right-hand ViewBox ([D88]): x-linked to the primary,
+    driven by the right AxisItem, geometry-synced on resize. Emits no range
+    events and takes no brush — the surface's events stay primary-axes."""
+    import pyqtgraph as pg  # noqa: PLC0415
+
+    vb2 = pg.ViewBox(enableMenu=False)
+    x_log, y2_log = x_scale == "log", y2_scale == "log"
+    vb2.x_log, vb2.y_log = x_log, y2_log
+    # R1 for pick/hover coordinate emission (wire_scatter reads these):
+    vb2._to_data_x = (lambda v: 10.0 ** v) if x_log else float
+    vb2._to_data_y = (lambda v: 10.0 ** v) if y2_log else float
+    plot.scene().addItem(vb2)
+    plot.showAxis("right")
+    right = plot.getAxis("right")
+    right.linkToView(vb2)
+    vb2.setXLink(vb)
+
+    def _sync(*_a) -> None:
+        vb2.setGeometry(vb.sceneBoundingRect())
+
+    vb.sigResized.connect(_sync)
+    _sync()
+    _apply_axis(plot, vb2, "y", "right", spec, y2_scale, theme.foreground.hex())
+    return vb2
+
+
 def _apply_axis(plot, vb, axis: str, side: str, spec, eff_scale: str, color) -> None:
     if spec.label:
         plot.setLabel(side, spec.label, color=color)

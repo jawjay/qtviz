@@ -90,12 +90,14 @@ _LEGEND_POSITIONS = ("auto", "right", "top", "none")
 
 
 class OverlayOptions(Immutable):
-    """Shared-surface options for an `Overlay`: title, per-axis `AxisSpec` (`x`/`y`),
-    `aspect`, legend toggle + position, background, grid toggle ([D87]).
+    """Shared-surface options for an `Overlay`: title, per-axis `AxisSpec` (`x`/`y`,
+    plus the twin `y2`, [D88]), `aspect`, legend toggle + position, background,
+    grid toggle ([D87]).
 
     `x_label`/`y_label` are conveniences that populate `x.label`/`y.label` (so the
     canonical axis config has one home, `AxisSpec`); they remain readable as
-    properties for back-compat."""
+    properties for back-compat. `y2` configures the right-hand axis that appears
+    when any series element sets `axis="y2"` — it is ignored when none does."""
 
     def __init__(
         self,
@@ -105,6 +107,7 @@ class OverlayOptions(Immutable):
         y_label: str | None = None,
         x: AxisSpec | None = None,
         y: AxisSpec | None = None,
+        y2: AxisSpec | None = None,
         aspect: float | None = None,
         legend: bool = True,
         legend_position: str = "auto",
@@ -118,6 +121,7 @@ class OverlayOptions(Immutable):
         self.title = title
         self.x = x if x is not None else AxisSpec(label=x_label)
         self.y = y if y is not None else AxisSpec(label=y_label)
+        self.y2 = y2
         self.aspect = float(aspect) if aspect is not None else None
         self.legend = legend
         self.legend_position = legend_position

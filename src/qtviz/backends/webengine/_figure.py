@@ -479,9 +479,9 @@ _TRACE_BUILDERS: dict[type, Any] = {
 # [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "color_norm", "label"}),
+                        "color_norm", "label", "axis"}),
     Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
-                      "alpha", "label"}),
+                      "alpha", "label", "axis"}),
     Bars: frozenset({"color", "orient", "group", "mode", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
@@ -598,6 +598,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
     notes: list[dict] = []
     idx = 0  # data-series palette slot; annotations excluded
     barmode: str | None = None  # set by a grouped/stacked Bars ([D68])
+    y2_active = False  # any child on the twin axis ([D88])
     for element in _elements(node):
         if isinstance(element, RawFigure):
             raise IncompatibleOverlayError(
@@ -624,11 +625,23 @@ def build(node, theme) -> tuple[dict, list[str]]:
             )
         el_traces = builder(element, theme, idx)
         idx += 1
+        if getattr(element, "axis", "y") == "y2":  # twin axis ([D88])
+            for tr in el_traces:
+                tr["yaxis"] = "y2"
+            y2_active = True
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))
         if isinstance(element, Bars) and element.group is not None:
             barmode = "stack" if element.mode == "stacked" else "group"
-    layout = plotly_layout(theme, surf, x_scale, y_scale)
+    y2 = None
+    if y2_active:
+        from ...core.compose import resolve_scale  # noqa: PLC0415
+        from ...core.options import AxisSpec  # noqa: PLC0415
+
+        y2_spec = surf.y2 if surf.y2 is not None else AxisSpec()
+        y2 = (y2_spec, resolve_scale(y2_spec.scale, _SUPPORTED_SCALES,
+                                     axis="y2", backend="webengine"))
+    layout = plotly_layout(theme, surf, x_scale, y_scale, y2=y2)
     if barmode is not None:
         layout["barmode"] = barmode
     if shapes:
@@ -682,11 +695,13 @@ def _axis(grid: str, fg: str, axis: str, spec=None, eff_scale: str = "linear") -
     return d
 
 
-def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "linear") -> dict:
+def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "linear",
+                  y2=None) -> dict:
     """A Plotly layout carrying the qtviz Theme (axes/bg/font/palette) and, when
     given, the shared-surface options (`OverlayOptions` — title, per-axis labels /
     scale / limits / invert, aspect — axis-surface seam). The caller resolves the
-    effective scales (`effective_scales`)."""
+    effective scales (`effective_scales`); `y2` is `(AxisSpec, effective_scale)`
+    for the twin right-hand axis when any trace rides it ([D88])."""
     fg = _css(theme.foreground)
     bg = _css(theme.background)
     grid = _css(theme.grid)
@@ -716,4 +731,11 @@ def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "lin
     if surf is not None and surf.aspect is not None:
         layout["yaxis"]["scaleanchor"] = "x"
         layout["yaxis"]["scaleratio"] = surf.aspect
+    if y2 is not None:  # twin axis ([D88])
+        y2_spec, y2_scale = y2
+        d2 = _axis(grid, fg, "y2", y2_spec, y2_scale)
+        d2["overlaying"] = "y"
+        d2["side"] = "right"
+        d2["showgrid"] = False  # two grids on one surface fight
+        layout["yaxis2"] = d2
     return layout

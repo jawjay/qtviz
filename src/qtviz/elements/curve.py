@@ -17,13 +17,23 @@ _STEPS = ("pre", "mid", "post")
 _MARKERS = ("circle", "square", "triangle", "diamond", "cross")
 
 
+def check_axis(axis: str, scale: str, *, who: str) -> None:
+    """Twin-axis field guard ([D88]): `axis` names a known y axis, and a
+    datashaded element can't ride y2 (the raster pipeline is primary-axes)."""
+    if axis not in ("y", "y2"):
+        raise ValidationError(f"{who} axis must be 'y' or 'y2', got {axis!r}")
+    if axis == "y2" and scale == "datashader":
+        raise ValidationError(f"{who}: axis='y2' is not supported with scale='datashader'")
+
+
 class Curve(Element):
     """A connected line through ordered x/y points; optionally stepped
-    (`step=`) and/or with point markers (`marker=`) ([D84])."""
+    (`step=`) and/or with point markers (`marker=`) ([D84]); `axis="y2"`
+    puts it on the twin right-hand axis ([D88])."""
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "line_width", "line_style", "marker", "step",
-                           "alpha", "label")
+                           "alpha", "label", "axis")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -39,6 +49,7 @@ class Curve(Element):
         step: Literal["pre", "mid", "post"] | None = None,
         alpha: float = 1.0,
         label: str | None = None,
+        axis: Literal["y", "y2"] = "y",
         scale: Literal["native", "auto", "datashader"] = "native",
         backend_hint: str | None = None,
         id=None,
@@ -51,6 +62,7 @@ class Curve(Element):
             raise ValidationError(
                 f"Curve marker must be one of {_MARKERS} or None, got {marker!r}"
             )
+        check_axis(axis, scale, who="Curve")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color = color
@@ -60,6 +72,7 @@ class Curve(Element):
         self.step = step
         self.alpha = alpha
         self.label = label
+        self.axis = axis
         self.scale = scale
         self._validate_tabular()
         self._freeze()

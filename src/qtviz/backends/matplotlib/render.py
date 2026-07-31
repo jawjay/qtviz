@@ -67,17 +67,22 @@ class MplRenderHandle(RenderHandle):
     def capture_state(self) -> ViewState:
         if not self._surfaces:
             return ViewState()
-        ax = self._surfaces[0]["ax"]
-        return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()))
+        surf = self._surfaces[0]
+        ax, ax2 = surf["ax"], surf.get("y2_ax")
+        return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()),
+                         y2_range=tuple(ax2.get_ylim()) if ax2 is not None else None)
 
     def restore_state(self, state: ViewState) -> None:
         if not self._surfaces:
             return
-        ax = self._surfaces[0]["ax"]
+        surf = self._surfaces[0]
+        ax = surf["ax"]
         if state.x_range:
             ax.set_xlim(*state.x_range)
         if state.y_range:
             ax.set_ylim(*state.y_range)
+        if state.y2_range and surf.get("y2_ax") is not None:
+            surf["y2_ax"].set_ylim(*state.y2_range)
         self._fig.canvas.draw_idle()
 
     def select_bounds(self, ax_index: int, xmin, ymin, xmax, ymax) -> None:
@@ -172,16 +177,33 @@ class MatplotlibBackend:
         apply_surface(ax, surf, theme, x_scale, y_scale)
         surface_id = uuid.uuid4().hex
         selectables: list = []
-        surfaces.append({"ax": ax, "surface_id": surface_id, "selectables": selectables})
-        _events.connect_range(ax, surface_id, bus)
         children = node.children if isinstance(node, Overlay) else (node,)
+        # twin axis ([D88]): created when any series child asks for y2
+        ax2, y2_scale = None, "linear"
+        if any(getattr(el, "axis", "y") == "y2" for el in children):
+            from ...core.compose import resolve_scale  # noqa: PLC0415
+            from ...core.options import AxisSpec  # noqa: PLC0415
+            from ._surface import apply_y2  # noqa: PLC0415
+
+            y2_spec = surf.y2 if surf.y2 is not None else AxisSpec()
+            y2_scale = resolve_scale(y2_spec.scale, self.capabilities.scales,
+                                     axis="y2", backend=self.name)
+            ax2 = ax.twinx()
+            apply_y2(ax2, y2_spec, theme, y2_scale)
+        surfaces.append({"ax": ax, "surface_id": surface_id,
+                         "selectables": selectables, "y2_ax": ax2})
+        _events.connect_range(ax, surface_id, bus)
         indices = series_index_map(children)  # palette slots; annotations excluded
         ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self,
                             parent_axes=ax, x_scale=x_scale, y_scale=y_scale,
                             show_legend=surf.legend_enabled,
                             legend_position=surf.legend_position)
         for element, si in zip(children, indices, strict=True):
-            self._render_element(element, replace(ctx, series_index=si), selectables, natives)
+            on_y2 = getattr(element, "axis", "y") == "y2"
+            el_ctx = replace(ctx, series_index=si,
+                             parent_axes=ax2 if on_y2 else ax,
+                             y_scale=y2_scale if on_y2 else y_scale)
+            self._render_element(element, el_ctx, selectables, natives)
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:

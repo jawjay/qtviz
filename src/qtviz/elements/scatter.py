@@ -16,7 +16,7 @@ class Scatter(Element):
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker",
-                           "color_norm", "label")
+                           "color_norm", "label", "axis")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -33,6 +33,7 @@ class Scatter(Element):
         alpha: float = 1.0,
         color_norm: Literal["linear", "log"] = "linear",
         label: str | None = None,
+        axis: Literal["y", "y2"] = "y",
         scale: Literal["native", "auto", "datashader"] = "native",
         agg: Literal["auto", "count", "sum", "mean", "max", "min", "std", "any", "by"] = "auto",
         backend_hint: str | None = None,
@@ -41,10 +42,13 @@ class Scatter(Element):
         matplotlib_rasterized: bool = False,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
         check_exclusive(color, color_by, names=("color", "color_by"), who="Scatter")
         check_exclusive(size, size_by, names=("size", "size_by"), who="Scatter")
         check_alpha(alpha, who="Scatter")
         check_agg(agg, color_by, scale, who="Scatter")
+        check_axis(axis, scale, who="Scatter")
         if color_norm not in ("linear", "log"):
             raise ValidationError(f"color_norm must be 'linear' or 'log', got {color_norm!r}")
         if color_norm != "linear" and color_by is None:
@@ -56,6 +60,7 @@ class Scatter(Element):
         self.marker, self.alpha = marker, alpha
         self.color_norm = color_norm
         self.label = label
+        self.axis = axis
         self.scale = scale
         self.agg = agg
         self.pyqtgraph_use_opengl = pyqtgraph_use_opengl

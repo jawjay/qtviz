@@ -74,9 +74,16 @@ class PgRenderHandle(RenderHandle):
             return ViewState()
         (x0, x1), (y0, y1) = vb.viewRange()
         x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
+        y2_range = None
+        vb2 = getattr(self._plots[0], "_qtviz_vb2", None)
+        if vb2 is not None:  # twin axis ([D88])
+            (_, _), (b0, b1) = vb2.viewRange()
+            y2_log = getattr(vb2, "y_log", False)
+            y2_range = (delog(b0, y2_log), delog(b1, y2_log))
         return ViewState(
             x_range=(delog(x0, x_log), delog(x1, x_log)),
             y_range=(delog(y0, y_log), delog(y1, y_log)),
+            y2_range=y2_range,
         )
 
     def restore_state(self, state: ViewState) -> None:
@@ -92,6 +99,12 @@ class PgRenderHandle(RenderHandle):
             vb.setXRange(*x_rng, padding=0)
         if y_rng:
             vb.setYRange(*y_rng, padding=0)
+        vb2 = getattr(self._plots[0], "_qtviz_vb2", None) if self._plots else None
+        if vb2 is not None and state.y2_range is not None:
+            y2_rng = (log_lim(state.y2_range, axis="y2", backend="pyqtgraph")
+                      if getattr(vb2, "y_log", False) else state.y2_range)
+            if y2_rng:
+                vb2.setYRange(*y2_rng, padding=0)
 
     def _dispose_rasters(self) -> None:
         for plot in self._plots:
@@ -226,13 +239,30 @@ class PyQtGraphBackend:
         apply_surface(plot, surf, theme, x_scale, y_scale)
         plots.append(plot)
         children = node.children if isinstance(node, Overlay) else (node,)
+        # twin axis ([D88]): created when any series child asks for y2
+        y2_host, y2_scale = None, "linear"
+        if any(getattr(el, "axis", "y") == "y2" for el in children):
+            from ...core.compose import resolve_scale  # noqa: PLC0415
+            from ...core.options import AxisSpec  # noqa: PLC0415
+            from ._surface import _Y2Host, make_y2  # noqa: PLC0415
+
+            y2_spec = surf.y2 if surf.y2 is not None else AxisSpec()
+            y2_scale = resolve_scale(y2_spec.scale, self.capabilities.scales,
+                                     axis="y2", backend=self.name)
+            vb2 = make_y2(plot, vb, y2_spec, theme, x_scale, y2_scale)
+            plot._qtviz_vb2 = vb2
+            y2_host = _Y2Host(plot, vb2)
         indices = series_index_map(children)  # palette slots; annotations excluded
         ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self,
                             parent_axes=plot, x_scale=x_scale, y_scale=y_scale,
                             show_legend=surf.legend_enabled,
                             legend_position=surf.legend_position)
         for element, si in zip(children, indices, strict=True):
-            self._render_element(element, replace(ctx, series_index=si), natives)
+            on_y2 = getattr(element, "axis", "y") == "y2"
+            el_ctx = replace(ctx, series_index=si,
+                             parent_axes=y2_host if on_y2 else plot,
+                             y_scale=y2_scale if on_y2 else y_scale)
+            self._render_element(element, el_ctx, natives)
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:

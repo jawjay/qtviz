@@ -29,6 +29,14 @@ the popular libraries, declaratively" ([D83]).
   worked); categorical tick labels move to the y axis.
 - **Surface grid toggle ([D87]).** `OverlayOptions(grid=False)` turns the
   grid off on every backend (it was permanently on).
+- **Twin y axes ([D88]).** `Curve`/`Scatter` gain `axis="y2"`; the surface
+  gains `OverlayOptions(y2=AxisSpec(...))` to configure the right-hand axis
+  that appears when any child asks for it (label, scale, lim, invert,
+  tick_format all honored). matplotlib `twinx`, pyqtgraph x-linked twin
+  `ViewBox` driven by the right `AxisItem`, Plotly `yaxis2`. `ViewState`
+  grows an additive `y2_range` so twin ranges survive rebuilds and backend
+  switches; events stay primary-axes (y2 elements are not brush-selectable —
+  documented). `axis="y2"` with `scale="datashader"` raises.
 - **Tick formatting wired ([D86]).** `AxisSpec(tick_format=…)` — reserved
   since 0.3 — now formats ticks on all three backends: a Python format-spec
   string (`".2f"`, `",d"`, `".0%"`, …) or `"eng"` (SI prefixes). matplotlib

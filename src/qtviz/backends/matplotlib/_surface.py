@@ -51,3 +51,23 @@ def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
         ax.xaxis.set_major_formatter(_tick_formatter(surf.x.tick_format))
     if surf.y.tick_format != "auto":
         ax.yaxis.set_major_formatter(_tick_formatter(surf.y.tick_format))
+
+
+def apply_y2(ax2, spec, theme, y2_scale: str) -> None:
+    """Configure the twin right-hand axes ([D88]): themed like the primary but
+    grid-less (two grids on one surface fight), carrying its own `AxisSpec`."""
+    fg = theme.foreground.mpl()
+    ax2.grid(False)
+    ax2.tick_params(colors=fg)
+    ax2.yaxis.label.set_color(fg)
+    ax2.spines["right"].set_color(fg)
+    if spec.label:
+        ax2.set_ylabel(spec.label, color=fg, fontsize=theme.font_size)
+    if y2_scale != "linear":
+        ax2.set_yscale(y2_scale)
+    if spec.lim is not None:
+        ax2.set_ylim(*spec.lim)
+    if spec.invert:
+        ax2.invert_yaxis()
+    if spec.tick_format != "auto":
+        ax2.yaxis.set_major_formatter(_tick_formatter(spec.tick_format))
