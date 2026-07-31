@@ -131,7 +131,9 @@ def test_mpl_time_axis_plots_seconds_with_calendar_labels(qtbot):
     fmt = handle.axes[0].xaxis.get_major_formatter()
     assert fmt(_EPOCH0, 0) == "01-01"  # 10-day span → %m-%d granularity
     handle.axes[0].set_xlim(_EPOCH0, _EPOCH0 + 1800)  # zoom to 30 min
-    assert fmt(_EPOCH0, 0) == "00:00:00"  # granularity follows the span
+    assert fmt(_EPOCH0, 0) == "00:00"  # granularity follows the tick ladder ([D104])
+    handle.axes[0].set_xlim(_EPOCH0, _EPOCH0 + 20)  # zoom to seconds
+    assert fmt(_EPOCH0, 0) == "00:00:00"
 
 
 @pytest.mark.tier2

@@ -22,19 +22,38 @@ def _tick_formatter(spec: str):
 
 
 def _time_formatter(ax, axis: str):
-    """Adaptive calendar labels for a time axis ([D94]): values are epoch
-    seconds; the strftime granularity follows the visible span at draw time."""
+    """Calendar labels for a time axis ([D94]/[D104]): values are epoch
+    seconds; the strftime spec is the one `time_ticks` chose for the visible
+    span, so labels and tick positions always agree."""
     from matplotlib.ticker import FuncFormatter  # noqa: PLC0415
 
-    from ...core._time import format_time_auto  # noqa: PLC0415
+    from ...core._time import format_time, time_ticks  # noqa: PLC0415
 
     limits = ax.get_xlim if axis == "x" else ax.get_ylim
 
     def fmt(v, _pos) -> str:
         lo, hi = limits()
-        return format_time_auto(v, hi - lo)
+        return format_time(v, time_ticks(lo, hi)[1])
 
     return FuncFormatter(fmt)
+
+
+def _time_locator():
+    """Calendar-aligned major ticks from the shared core ladder ([D104]) —
+    month/day/hour boundaries instead of MaxNLocator's arbitrary seconds."""
+    from matplotlib.ticker import Locator  # noqa: PLC0415
+
+    from ...core._time import time_ticks  # noqa: PLC0415
+
+    class _CalendarLocator(Locator):
+        def __call__(self):
+            lo, hi = self.axis.get_view_interval()
+            return self.tick_values(lo, hi)
+
+        def tick_values(self, vmin, vmax):
+            return list(time_ticks(float(vmin), float(vmax))[0])
+
+    return _CalendarLocator()
 
 
 def _apply_ticks(ax, axis: str, spec) -> None:
@@ -68,10 +87,16 @@ def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
         ax.set_xscale(x_scale)
     if y_scale in ("log", "symlog"):
         ax.set_yscale(y_scale)
-    if x_scale == "time" and surf.x.tick_format == "auto":
-        ax.xaxis.set_major_formatter(_time_formatter(ax, "x"))
-    if y_scale == "time" and surf.y.tick_format == "auto":
-        ax.yaxis.set_major_formatter(_time_formatter(ax, "y"))
+    if x_scale == "time":
+        if surf.x.ticks is None:
+            ax.xaxis.set_major_locator(_time_locator())
+        if surf.x.tick_format == "auto":
+            ax.xaxis.set_major_formatter(_time_formatter(ax, "x"))
+    if y_scale == "time":
+        if surf.y.ticks is None:
+            ax.yaxis.set_major_locator(_time_locator())
+        if surf.y.tick_format == "auto":
+            ax.yaxis.set_major_formatter(_time_formatter(ax, "y"))
     if surf.x.lim is not None:
         ax.set_xlim(*surf.x.lim)
     if surf.y.lim is not None:
@@ -104,8 +129,11 @@ def apply_y2(ax2, spec, theme, y2_scale: str) -> None:
         ax2.set_ylabel(spec.label, color=fg, fontsize=theme.font_size)
     if y2_scale in ("log", "symlog"):  # "time" stays linear ([D94])
         ax2.set_yscale(y2_scale)
-    if y2_scale == "time" and spec.tick_format == "auto":
-        ax2.yaxis.set_major_formatter(_time_formatter(ax2, "y"))
+    if y2_scale == "time":
+        if spec.ticks is None:
+            ax2.yaxis.set_major_locator(_time_locator())
+        if spec.tick_format == "auto":
+            ax2.yaxis.set_major_formatter(_time_formatter(ax2, "y"))
     if spec.lim is not None:
         ax2.set_ylim(*spec.lim)
     if spec.invert:
