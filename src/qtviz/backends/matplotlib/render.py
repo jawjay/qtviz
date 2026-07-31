@@ -129,12 +129,19 @@ class MplRenderHandle(RenderHandle):
                 brush.set_active(False)  # live selector on a deleted canvas
                 brush.disconnect_events()  # segfaults in queued Qt events
                 s["ax"]._qtviz_brush = None
+        import contextlib  # noqa: PLC0415
+
         self.event_bus.dispose()
-        self._fig.clf()
+        # cancel any queued idle draw first so fig.clf()'s stale-callback
+        # can't schedule one on a canvas that is mid-destruction
+        self._fig.canvas._draw_pending = False
+        with contextlib.suppress(RuntimeError):
+            self._fig.clf()
         w = self.widget
         if w is not None:
-            w.setParent(None)
-            w.deleteLater()
+            with contextlib.suppress(RuntimeError):  # C++ half may already be gone
+                w.setParent(None)
+                w.deleteLater()
         self.widget = None
 
 
@@ -162,6 +169,15 @@ class MatplotlibBackend:
         node = resolve_node(node)  # accessors → role-keyed eager refs (D14)
         fig = Figure()
         canvas = FigureCanvasQTAgg(fig)
+        # A queued draw_idle outliving the canvas is the classic PySide crash
+        # (undisposed handles: Qt deletes the widget; a pending _draw_idle —
+        # or a figure stale-callback re-arming one — then touches freed C++).
+        # `destroyed` fires while the Python wrapper is still valid: shadow the
+        # draw methods with no-ops so nothing can render a dead canvas.
+        _noop = lambda *a, **k: None  # noqa: E731
+        canvas.destroyed.connect(
+            lambda *_, c=canvas: c.__dict__.update(
+                _draw_pending=False, draw=_noop, draw_idle=_noop, _draw_idle=_noop))
         if parent is not None:
             canvas.setParent(parent)
         apply_theme_fig(fig, theme)

@@ -111,12 +111,23 @@ class RenderHandle:
         `update()` or a rebuild — degradation is explicit, never silent)."""
         return False
 
+    def release(self) -> None:
+        """Dispose non-widget resources (bus throttles, raster controllers,
+        selector hooks) when Qt is already tearing the widget tree down —
+        View destruction. Re-parenting children mid-destruction is undefined
+        behavior, so the widget references are dropped, not touched."""
+        self.widget = None
+        self.dispose()
+
     def dispose(self) -> None:
+        import contextlib  # noqa: PLC0415
+
         self.event_bus.dispose()
         w = self.widget
         if w is not None:
-            w.setParent(None)
-            w.deleteLater()
+            with contextlib.suppress(RuntimeError):  # C++ half may already be gone
+                w.setParent(None)
+                w.deleteLater()
         self.widget = None
 
     def export(self, fmt: str, path) -> Path:
@@ -194,13 +205,21 @@ class CompositeRenderHandle(RenderHandle):
                 return item
         return None
 
+    def release(self) -> None:
+        for h in self._children:
+            h.widget = None
+        super().release()
+
     def dispose(self) -> None:
+        import contextlib  # noqa: PLC0415
+
         for h in self._children:
             h.dispose()
         w = self.widget
         if w is not None:
-            w.setParent(None)
-            w.deleteLater()
+            with contextlib.suppress(RuntimeError):
+                w.setParent(None)
+                w.deleteLater()
         self.widget = None
 
     def export(self, fmt: str, path) -> Path:

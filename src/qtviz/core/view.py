@@ -77,41 +77,43 @@ def _is_live_ref(ref) -> bool:
     return callable(getattr(ref, "subscribe", None)) and callable(getattr(ref, "version", None))
 
 
-class _StreamBinding(QObject):
+class _StreamBinding:
     """Live-data glue ([D77], resolves [D7]): one subscription per distinct live
     ref in the *original* (unresolved) root — the resolved tree holds snapshots.
-    Appends arrive on any thread; the queued `notified` signal marshals to the
-    GUI thread, where a single-shot 0 ms timer coalesces a burst into **one
-    refresh per event-loop tick**. A refresh re-resolves the live elements and
-    writes them in place (`handle.set_element_data`); if any element can't take
-    the fast path, it degrades explicitly — `handle.update` (webengine's
-    Plotly-react diff) or a full View rebuild (matplotlib)."""
-
-    notified = Signal()
+    Appends arrive on any thread; the View's queued `_stream_notified` signal
+    marshals to the GUI thread, where the View's single-shot 0 ms timer
+    coalesces a burst into **one refresh per event-loop tick**. Deliberately
+    NOT a QObject: bindings churn at every rebuild, and queued/timer delivery
+    to a just-disposed QObject mis-resolves its slot ("Slot not found") — all
+    Qt plumbing lives on the View, which never churns. A refresh re-resolves
+    the live elements and writes them in place (`handle.set_element_data`); if
+    any element can't take the fast path, it degrades explicitly —
+    `handle.update` (webengine's Plotly-react diff) or a full View rebuild
+    (matplotlib)."""
 
     def __init__(self, view: View, root) -> None:
-        super().__init__(view)
         from .compose import _elements_of  # noqa: PLC0415
 
         self._view = view
         self._elements = [el for el in _elements_of(root)
                           if _is_live_ref(getattr(el, "data", None))]
         refs = {id(el.data): el.data for el in self._elements}
+        self._disposed = False
         self._subs = [ref.subscribe(self._on_append) for ref in refs.values()]
-        self._timer = QTimer(self)
-        self._timer.setSingleShot(True)
-        self._timer.timeout.connect(self._refresh)
-        self.notified.connect(self._schedule)
 
     @property
     def live(self) -> bool:
         return bool(self._elements)
 
     def _on_append(self, _ref) -> None:
-        self.notified.emit()  # any thread → queued onto the GUI event loop
+        import contextlib  # noqa: PLC0415
 
-    def _schedule(self) -> None:
-        self._timer.start(0)  # coalesce: one refresh per tick ([D7]/[D40])
+        # any thread → queued onto the GUI event loop via the *View's* signal;
+        # the View outlives every binding, so a queued event can't land on a
+        # churned receiver. A disposal can still race an in-flight append, and
+        # emitting on a dead QObject is fatal — hence the suppress.
+        with contextlib.suppress(RuntimeError):
+            self._view._stream_notified.emit()
 
     def _refresh(self) -> None:
         handle = self._view.handle
@@ -133,13 +135,20 @@ class _StreamBinding(QObject):
             self._view._rebuild()  # the honest slow path (mpl: streaming=False)
 
     def dispose(self) -> None:
-        self._timer.stop()
+        self._disposed = True  # a queued notification may still land — ignore it
         for sub in self._subs:
             sub.dispose()
         self._subs = []
 
 
 class View(QWidget):
+    # Cross-thread marshal for live-data appends ([D77]): emitted (queued) from
+    # any thread, delivered here — the stable receiver — then routed to the
+    # *current* binding. Bindings are rebuilt at every install; queued events
+    # addressed to a disposed one mis-resolve ("Slot not found"), the View never
+    # churns.
+    _stream_notified = Signal()
+
     def __init__(self, root, *, backend="auto", theme: Theme | None = None,
                  toolbar: bool = False, parent=None) -> None:
         super().__init__(parent)
@@ -156,9 +165,26 @@ class View(QWidget):
         self._pending_state = None
         self._build_id = 0
         self._connected = False
-        self._reactive_timer = None
+        self._reactive_timer: QTimer | None = None
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
+        self._stream_notified.connect(self._on_stream_notified)
+        self._stream_timer = QTimer(self)  # coalesces appends: one refresh/tick
+        self._stream_timer.setSingleShot(True)
+        self._stream_timer.timeout.connect(self._on_stream_tick)
+        # Lifecycle hygiene: dispose the active handle (event-bus throttles,
+        # raster controllers, selector hooks) when the View is destroyed —
+        # replaced handles are already disposed at swap; the LAST one wasn't,
+        # leaving parentless QTimers behind widget deletion (teardown races).
+        box = self._handle_box = [None]
+
+        def _release_last(*_a, _box=box) -> None:
+            handle = _box[0]
+            _box[0] = None
+            if handle is not None:
+                handle.release()  # Qt owns the widget teardown at this point
+
+        self.destroyed.connect(_release_last)
         # Reactive root (spec §9 / D38): a Signal[Node] re-renders the View on change.
         if _is_reactive(root):
             self._root = root.get()
@@ -167,6 +193,17 @@ class View(QWidget):
         else:
             self._root = root
         self._build()
+
+    @Slot()
+    def _on_stream_notified(self) -> None:
+        if self._binding is not None and not self._binding._disposed:
+            self._stream_timer.start(0)  # coalesce ([D7]/[D40])
+
+    @Slot()
+    def _on_stream_tick(self) -> None:
+        b = self._binding
+        if b is not None and not b._disposed:
+            b._refresh()
 
     def _backend_name(self) -> str:
         c = self._backend_choice
@@ -207,6 +244,7 @@ class View(QWidget):
         self._install(self._render(resolved))
 
     def _install(self, handle) -> None:
+        self._handle_box[0] = handle
         if self._toolbar_widget is not None:  # belongs to the outgoing canvas
             self._layout.removeWidget(self._toolbar_widget)
             self._toolbar_widget.setParent(None)
