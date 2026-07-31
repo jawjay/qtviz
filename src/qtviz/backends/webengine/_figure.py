@@ -145,16 +145,29 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
     }]
 
 
+# qtviz step vocabulary → Plotly line shapes ([D84]).
+_LINE_SHAPE = {"pre": "vh", "mid": "hvh", "post": "hv"}
+
+
 def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
     d = element.data
-    line = {"color": _css(_element_color(element, theme, idx)), "width": element.line_width,
+    color = _css(_element_color(element, theme, idx))
+    line = {"color": color, "width": element.line_width,
             "dash": _DASH.get(element.line_style, "solid")}
-    return [{
-        "type": "scattergl", "mode": "lines",
+    if element.step is not None:
+        line["shape"] = _LINE_SHAPE[element.step]
+    trace = {
+        # scattergl only draws linear/hv line shapes — stepped curves take the
+        # SVG trace (step charts are small; huge data goes through datashader)
+        "type": "scatter" if element.step is not None else "scattergl",
+        "mode": "lines+markers" if element.marker is not None else "lines",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
         "line": line, "opacity": element.alpha, "name": element.label or element.id,
         "showlegend": element.label is not None,
-    }]
+    }
+    if element.marker is not None:
+        trace["marker"] = {"symbol": _SYMBOL[element.marker], "color": color, "size": 7}
+    return [trace]
 
 
 def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
@@ -183,10 +196,13 @@ def _group_bars_traces(element: Bars, theme) -> list[dict]:
                              np.asarray(d.series("y"), dtype="float64"),
                              np.asarray(d.series("group")))
     numeric = np.issubdtype(xs.dtype, np.number)
-    x = _floats(xs) if numeric else [str(c) for c in xs]
+    cats = _floats(xs) if numeric else [str(c) for c in xs]
     swatches = category_swatches(gs, theme.palette)
+    horizontal = element.orient == "h"  # categories on y, lengths on x ([D85])
     return [{
-        "type": "bar", "x": x, "y": mat[gi],
+        "type": "bar",
+        **({"x": mat[gi], "y": cats, "orientation": "h"} if horizontal
+           else {"x": cats, "y": mat[gi]}),
         "marker": {"color": _css(swatches[gi])},
         "name": str(g), "showlegend": True,
     } for gi, g in enumerate(gs)]
@@ -360,8 +376,9 @@ _TRACE_BUILDERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label"}),
-    Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Bars: frozenset({"color", "orient", "group", "label"}),
+    Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
+                      "alpha", "label"}),
+    Bars: frozenset({"color", "orient", "group", "mode", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset(),                          # colorscale hardcoded Viridis
     Heatmap: frozenset({"aggregator"}),          # colorscale still hardcoded
@@ -578,6 +595,9 @@ def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "lin
         from ...core.color import Color  # noqa: PLC0415
 
         layout["plot_bgcolor"] = _css(Color(surf.background))  # plot area only
+    if surf is not None and not surf.grid:  # ([D87])
+        layout["xaxis"]["showgrid"] = False
+        layout["yaxis"]["showgrid"] = False
     if surf is not None and surf.legend_position == "top":
         layout["legend"] = {"orientation": "h", "x": 0.0, "y": 1.12}
     if surf is not None and surf.title:

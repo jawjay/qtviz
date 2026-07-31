@@ -20,7 +20,7 @@ class Bars(Element):
     ([D68]); `mode` is meaningful only with `group`."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("group", "color", "orient", "label")
+    RECOMMENDED_OPTIONS = ("group", "mode", "color", "orient", "label")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -40,6 +40,8 @@ class Bars(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         if mode not in _MODES:
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")
+        if mode != "grouped" and group is None:
+            raise ValidationError(f"Bars mode={mode!r} requires group= (it stacks the groups)")
         check_exclusive(color, group, names=("color", "group"), who="Bars")
         self.data = as_data_ref(data)
         self.x, self.y = x, y

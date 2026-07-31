@@ -87,7 +87,7 @@ _LEGEND_POSITIONS = ("auto", "right", "top", "none")
 
 class OverlayOptions(Immutable):
     """Shared-surface options for an `Overlay`: title, per-axis `AxisSpec` (`x`/`y`),
-    `aspect`, legend toggle + position, background.
+    `aspect`, legend toggle + position, background, grid toggle ([D87]).
 
     `x_label`/`y_label` are conveniences that populate `x.label`/`y.label` (so the
     canonical axis config has one home, `AxisSpec`); they remain readable as
@@ -105,6 +105,7 @@ class OverlayOptions(Immutable):
         legend: bool = True,
         legend_position: str = "auto",
         background: ColorSpec | None = None,
+        grid: bool = True,
     ) -> None:
         if legend_position not in _LEGEND_POSITIONS:
             raise ValidationError(
@@ -117,6 +118,7 @@ class OverlayOptions(Immutable):
         self.legend = legend
         self.legend_position = legend_position
         self.background = background
+        self.grid = bool(grid)
         self._freeze()
 
     @property

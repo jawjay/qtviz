@@ -27,6 +27,8 @@ def apply_surface(plot, surf, theme, x_scale: str, y_scale: str) -> None:
     _apply_axis(plot, vb, "y", "left", surf.y, y_scale, color)
     if surf.aspect is not None:
         vb.setAspectLocked(True, surf.aspect)
+    if not surf.grid:
+        plot.showGrid(x=False, y=False)  # override the themed default ([D87])
 
 
 def _apply_axis(plot, vb, axis: str, side: str, spec, eff_scale: str, color) -> None:

@@ -112,16 +112,45 @@ def render_scatter(element: Scatter, ctx):
     return item
 
 
+# qtviz step vocabulary → pg stepMode ([D84]): pg assigns y[i] to the named
+# edge of the [x[i], x[i+1]) interval, so data "post" is pg "left".
+_STEP_PG = {"pre": "right", "mid": "center", "post": "left"}
+
+
+def _mid_edges(x: np.ndarray) -> np.ndarray:
+    """Bin edges for a mid-step curve (pg stepMode="center" wants n+1 edges):
+    midpoints between samples, end bins extended symmetrically."""
+    if len(x) < 2:
+        return np.array([x[0] - 0.5, x[0] + 0.5]) if len(x) else np.array([0.0, 1.0])
+    mid = (x[:-1] + x[1:]) / 2.0
+    return np.concatenate(([2 * x[0] - mid[0]], mid, [2 * x[-1] - mid[-1]]))
+
+
 def render_curve(element: Curve, ctx):
     d = element.data
     color = _color(element.color, ctx.theme, ctx.series_index).qt()
     color.setAlphaF(element.alpha)
     pen = pg.mkPen(color, width=element.line_width, style=_PEN_STYLE[element.line_style])
     x_log, y_log = _xy_log(ctx)
+    x, y = _col(d, "x"), _col(d, "y")
     # connect="finite" breaks the line at NaN — the mask logify leaves for
     # non-positive values under log (and any NaN already in the data).
-    item = pg.PlotCurveItem(x=logify(_col(d, "x"), x_log), y=logify(_col(d, "y"), y_log),
-                            pen=pen, connect="finite")
+    kwargs: dict = {"pen": pen, "connect": "finite"}
+    if element.step is not None:
+        kwargs["stepMode"] = _STEP_PG[element.step]
+        if element.step == "mid":
+            x = _mid_edges(x)  # edges in data space, then logified below
+    lx, ly = logify(x, x_log), logify(y, y_log)
+    if element.marker is not None and element.step != "mid":
+        item = pg.PlotDataItem(x=lx, y=ly, symbol=_MARKER[element.marker],
+                               symbolBrush=color, symbolPen=None, symbolSize=7, **kwargs)
+    else:
+        item = pg.PlotCurveItem(x=lx, y=ly, **kwargs)
+        if element.marker is not None:  # mid-step: symbols sit at the data points,
+            dots = pg.ScatterPlotItem(   # not the edges — a separate points item
+                x=logify(_col(d, "x"), x_log), y=ly,
+                symbol=_MARKER[element.marker], brush=color, pen=None, size=7)
+            ctx.parent_axes.addItem(dots)
     ctx.parent_axes.addItem(item)
     return item
 
@@ -137,10 +166,14 @@ def render_bars(element: Bars, ctx):
         x = np.arange(len(height), dtype="float64")  # categorical → indices
     brush = _color(element.color, ctx.theme, ctx.series_index).qt()
     x_log, y_log = _xy_log(ctx)
-    # under log-y bar *heights* are log10'd (baseline sits at data 1); a proper
+    # under log the bar *lengths* are log10'd (baseline sits at data 1); a proper
     # clipped-baseline treatment is deferred with the rest of the bar vocabulary.
-    item = pg.BarGraphItem(x=logify(x, x_log), height=logify(height, y_log),
-                           width=0.6, brush=brush)
+    if element.orient == "h":  # positions on y, lengths on x ([D85])
+        item = pg.BarGraphItem(y=logify(x, y_log), x0=0.0, x1=logify(height, x_log),
+                               height=0.6, brush=brush)
+    else:
+        item = pg.BarGraphItem(x=logify(x, x_log), height=logify(height, y_log),
+                               width=0.6, brush=brush)
     ctx.parent_axes.addItem(item)
     return item
 
@@ -175,27 +208,32 @@ def _render_group_bars(element: Bars, ctx):
     xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
                              np.asarray(d.series("group")))
     pos, numeric = _bar_positions(xs)
+    horizontal = element.orient == "h"  # positions on y, lengths on x ([D85])
     if not numeric:
-        ctx.parent_axes.getAxis("bottom").setTicks(
+        ctx.parent_axes.getAxis("left" if horizontal else "bottom").setTicks(
             [[(float(i), str(c)) for i, c in enumerate(xs)]]
         )
     swatches = category_swatches(gs, ctx.theme.palette)
-    _x_log, y_log = _xy_log(ctx)
+    x_log, y_log = _xy_log(ctx)
+    val_log = x_log if horizontal else y_log
     items = []
     if element.mode == "grouped":
         total_w = 0.8
         w = total_w / len(gs)
         for gi in range(len(gs)):
             offs = pos - total_w / 2 + w / 2 + gi * w
-            items.append(pg.BarGraphItem(x=offs, height=logify(mat[gi], y_log),
-                                         width=w * 0.95, brush=swatches[gi].qt()))
+            vals = logify(mat[gi], val_log)
+            geo = ({"y": offs, "x0": 0.0, "x1": vals, "height": w * 0.95} if horizontal
+                   else {"x": offs, "height": vals, "width": w * 0.95})
+            items.append(pg.BarGraphItem(brush=swatches[gi].qt(), **geo))
     else:  # stacked
         bases = np.zeros(len(xs))
         for gi in range(len(gs)):
             tops = bases + mat[gi]
-            y0, y1 = _log_base_top(bases, tops, y_log)
-            items.append(pg.BarGraphItem(x=pos, y0=y0, y1=y1, width=0.6,
-                                         brush=swatches[gi].qt()))
+            v0, v1 = _log_base_top(bases, tops, val_log)
+            geo = ({"y": pos, "x0": v0, "x1": v1, "height": 0.6} if horizontal
+                   else {"x": pos, "y0": v0, "y1": v1, "width": 0.6})
+            items.append(pg.BarGraphItem(brush=swatches[gi].qt(), **geo))
             bases = tops
     for item in items:
         ctx.parent_axes.addItem(item)
@@ -594,8 +632,9 @@ RENDERERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label"}),
-    Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Bars: frozenset({"color", "group", "label"}),                  # not orient
+    Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
+                      "alpha", "label"}),
+    Bars: frozenset({"color", "group", "mode", "orient", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset(),                                            # colormap/interpolation unwired
     Heatmap: frozenset({"aggregator"}),                            # colormap unwired

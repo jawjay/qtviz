@@ -29,6 +29,7 @@ _PICKING = {"native", "approximate", "none"}
 # they're covered by the render tests rather than this warn/honor matrix.
 _NON_DEFAULT = {
     "marker": "square", "alpha": 0.5, "line_style": "dashed", "line_width": 3.0,
+    "step": "post",  # ("mode" is skipped: stacking requires group=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
     "group": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,
     "color": "#ff0000", "size": 10.0, "label": "series-A", "anchor": "left",

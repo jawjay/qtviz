@@ -115,8 +115,10 @@ class PgRenderHandle(RenderHandle):
         import numpy as np  # noqa: PLC0415
 
         item = self._natives.get(element_id)
-        if not isinstance(item, (pg.ScatterPlotItem, pg.PlotCurveItem)):
+        if not isinstance(item, (pg.ScatterPlotItem, pg.PlotCurveItem, pg.PlotDataItem)):
             return False
+        if getattr(item, "opts", {}).get("stepMode") == "center":
+            return False  # center-step wants n+1 edges — fall back to a re-render
         if set(arrays) != {"x", "y"}:  # styling channels need a real re-render
             return False
         x = np.asarray(arrays["x"], dtype="float64")

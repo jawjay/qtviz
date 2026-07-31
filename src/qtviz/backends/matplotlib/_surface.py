@@ -38,3 +38,5 @@ def apply_surface(ax, surf, theme, x_scale: str, y_scale: str) -> None:
         ax.invert_yaxis()
     if surf.aspect is not None:
         ax.set_aspect(surf.aspect)
+    if not surf.grid:
+        ax.grid(False)  # override the themed default ([D87])

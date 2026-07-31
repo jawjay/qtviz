@@ -33,6 +33,8 @@ from ...elements import (
 _LINE_STYLE = {"solid": "-", "dashed": "--", "dotted": ":", "dashdot": "-."}
 # qtviz marker vocabulary → matplotlib marker codes ([D51]).
 _MARKER = {"circle": "o", "square": "s", "triangle": "^", "diamond": "D", "cross": "X"}
+# qtviz step vocabulary → matplotlib drawstyle ([D84]).
+_STEP = {"pre": "steps-pre", "mid": "steps-mid", "post": "steps-post"}
 
 
 def _color(spec, theme, idx: int = 0) -> Color:
@@ -144,8 +146,19 @@ def render_curve(element: Curve, ctx):
         _col(element.data, "x"), _col(element.data, "y"),
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
         lw=element.line_width, ls=_LINE_STYLE[element.line_style], alpha=element.alpha,
+        drawstyle=_STEP[element.step] if element.step else "default",
+        marker=_MARKER[element.marker] if element.marker else None, markersize=6,
     )
     return line
+
+
+def _bar_fns(ax, orient: str):
+    """The axis-swapped trio for one bar orientation ([D85]): the draw call
+    (`bar`/`barh` — both take (positions, lengths) positionally), the kwarg
+    naming the bar *thickness*, and the categorical tick setter."""
+    if orient == "h":
+        return ax.barh, "height", ax.set_yticks
+    return ax.bar, "width", ax.set_xticks
 
 
 def render_bars(element: Bars, ctx):
@@ -156,13 +169,15 @@ def render_bars(element: Bars, ctx):
         x = _col(element.data, "x")
     except (ValueError, TypeError):
         x = np.arange(len(height), dtype="float64")
-    return ctx.parent_axes.bar(
-        x, height, color=_color(element.color, ctx.theme, ctx.series_index).mpl())
+    bar, thick, _ticks = _bar_fns(ctx.parent_axes, element.orient)
+    return bar(x, height, **{thick: 0.8},
+               color=_color(element.color, ctx.theme, ctx.series_index).mpl())
 
 
 def _render_group_bars(element: Bars, ctx):
-    """One bar series per group ([D68]) — offset (grouped) or bottom-stacked;
-    palette per group in category order + a categorical group legend."""
+    """One bar series per group ([D68]) — offset (grouped) or base-stacked, in
+    either orientation ([D85]); palette per group in category order + a
+    categorical group legend."""
     from ...core._stats import group_bars  # noqa: PLC0415
     from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
 
@@ -172,21 +187,23 @@ def _render_group_bars(element: Bars, ctx):
     numeric = np.issubdtype(xs.dtype, np.number)
     pos = xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")
     ax = ctx.parent_axes
+    bar, thick, set_ticks = _bar_fns(ax, element.orient)
+    base_kw = "left" if element.orient == "h" else "bottom"
     if not numeric:
-        ax.set_xticks(pos, [str(c) for c in xs])
+        set_ticks(pos, [str(c) for c in xs])
     swatches = category_swatches(gs, ctx.theme.palette)
     artists = []
     if element.mode == "grouped":
         total_w = 0.8
         w = total_w / len(gs)
         for gi in range(len(gs)):
-            artists.append(ax.bar(pos - total_w / 2 + w / 2 + gi * w, mat[gi],
-                                  width=w * 0.95, color=swatches[gi].mpl()))
+            artists.append(bar(pos - total_w / 2 + w / 2 + gi * w, mat[gi],
+                               **{thick: w * 0.95}, color=swatches[gi].mpl()))
     else:  # stacked
         bases = np.zeros(len(xs))
         for gi in range(len(gs)):
-            artists.append(ax.bar(pos, mat[gi], width=0.6, bottom=bases,
-                                  color=swatches[gi].mpl()))
+            artists.append(bar(pos, mat[gi], **{thick: 0.6, base_kw: bases},
+                               color=swatches[gi].mpl()))
             bases = bases + mat[gi]
     if ctx.show_legend:
         legend = Legend(kind="categorical", title=element.group,
@@ -483,8 +500,9 @@ RENDERERS: dict[type, Any] = {
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
                         "color_norm", "label"}),
-    Curve: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Bars: frozenset({"color", "group", "label"}),                # not orient
+    Curve: frozenset({"color", "line_width", "line_style", "marker", "step",
+                      "alpha", "label"}),
+    Bars: frozenset({"color", "group", "mode", "orient", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
     Image: frozenset({"colormap", "interpolation"}),
     Heatmap: frozenset({"colormap", "aggregator"}),

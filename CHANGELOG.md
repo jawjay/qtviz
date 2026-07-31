@@ -6,6 +6,25 @@ All notable changes to qtviz are documented here. The format follows
 
 ## [Unreleased]
 
+Parity program ([`design/parity-program.md`](design/parity-program.md)) — the
+post-1.0 arc growing the vocabulary and axes toward "the everyday figures of
+the popular libraries, declaratively" ([D83]).
+
+### Added
+
+- **Step curves and curve markers ([D84]).** `Curve(step="pre"|"mid"|"post")`
+  renders stepped lines and `Curve(marker=...)` puts point symbols on the line
+  (the 5-marker vocabulary), on all three backends.
+- **Horizontal bars wired ([D85]).** `Bars(orient="h")` — simple, grouped and
+  stacked — now renders horizontally on matplotlib and pyqtgraph (it
+  warned-and-degraded) and on webengine grouped bars (simple bars already
+  worked); categorical tick labels move to the y axis.
+- **Surface grid toggle ([D87]).** `OverlayOptions(grid=False)` turns the
+  grid off on every backend (it was permanently on).
+- `Bars.mode` joined the honor-or-warn contract (`RECOMMENDED_OPTIONS`), and
+  `Bars(mode="stacked")` without `group=` is now a `ValidationError` instead
+  of a silent no-op.
+
 ### Fixed
 
 Three silent-drop warts surfaced by the matplotlib support audit
