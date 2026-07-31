@@ -122,3 +122,52 @@ def test_webengine_bare_element_has_no_titles(data):
     assert "title" not in layout
     assert "text" not in layout["xaxis"]["title"]
     assert "text" not in layout["yaxis"]["title"]
+
+
+# ── surface background ───────────────────────────────────────────────────────
+# `OverlayOptions.background` was defined but read by no backend (same defect
+# shape as the pre-seam title/labels this file opens with). It sets the *plot
+# area* — the theme keeps the figure/widget chrome.
+@pytest.mark.tier2
+def test_matplotlib_applies_surface_background(qtbot, data):
+    if "matplotlib" not in qv.backends.list_available():
+        pytest.skip("matplotlib not registered")
+    from matplotlib.colors import to_rgba
+
+    node = _surface(qv.Scatter(data, x="x", y="y"), background="#123456")
+    view = qv.View(node, backend="matplotlib")
+    qtbot.addWidget(view)
+    assert view.handle.axes[0].get_facecolor() == to_rgba("#123456")
+
+
+@pytest.mark.tier2
+def test_pyqtgraph_applies_surface_background(qtbot, data):
+    if "pyqtgraph" not in qv.backends.list_available():
+        pytest.skip("pyqtgraph not registered")
+    from qtviz.core.color import Color
+
+    node = _surface(qv.Scatter(data, x="x", y="y"), background="#123456")
+    view = qv.View(node, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    vb = view.handle.plots[0].getViewBox()
+    assert vb.state["background"] == Color("#123456").qt()
+
+
+@pytest.mark.tier2
+def test_pyqtgraph_default_surface_has_no_background_override(qtbot, data):
+    if "pyqtgraph" not in qv.backends.list_available():
+        pytest.skip("pyqtgraph not registered")
+    view = qv.View(qv.Scatter(data, x="x", y="y"), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    assert view.handle.plots[0].getViewBox().state["background"] is None
+
+
+@pytest.mark.tier1
+def test_webengine_layout_carries_surface_background(data):
+    from qtviz.backends.webengine import _figure
+
+    node = _surface(qv.Scatter(data, x="x", y="y"), background="#123456")
+    layout = _figure.build_figure(node, qv.Theme.light())["layout"]
+    assert layout["plot_bgcolor"] == "rgb(18,52,86)"
+    # the figure chrome stays on the theme
+    assert layout["paper_bgcolor"] == "rgb(255,255,255)"

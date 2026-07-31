@@ -71,6 +71,7 @@ def render_scatter(element: Scatter, ctx):
         rgba, legend = _color_mapping(element, d, ctx.theme)
         artist = ctx.parent_axes.scatter(
             _col(d, "x"), _col(d, "y"), c=rgba, s=s, alpha=element.alpha, marker=marker,
+            rasterized=element.matplotlib_rasterized,
         )
         if ctx.show_legend:
             _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
@@ -79,6 +80,7 @@ def render_scatter(element: Scatter, ctx):
         _col(d, "x"), _col(d, "y"),
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
         s=s, alpha=element.alpha, marker=marker,
+        rasterized=element.matplotlib_rasterized,
     )
 
 
@@ -341,7 +343,11 @@ def render_errorbars(element: ErrorBars, ctx):
     d = element.data
     lo, hi = _col(d, "err_lo"), _col(d, "err_hi")
     err = np.vstack([lo, hi])  # [below, above]
-    kwargs = {"yerr": err} if element.direction in ("y", "both") else {"xerr": err}
+    kwargs = {}
+    if element.direction in ("y", "both"):
+        kwargs["yerr"] = err
+    if element.direction in ("x", "both"):
+        kwargs["xerr"] = err
     return ctx.parent_axes.errorbar(
         _col(d, "x"), _col(d, "y"), fmt="o",
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(), **kwargs,

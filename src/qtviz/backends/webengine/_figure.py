@@ -251,7 +251,10 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
         "marker": {"color": color}, "name": element.label or element.id,
         "showlegend": element.label is not None,
     }
-    trace["error_y" if element.direction in ("y", "both") else "error_x"] = err
+    if element.direction in ("y", "both"):
+        trace["error_y"] = err
+    if element.direction in ("x", "both"):
+        trace["error_x"] = dict(err)  # not aliased to error_y
     return [trace]
 
 
@@ -571,6 +574,10 @@ def plotly_layout(theme, surf=None, x_scale: str = "linear", y_scale: str = "lin
         # so an unlabeled figure shows no opaque-id entries even when enabled.
         "showlegend": surf.legend_enabled if surf is not None else False,
     }
+    if surf is not None and surf.background is not None:
+        from ...core.color import Color  # noqa: PLC0415
+
+        layout["plot_bgcolor"] = _css(Color(surf.background))  # plot area only
     if surf is not None and surf.legend_position == "top":
         layout["legend"] = {"orientation": "h", "x": 0.0, "y": 1.12}
     if surf is not None and surf.title:

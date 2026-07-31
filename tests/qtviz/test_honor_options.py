@@ -79,3 +79,63 @@ def test_webengine_scatter_marker_symbol():
 
     fig, _ = _figure.build(qv.Scatter(_TABLE, x="x", y="y", marker="diamond"), qv.Theme.light())
     assert fig["data"][0]["marker"]["symbol"] == "diamond"
+
+
+def test_matplotlib_scatter_honors_rasterized(qtbot):
+    """The backend-prefixed flag reaches the artist (it was a silent no-op)."""
+    pytest.importorskip("matplotlib")
+    handle = _backend("matplotlib").render(
+        qv.Scatter(_TABLE, x="x", y="y", matplotlib_rasterized=True), theme=qv.Theme.light()
+    )
+    qtbot.addWidget(handle.widget)
+    colls = handle.axes[0].collections
+    assert colls and colls[0].get_rasterized() is True
+
+
+def test_matplotlib_scatter_rasterized_defaults_off(qtbot):
+    pytest.importorskip("matplotlib")
+    handle = _backend("matplotlib").render(
+        qv.Scatter(_TABLE, x="x", y="y"), theme=qv.Theme.light()
+    )
+    qtbot.addWidget(handle.widget)
+    colls = handle.axes[0].collections
+    assert colls and not colls[0].get_rasterized()
+
+
+_ERR_TABLE = {**_TABLE, "err": [0.1, 0.1, 0.1, 0.1]}
+
+
+def test_matplotlib_errorbars_direction_both(qtbot):
+    """direction="both" must put whiskers on BOTH axes (it drew y-only)."""
+    pytest.importorskip("matplotlib")
+    el = qv.ErrorBars(_ERR_TABLE, x="x", y="y", err="err", direction="both")
+    handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
+    qtbot.addWidget(handle.widget)
+    container = handle.native(el.id)
+    assert container.has_xerr and container.has_yerr
+
+
+def test_matplotlib_errorbars_direction_x_only(qtbot):
+    pytest.importorskip("matplotlib")
+    el = qv.ErrorBars(_ERR_TABLE, x="x", y="y", err="err", direction="x")
+    handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
+    qtbot.addWidget(handle.widget)
+    container = handle.native(el.id)
+    assert container.has_xerr and not container.has_yerr
+
+
+def test_webengine_errorbars_direction_both():
+    """Pure (no display): direction="both" carries error_x AND error_y."""
+    from qtviz.backends.webengine import _figure
+
+    el = qv.ErrorBars(_ERR_TABLE, x="x", y="y", err="err", direction="both")
+    trace = _figure.build_figure(el, qv.Theme.light())["data"][0]
+    assert "error_x" in trace and "error_y" in trace
+
+
+def test_webengine_errorbars_direction_x_only():
+    from qtviz.backends.webengine import _figure
+
+    el = qv.ErrorBars(_ERR_TABLE, x="x", y="y", err="err", direction="x")
+    trace = _figure.build_figure(el, qv.Theme.light())["data"][0]
+    assert "error_x" in trace and "error_y" not in trace

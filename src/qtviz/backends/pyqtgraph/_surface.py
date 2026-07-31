@@ -2,7 +2,8 @@
 
 The semantic sibling of `_theme.style_plot`: theme sets the axis *colors*, this sets
 what the surface *declares* — title / labels (Phase A), declarative `lim` / `invert` /
-`aspect` (0.3 increment 1), and the axis scale (increment 2). Under log the ViewBox
+`aspect` (0.3 increment 1), the axis scale (increment 2), and a per-surface
+`background` (plot area only — the widget chrome stays on the theme). Under log the ViewBox
 lives in exponent space (Approach A: renderers pre-`log10` the data; the `AxisItem`
 switches to log ticks only), so a data-space `lim` is transformed here. The caller
 resolves the *effective* scales (capability gate + raster gate) via
@@ -12,6 +13,7 @@ resolves the *effective* scales (capability gate + raster gate) via
 from __future__ import annotations
 
 from ...core._scales import log_lim
+from ...core.color import Color
 
 
 def apply_surface(plot, surf, theme, x_scale: str, y_scale: str) -> None:
@@ -19,6 +21,8 @@ def apply_surface(plot, surf, theme, x_scale: str, y_scale: str) -> None:
     if surf.title:
         plot.setTitle(surf.title, color=color, size=f"{theme.title_size}pt")
     vb = plot.getViewBox()
+    if surf.background is not None:
+        vb.setBackgroundColor(Color(surf.background).qt())  # plot area only
     _apply_axis(plot, vb, "x", "bottom", surf.x, x_scale, color)
     _apply_axis(plot, vb, "y", "left", surf.y, y_scale, color)
     if surf.aspect is not None:

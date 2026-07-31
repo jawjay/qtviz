@@ -4,6 +4,26 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+Three silent-drop warts surfaced by the matplotlib support audit
+(`design/matplotlib-support-matrix.md` §11):
+
+- **`Scatter(matplotlib_rasterized=True)` now reaches the artist.** The
+  backend-prefixed flag was stored but read by no renderer; the matplotlib
+  scatter now passes it through, so large point clouds can rasterize inside
+  SVG/PDF exports. (`pyqtgraph_use_opengl`, its sibling, remains unwired —
+  tracked as an open wire-or-deprecate decision.)
+- **`OverlayOptions(background=…)` is honored on all three backends.** It was
+  defined but consumed nowhere; it now sets the *plot area* (matplotlib axes
+  facecolor, pyqtgraph `ViewBox` background, Plotly `plot_bgcolor`) while the
+  figure/widget chrome stays on the `Theme`.
+- **`ErrorBars(direction="both")` draws both whisker sets.** matplotlib
+  emitted y-error only and webengine had the same `error_y`-only bug; both
+  now emit x *and* y errors, and `direction="x"` still draws x only.
+
 ## [1.0.0] — 2026-07-24
 
 The stability release. The 0.3–0.6 milestones below were developed against the
