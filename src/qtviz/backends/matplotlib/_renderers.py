@@ -213,13 +213,14 @@ def _render_group_bars(element: Bars, ctx):
 
 
 def render_histogram(element: Histogram, ctx):
-    vals = _col(element.data, "column")
-    bins = element.bins if isinstance(element.bins, int) else "auto"
-    _n, _bins, patches = ctx.parent_axes.hist(
-        vals, bins=bins, density=element.density,
+    from ...core._stats import histogram  # noqa: PLC0415
+
+    counts, edges = histogram(_col(element.data, "column"), element.bins,
+                              density=element.density)  # shared binning ([D93])
+    return ctx.parent_axes.bar(
+        edges[:-1], counts, width=np.diff(edges), align="edge",
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
     )
-    return patches
 
 
 def render_image(element: Image, ctx):
@@ -347,13 +348,31 @@ def _wire_dynamic_regrid(element, artist, ctx) -> None:
     ax._qtviz_rasters.append(controller)
 
 
+def _heat_extent(ax, centers, axis: str) -> tuple[float, float]:
+    """Data-space extent for one heatmap axis ([D92]): numeric centers place the
+    cells at their values; categorical centers use index positions + tick labels."""
+    from ...core._stats import cell_extent  # noqa: PLC0415
+
+    arr = np.asarray(centers)
+    if np.issubdtype(arr.dtype, np.number):
+        return cell_extent(arr)
+    n = len(arr)
+    (ax.set_xticks if axis == "x" else ax.set_yticks)(
+        np.arange(n), [str(c) for c in arr])
+    return (-0.5, n - 0.5)
+
+
 def render_heatmap(element: Heatmap, ctx):
     from ...core._stats import grid_reduce  # noqa: PLC0415
 
     d = element.data
-    _xs, _ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
-                                 element.aggregator)  # real reduction ([D69])
-    return ctx.parent_axes.imshow(grid, origin="lower", aspect="auto", cmap=element.colormap)
+    xs, ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
+                               element.aggregator)  # real reduction ([D69])
+    ax = ctx.parent_axes
+    x0, x1 = _heat_extent(ax, xs, "x")
+    y0, y1 = _heat_extent(ax, ys, "y")
+    return ax.imshow(grid, origin="lower", aspect="auto", cmap=element.colormap,
+                     extent=(x0, x1, y0, y1))
 
 
 def render_errorbars(element: ErrorBars, ctx):

@@ -13,6 +13,30 @@ import numpy as np
 
 GRID_AGGS = ("mean", "sum", "count", "max", "min", "last")
 
+# numpy's automatic bin-selection rules (np.histogram_bin_edges) — the string
+# vocabulary `Histogram.bins` accepts besides an int ([D93]).
+BIN_RULES = ("auto", "fd", "doane", "scott", "stone", "rice", "sturges", "sqrt")
+
+
+def histogram(values, bins: int | str = "auto", *,
+              density: bool = False) -> tuple[np.ndarray, np.ndarray]:
+    """Shared histogram binning ([D93]) — one engine so every backend draws the
+    *same* bars (previously np/mpl/Plotly each binned their own way). Returns
+    `(counts, edges)` from `np.histogram` over the finite values."""
+    a = np.asarray(values, dtype="float64")
+    a = a[np.isfinite(a)]
+    return np.histogram(a, bins=bins, density=density)
+
+
+def cell_extent(centers) -> tuple[float, float]:
+    """Outer edges spanned by a row of grid-cell centers (end cells extend half
+    the adjacent spacing) — where an image drawn over those centers sits in
+    data space ([D92])."""
+    c = np.asarray(centers, dtype="float64")
+    if len(c) == 1:
+        return float(c[0]) - 0.5, float(c[0]) + 0.5
+    return (float(c[0] - (c[1] - c[0]) / 2.0), float(c[-1] + (c[-1] - c[-2]) / 2.0))
+
 
 @dataclass(frozen=True)
 class BoxStats:

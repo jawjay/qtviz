@@ -96,7 +96,8 @@ def test_element_trace_shapes(make_elements):
     light = qv.Theme.light()
     assert _figure.build_figure(els["Curve"], light)["data"][0]["mode"] == "lines"
     assert _figure.build_figure(els["Bars"], light)["data"][0]["type"] == "bar"
-    assert _figure.build_figure(els["Histogram"], light)["data"][0]["type"] == "histogram"
+    # pre-binned bar, not a Plotly histogram — shared core binning ([D93])
+    assert _figure.build_figure(els["Histogram"], light)["data"][0]["type"] == "bar"
     assert _figure.build_figure(els["Image"], light)["data"][0]["type"] == "heatmap"
     assert _figure.build_figure(els["Heatmap"], light)["data"][0]["type"] == "heatmap"
     assert "error_y" in _figure.build_figure(els["ErrorBars"], light)["data"][0]

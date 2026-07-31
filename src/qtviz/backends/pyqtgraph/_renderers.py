@@ -247,9 +247,10 @@ def _render_group_bars(element: Bars, ctx):
 
 
 def render_histogram(element: Histogram, ctx):
-    vals = _col(element.data, "column")
-    bins = element.bins if isinstance(element.bins, int) else "auto"
-    counts, edges = np.histogram(vals, bins=bins, density=element.density)
+    from ...core._stats import histogram  # noqa: PLC0415
+
+    counts, edges = histogram(_col(element.data, "column"), element.bins,
+                              density=element.density)  # shared binning ([D93])
     centers = (edges[:-1] + edges[1:]) / 2.0
     width = float(edges[1] - edges[0]) if len(edges) > 1 else 1.0
     x_log, y_log = _xy_log(ctx)
@@ -282,7 +283,9 @@ def render_image(element: Image, ctx):
         if values.ndim == 3:  # RGBA raster (e.g. a user-built image): row 0 = ymin
             item = pg.ImageItem(values, axisOrder="row-major")
         else:
-            item = pg.ImageItem(np.asarray(values, dtype="float64"))
+            item = pg.ImageItem(np.asarray(values, dtype="float64"),
+                                axisOrder="row-major")
+            item.setLookupTable(_pg_lut(element.colormap))  # ([D92])
     x0, y0, x1, y1 = element.bounds
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
@@ -388,31 +391,78 @@ def _wire_dynamic_regrid(element, item, ctx) -> None:
     vb._qtviz_rasters.append(controller)
 
 
+def _pg_lut(name: str):
+    """256-entry LUT for a named colormap ([D92]): pg's own maps first, then
+    matplotlib's registry when importable, else warn → viridis."""
+    for source in (None, "matplotlib"):
+        try:
+            return pg.colormap.get(name, source=source).getLookupTable(nPts=256)
+        except Exception:  # noqa: BLE001 — unknown name / mpl not installed
+            continue
+    import warnings  # noqa: PLC0415
+
+    from ...errors import QtvizWarning  # noqa: PLC0415
+
+    warnings.warn(f"pyqtgraph: no colormap named {name!r}; using 'viridis'",
+                  QtvizWarning, stacklevel=2)
+    return pg.colormap.get("viridis").getLookupTable(nPts=256)
+
+
+def _heat_extent(plot, centers, axis: str) -> tuple[float, float]:
+    """Data-space extent for one heatmap axis ([D92]) — the pg sibling of the
+    matplotlib helper: numeric centers place cells at their values; categorical
+    centers use index positions + tick labels."""
+    from ...core._stats import cell_extent  # noqa: PLC0415
+
+    arr = np.asarray(centers)
+    if np.issubdtype(arr.dtype, np.number):
+        return cell_extent(arr)
+    plot.getAxis("bottom" if axis == "x" else "left").setTicks(
+        [[(float(i), str(c)) for i, c in enumerate(arr)]])
+    return (-0.5, len(arr) - 0.5)
+
+
 def render_heatmap(element: Heatmap, ctx):
+    from PySide6.QtCore import QRectF  # noqa: PLC0415
+
     from ...core._stats import grid_reduce  # noqa: PLC0415
 
     d = element.data
-    _xs, _ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
-                                 element.aggregator)  # real reduction ([D69])
-    item = pg.ImageItem(grid)
+    xs, ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
+                               element.aggregator)  # real reduction ([D69])
+    # row-major: grid[j, i] is (ys[j], xs[i]) — the pg default (col-major) drew
+    # every heatmap transposed relative to matplotlib/webengine ([D92]).
+    item = pg.ImageItem(grid, axisOrder="row-major")
+    item.setLookupTable(_pg_lut(element.colormap))
+    x0, x1 = _heat_extent(ctx.parent_axes, xs, "x")
+    y0, y1 = _heat_extent(ctx.parent_axes, ys, "y")
+    item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
     return item
+
+
+def _log_deltas(center, lo, hi, is_log: bool, lc):
+    """Whisker extents around `center` for one axis: error extents are deltas —
+    under log they're recomputed in exponent space so the whiskers land at
+    log10(v ± err), not log10(v) ± err."""
+    if not is_log:
+        return lo, hi
+    return lc - logify(center - lo, True), logify(center + hi, True) - lc
 
 
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
     x_log, y_log = _xy_log(ctx)
-    y, hi, lo = _col(d, "y"), _col(d, "err_hi"), _col(d, "err_lo")
-    ly = logify(y, y_log)
-    if y_log:
-        # error extents are deltas — recompute them in exponent space so the
-        # whiskers land at log10(y ± err), not log10(y) ± err.
-        top, bottom = logify(y + hi, True) - ly, ly - logify(y - lo, True)
-    else:
-        top, bottom = hi, lo
-    item = pg.ErrorBarItem(
-        x=logify(_col(d, "x"), x_log), y=ly, top=top, bottom=bottom, beam=0.0,
-    )
+    x, y = _col(d, "x"), _col(d, "y")
+    hi, lo = _col(d, "err_hi"), _col(d, "err_lo")
+    lx, ly = logify(x, x_log), logify(y, y_log)
+    kwargs: dict = {}
+    if element.direction in ("y", "both"):
+        kwargs["bottom"], kwargs["top"] = _log_deltas(y, lo, hi, y_log, ly)
+    if element.direction in ("x", "both"):  # ([D92]: direction was unwired)
+        kwargs["left"], kwargs["right"] = _log_deltas(x, lo, hi, x_log, lx)
+    pen = pg.mkPen(_color(element.color, ctx.theme, ctx.series_index).qt(), width=1.5)
+    item = pg.ErrorBarItem(x=lx, y=ly, beam=0.0, pen=pen, **kwargs)
     ctx.parent_axes.addItem(item)
     return item
 
@@ -636,9 +686,9 @@ HONORED: dict[type, frozenset[str]] = {
                       "alpha", "label"}),
     Bars: frozenset({"color", "group", "mode", "orient", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
-    Image: frozenset(),                                            # colormap/interpolation unwired
-    Heatmap: frozenset({"aggregator"}),                            # colormap unwired
-    ErrorBars: frozenset({"label"}),                               # color/direction unwired
+    Image: frozenset({"colormap"}),                                # interpolation unwired
+    Heatmap: frozenset({"colormap", "aggregator"}),
+    ErrorBars: frozenset({"color", "direction", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

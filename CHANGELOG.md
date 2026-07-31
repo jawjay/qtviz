@@ -24,6 +24,27 @@ the popular libraries, declaratively" ([D83]).
 - `Bars.mode` joined the honor-or-warn contract (`RECOMMENDED_OPTIONS`), and
   `Bars(mode="stacked")` without `group=` is now a `ValidationError` instead
   of a silent no-op.
+- **Colormaps wired beyond matplotlib ([D92]).** `Image.colormap` and
+  `Heatmap.colormap` are honored on pyqtgraph (pg's maps, then matplotlib's
+  registry, warn-fallback to viridis) and webengine (named Plotly colorscales,
+  warn-fallback to Viridis); `Image.interpolation` maps to Plotly `zsmooth`.
+- **pyqtgraph `ErrorBars` honors `color` and `direction`** (x / y / both,
+  with the log-space delta treatment on both axes).
+
+### Changed
+
+- **One histogram binning engine ([D93]).** `Histogram` is binned once in
+  core (`np.histogram`) and every backend draws those bars — previously
+  numpy, `Axes.hist` and Plotly each binned their own way, so the same
+  Element drew different charts per backend. numpy rule strings
+  (`"fd"`, `"sturges"`, …) now pass through instead of collapsing to
+  `"auto"`; unknown rules and non-positive counts raise `ValidationError`.
+  webengine emits a pre-binned `bar` trace instead of a `histogram` trace.
+- **`Heatmap` renders in real data coordinates ([D92]).** matplotlib and
+  pyqtgraph now place cells at the x/y values (categorical axes get index
+  positions + tick labels), matching webengine; pyqtgraph heatmaps were
+  additionally **transposed** (col-major default) relative to the other
+  backends — fixed with row-major orientation.
 
 ### Fixed
 

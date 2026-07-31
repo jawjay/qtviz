@@ -208,17 +208,45 @@ def _group_bars_traces(element: Bars, theme) -> list[dict]:
     } for gi, g in enumerate(gs)]
 
 
+# qtviz colormap names (matplotlib vocabulary) → Plotly named colorscales.
+_COLORSCALES = {
+    "viridis": "Viridis", "plasma": "Plasma", "inferno": "Inferno",
+    "magma": "Magma", "cividis": "Cividis", "greys": "Greys", "hot": "Hot",
+    "jet": "Jet", "rainbow": "Rainbow", "rdbu": "RdBu", "picnic": "Picnic",
+    "portland": "Portland", "ylgnbu": "YlGnBu", "ylorrd": "YlOrRd",
+    "blues": "Blues", "greens": "Greens", "reds": "Reds", "bluered": "Bluered",
+}
+
+
+def _colorscale(name: str) -> str:
+    scale = _COLORSCALES.get(name.lower())
+    if scale is None:
+        import warnings  # noqa: PLC0415
+
+        from ...errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(
+            f"webengine: colormap {name!r} has no Plotly colorscale; using 'Viridis'",
+            QtvizWarning, stacklevel=2,
+        )
+        return "Viridis"
+    return scale
+
+
 def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
-    trace = {
-        "type": "histogram", "x": _floats(element.data.series("column")),
+    from ...core._stats import histogram  # noqa: PLC0415
+
+    counts, edges = histogram(element.data.series("column"), element.bins,
+                              density=element.density)  # shared binning ([D93]) —
+    # a pre-binned bar trace, not a Plotly histogram: every backend draws the
+    # same bars instead of Plotly re-binning client-side.
+    return [{
+        "type": "bar",
+        "x": _floats((edges[:-1] + edges[1:]) / 2.0), "y": _floats(counts),
+        "width": _floats(np.diff(edges)),
         "marker": {"color": _css(_element_color(element, theme, idx))},
         "name": element.label or element.id, "showlegend": element.label is not None,
-    }
-    if isinstance(element.bins, int):
-        trace["nbinsx"] = element.bins
-    if element.density:
-        trace["histnorm"] = "probability density"
-    return [trace]
+    }]
 
 
 def _image_trace(element: Image, theme, idx: int) -> list[dict]:
@@ -238,7 +266,9 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
             "type": "heatmap", "z": values,
             "x": np.linspace(x0, x1, ncols),
             "y": np.linspace(y0, y1, nrows),
-            "colorscale": "Viridis", "name": element.id,
+            "colorscale": _colorscale(element.colormap),
+            "zsmooth": "best" if element.interpolation == "bilinear" else False,
+            "name": element.id,
         }]
     return [{"type": "image", "z": values, "name": element.id}]  # RGBA raster (user-built)
 
@@ -252,7 +282,7 @@ def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
                                element.aggregator)  # real reduction ([D69])
     return [{
         "type": "heatmap", "x": xs, "y": ys, "z": grid,
-        "colorscale": "Viridis", "name": element.id,
+        "colorscale": _colorscale(element.colormap), "name": element.id,
     }]
 
 
@@ -380,8 +410,8 @@ HONORED: dict[type, frozenset[str]] = {
                       "alpha", "label"}),
     Bars: frozenset({"color", "orient", "group", "mode", "label"}),
     Histogram: frozenset({"bins", "density", "color", "label"}),
-    Image: frozenset(),                          # colorscale hardcoded Viridis
-    Heatmap: frozenset({"aggregator"}),          # colorscale still hardcoded
+    Image: frozenset({"colormap", "interpolation"}),
+    Heatmap: frozenset({"colormap", "aggregator"}),
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
