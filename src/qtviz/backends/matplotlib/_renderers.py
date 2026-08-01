@@ -141,16 +141,59 @@ def _draw_key(ax, handles, title, fg, position: str) -> None:
     ax._qtviz_handles = handles
     loc = _LOC.get(position)
     kw = {"loc": loc} if loc is not None else {}
+    if any(isinstance(h, _ArrowKeyHandle) for h in handles):
+        kw["handler_map"] = {_ArrowKeyHandle: _ArrowKeyHandler()}
     ax.legend(handles=handles, title=title, fontsize=8, framealpha=0.85, labelcolor=fg, **kw)
+
+
+class _ArrowKeyHandle:
+    """Proxy legend handle for the Quiver reference key ([D112])."""
+
+    def __init__(self, entry) -> None:
+        self.entry = entry
+
+    def get_label(self):
+        return self.entry.label
+
+
+class _ArrowKeyHandler:
+    """Legend handler drawing the core unit-arrow sample (`arrow_key_points`,
+    same ±25° barbs as the field) into the handle box."""
+
+    def legend_artist(self, legend, orig_handle, fontsize, handlebox):
+        from matplotlib.lines import Line2D  # noqa: PLC0415
+
+        from ...core._geometry import arrow_key_points  # noqa: PLC0415
+
+        e = orig_handle.entry
+        shaft, head = arrow_key_points(e.head_scale)
+        x0, y0 = handlebox.xdescent, handlebox.ydescent
+        w, mid = handlebox.width, handlebox.height / 2.0
+        color = e.swatch.mpl()
+        artists = [
+            Line2D(x0 + pts[:, 0] * w, y0 + mid + pts[:, 1] * w,
+                   color=color, linewidth=max(e.line_width, 1.0))
+            for pts in (shaft, head)
+        ]
+        for a in artists:
+            a.set_transform(handlebox.get_transform())
+            handlebox.add_artist(a)
+        return artists[0]
 
 
 def append_legend_entries(ax, entries, theme, position: str = "auto") -> None:
     """Merge the Overlay-aggregated `LegendEntry` contributions into the axes
-    legend (after any color-mapping key drawn by a `color_by` renderer)."""
+    legend (after any color-mapping key drawn by a `color_by` renderer). An
+    `"arrow"` glyph (the [D112] Quiver key) draws the core unit-arrow sample
+    via a custom handler instead of a color patch."""
     from matplotlib.patches import Patch  # noqa: PLC0415
 
     handles = list(getattr(ax, "_qtviz_handles", []))
-    handles += [Patch(facecolor=e.swatch.mpl(), label=e.label) for e in entries]
+    handles += [
+        _ArrowKeyHandle(e) if getattr(e, "glyph", "swatch") == "arrow"
+        else Patch(facecolor=e.swatch.mpl(), label=e.label)
+        for e in entries
+    ]
     prev = ax.get_legend()
     title = prev.get_title().get_text() or None if prev is not None else None
     _draw_key(ax, handles, title, theme.foreground.mpl(), position)
@@ -889,6 +932,6 @@ HONORED: dict[type, frozenset[str]] = {
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
-                       "alpha", "label"}),
+                       "alpha", "label", "key", "key_label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

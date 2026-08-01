@@ -1127,6 +1127,6 @@ HONORED: dict[type, frozenset[str]] = {
     Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
-                       "alpha", "label"}),
+                       "alpha", "label", "key", "key_label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

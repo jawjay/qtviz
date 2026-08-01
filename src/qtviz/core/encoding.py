@@ -44,10 +44,19 @@ class LegendEntry:
     """One element's contribution to a multi-series legend — its `label` text and
     swatch color ([D60]: legend as a per-element contract, not a color-mapping
     side-effect). Produced by `Element.legend_entry()`; an Overlay aggregates its
-    children's entries into one legend."""
+    children's entries into one legend.
+
+    `glyph` picks the sample shape: `"swatch"` (default) is a color square;
+    `"arrow"` ([D112], the Quiver reference key) draws the core unit-arrow
+    sample (`_geometry.arrow_key_points`) with `line_width`/`head_scale`,
+    where the backend's legend can draw custom samples (Plotly falls back to
+    its own line sample)."""
 
     label: str
     swatch: Color
+    glyph: str = "swatch"
+    line_width: float = 1.5
+    head_scale: float = 1.0
 
 
 def is_categorical(values) -> bool:

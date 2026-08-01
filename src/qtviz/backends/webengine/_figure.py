@@ -588,18 +588,26 @@ def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
 
 
 def _quiver_traces(element: Quiver, theme, idx: int) -> list[dict]:
-    """Shared core geometry ([D107]) — two NaN-gapped line traces."""
+    """Shared core geometry ([D107]) — two NaN-gapped line traces. `key=`
+    ([D112]) adds a one-point legend-only trace: Plotly draws its own line
+    sample (no custom-glyph seam), so the magnitude is stated by the name."""
     (sx, sy), (hx, hy) = element.resolved_segments()
     color = _css(_element_color(element, theme, idx))
     line = {"color": color, "width": element.line_width}
     common = {"type": "scattergl", "mode": "lines", "line": line,
               "opacity": element.alpha, "hoverinfo": "skip"}
-    return [
+    show_label = element.label is not None and element.key is None  # key folds it in
+    traces = [
         {**common, "x": sx, "y": sy, "name": element.label or element.id,
-         "showlegend": element.label is not None},
+         "showlegend": show_label},
         {**common, "x": hx, "y": hy, "name": element.label or element.id,
          "showlegend": False},
     ]
+    if element.key is not None:
+        entry = element.legend_entry(theme, idx)
+        traces.append({**common, "x": [None], "y": [None],
+                       "name": entry.label, "showlegend": True})
+    return traces
 
 
 def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
@@ -696,7 +704,7 @@ HONORED: dict[type, frozenset[str]] = {
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
-                       "alpha", "label"}),
+                       "alpha", "label", "key", "key_label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 

@@ -55,6 +55,20 @@ def quiver_scale(x, y, u, v) -> float:
     return 0.9 * cell / max_mag
 
 
+def arrow_key_points(head_scale: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
+    """The quiver legend key's sample glyph ([D112]): one unit arrow along +x,
+    built by `quiver_segments` itself — same ±25° barbs, same 30% head — so the
+    sample is truthful by construction. Returns `(shaft, head)` as `(2, 2)` and
+    `(3, 2)` point arrays in the unit box; backends scale it into their legend
+    sample box (the *magnitude* is stated by the entry label, since a
+    data-space pixel length would go stale on zoom and Plotly cannot draw a
+    custom sample at all)."""
+    zero, one = np.zeros(1), np.ones(1)
+    (sx, sy), (hx, hy) = quiver_segments(zero, zero, one, zero, 1.0, head_scale)
+    return (np.column_stack([sx[:2], sy[:2]]),
+            np.column_stack([hx[:3], hy[:3]]))
+
+
 def quiver_segments(x, y, u, v, scale: float, head_scale: float = 1.0):
     """Shared arrow geometry ([D107]/[D110]): `(shaft_xy, head_xy)` as
     NaN-separated polylines every backend draws with two cheap primitives —

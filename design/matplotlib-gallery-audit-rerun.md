@@ -111,7 +111,7 @@ Every verdict change from the baseline (56 total):
 | `pcolor_demo.py` | ❌ | ✅ | Mesh — non-uniform rectilinear cell edges |
 | `pcolormesh_grids.py` | ❌ | ✅ | Mesh edge contract matches (flat shading; gouraud not modeled) |
 | `pcolormesh_levels.py` | ❌ | ◑ | Mesh + norm ✓; BoundaryNorm discrete levels not modeled (probe) |
-| `quiver_demo.py` | ❌ | ◑ | Quiver ✓ (auto scale); quiverkey reference arrow not modeled |
+| `quiver_demo.py` | ❌ | ✅ | Quiver ✓ (auto scale); `key=`/`key_label=` reference key as a legend entry ([D112], wave 1.4) |
 | `quiver_simple_demo.py` | ❌ | ✅ | Quiver(x=, y=, u=, v=, arrow_scale=) |
 | `power_norm.py` | ❌ | ✅ | Image/Heatmap/Mesh norm='power' + gamma= |
 | `figure_title.py` | ◑ | ✅ | LayoutOptions(title=) suptitle + per-pane titles |
@@ -306,7 +306,7 @@ all.
 | `pcolormesh_levels.py` | ◑ | Mesh + norm ✓; BoundaryNorm discrete levels not modeled (probe) *(recreated: `v2:mesh_log_norm`)* |
 | `plot_streamplot.py` | ❌ | no streamlines (probe) *(probe: `PROBE_streamplot`)* |
 | `quadmesh_demo.py` | ❌ | curvilinear (2-D coordinate) meshes not modeled (probe — fails with a raw TypeError, a validation wart) *(probe: `v2:PROBE_curvilinear_mesh`)* |
-| `quiver_demo.py` | ◑ | Quiver ✓ (auto scale); quiverkey reference arrow not modeled *(recreated: `v2:quiver_field`)* |
+| `quiver_demo.py` | ✅ | Quiver ✓ (auto scale); `key=`/`key_label=` reference key as a legend entry ([D112], wave 1.4) *(recreated: `v2:quiver_field`; key guard: `test_quiver.py`)* |
 | `quiver_simple_demo.py` | ✅ | Quiver(x=, y=, u=, v=, arrow_scale=) *(recreated: `v2:quiver_field`)* |
 | `shading_example.py` | ❌ | no hillshading/light sources |
 | `specgram_demo.py` | ◑ | compute spectrogram upstream → Image *(recreated: `spectrum_upstream`)* |

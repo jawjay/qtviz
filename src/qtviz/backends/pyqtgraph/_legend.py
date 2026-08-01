@@ -54,10 +54,14 @@ def append_legend_entries(plot, entries, theme, position: str = "auto") -> None:
     """Add the Overlay-aggregated `LegendEntry` contributions ([D60]) to the plot's
     legend — *merging* into an existing color-mapping legend (a `color_by` Scatter
     in the same Overlay) rather than replacing it, so a surface always shows one
-    combined legend."""
+    combined legend. An `"arrow"` glyph (the [D112] Quiver key) paints the core
+    unit-arrow sample instead of a color square."""
     lg = _ensure_legend(plot, position)
     for e in entries:
-        _add_swatch(lg, e.label, e.swatch)
+        if getattr(e, "glyph", "swatch") == "arrow":
+            lg.addItem(_ArrowSample(e), e.label)
+        else:
+            _add_swatch(lg, e.label, e.swatch)
 
 
 def _ensure_legend(plot, position: str):
@@ -66,6 +70,35 @@ def _ensure_legend(plot, position: str):
         lg = plot.addLegend(offset=_OFFSET.get(position, (-10, 10)))
         plot._qtviz_legend = lg
     return lg
+
+
+class _ArrowSample(pg.graphicsItems.LegendItem.ItemSample):
+    """Legend sample for the Quiver reference key ([D112]): the core unit-arrow
+    geometry (`arrow_key_points` — same barbs as the field) scaled into the
+    sample box."""
+
+    def __init__(self, entry) -> None:
+        super().__init__(pg.PlotCurveItem())  # placeholder; we paint ourselves
+        self._entry = entry
+
+    def paint(self, p, *_args) -> None:
+        from PySide6.QtCore import QPointF  # noqa: PLC0415
+
+        from ...core._geometry import arrow_key_points  # noqa: PLC0415
+
+        e = self._entry
+        shaft, head = arrow_key_points(e.head_scale)
+        w, h = self.width() or 20.0, self.height() or 20.0
+        pad, mid = 2.0, h / 2.0
+        sx = w - 2.0 * pad  # unit x-span → sample box width
+
+        def pt(xy):
+            return QPointF(pad + xy[0] * sx, mid - xy[1] * sx)
+
+        p.setRenderHint(p.RenderHint.Antialiasing)
+        p.setPen(pg.mkPen(e.swatch.qt(), width=max(e.line_width, 1.0)))
+        p.drawPolyline([pt(q) for q in shaft])
+        p.drawPolyline([pt(q) for q in head])
 
 
 def _add_swatch(lg, label, color) -> None:
