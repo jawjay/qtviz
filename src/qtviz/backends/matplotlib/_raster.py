@@ -44,12 +44,27 @@ class MplRasterTarget:
         return int(bbox.width), int(bbox.height)
 
     def set_raster(self, rgba, bounds) -> None:
+        from matplotlib.transforms import Bbox  # noqa: PLC0415
+
         x0, y0, x1, y1 = bounds
+        ax = self._ax
         self._suppress = True
+        # The raster tracks the viewport, so it must not steer it (P2 drift bug):
+        # with autoscale on, set_extent snaps the limits to the raster's
+        # pixel-center extent (a slow zoom-in), and its update_datalim call
+        # would feed later autoscales. Disable autoscale around the update and
+        # restore dataLim — the [D95] selector fix is precedent.
+        autox, autoy = ax.get_autoscalex_on(), ax.get_autoscaley_on()
+        saved_datalim = Bbox(ax.dataLim.get_points().copy())
         try:
+            ax.set_autoscalex_on(False)
+            ax.set_autoscaley_on(False)
             self._image.set_data(rgba)
             self._image.set_extent((x0, x1, y0, y1))
         finally:
+            ax.dataLim.set(saved_datalim)
+            ax.set_autoscalex_on(autox)
+            ax.set_autoscaley_on(autoy)
             self._suppress = False
         self._ax.figure.canvas.draw_idle()
 

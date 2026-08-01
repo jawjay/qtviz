@@ -1,8 +1,11 @@
 """pyqtgraph RasterTarget — the per-backend seam for dynamic datashading (4b).
 
 Reads the ViewBox's data-space range + on-screen pixel size, and writes a new
-RGBA raster into the ImageItem in place. Updating the image does not change the
-view range, so no feedback guard is needed here (cf. the matplotlib target).
+RGBA raster into the ImageItem in place. After a re-aggregation the raster
+always fills the (padded) viewport, so the item must stop feeding autorange
+once the loop takes over — otherwise every paint-time autorange pass pads the
+raster's own rect again, a runaway ~6%/cycle zoom-out (the P2 drift bug,
+roadmap-post-rerun §2).
 """
 
 from __future__ import annotations
@@ -12,6 +15,10 @@ import contextlib
 from PySide6.QtCore import QRectF
 
 from ...core.disposable import Disposable
+
+
+def _no_data_bounds(_axis, frac=1.0, orthoRange=None):  # noqa: N803 — pg's signature
+    return None
 
 
 class PgRasterTarget:
@@ -28,6 +35,11 @@ class PgRasterTarget:
         return int(rect.width()), int(rect.height())
 
     def set_raster(self, rgba, bounds) -> None:
+        # ViewBox.childrenBounds skips an item whose dataBounds is None on both
+        # axes. The static raster framed the view at render time; from the first
+        # re-aggregation on, the raster tracks the viewport and must not steer it.
+        self._item.dataBounds = _no_data_bounds
+        self._item.pixelPadding = lambda: 0
         self._item.setImage(rgba, axisOrder="row-major")  # shape may change with px size
         x0, y0, x1, y1 = bounds
         self._item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))  # after setImage: re-maps new shape

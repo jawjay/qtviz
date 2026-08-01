@@ -152,6 +152,109 @@ def test_pyqtgraph_reaggregates_to_zoom_window(qtbot):
     qtbot.waitUntil(lambda: abs(raster_left() - (-0.5)) < 0.25, timeout=6000)
 
 
+
+# ── autorange drift (P2 bug, roadmap-post-rerun §2) ──────────────────────────
+# After a re-aggregation the raster always fills the (padded) viewport, so if
+# the image item keeps feeding autorange, every autorange pass pads the raster's
+# rect *again* — a runaway ~6%/cycle zoom-out on pyqtgraph. matplotlib drifted
+# the other way: `set_extent` under autoscale snaps the limits to the raster's
+# pixel-center extent (half a pixel inside the viewport), a slow zoom-in.
+# These drive the real per-backend targets synchronously — one set_raster +
+# autorange pass per cycle, no worker threads — so the loop is deterministic.
+
+
+def test_pg_raster_does_not_feed_autorange_after_first_write(qtbot):
+    pg = pytest.importorskip("pyqtgraph")
+    from PySide6.QtCore import QRectF
+
+    from qtviz.backends.pyqtgraph._raster import PgRasterTarget
+
+    plot = pg.PlotWidget()
+    qtbot.addWidget(plot)
+    vb = plot.getViewBox()
+    item = pg.ImageItem(np.zeros((8, 8, 4), dtype=np.uint8), axisOrder="row-major")
+    plot.addItem(item)
+    item.setRect(QRectF(0.0, 0.0, 10.0, 10.0))
+    vb.updateAutoRange()  # initial framing: the static raster + padding
+    target = PgRasterTarget(item, vb)
+
+    (x0, x1), _ = vb.viewRange()
+    span0 = x1 - x0
+    assert span0 > 10.0  # framed with padding — autorange saw the static raster
+    for _ in range(8):
+        (x0, x1), (y0, y1) = vb.viewRange()
+        # what the controller writes after re-aggregating: raster == viewport
+        target.set_raster(np.zeros((8, 8, 4), dtype=np.uint8), (x0, y0, x1, y1))
+        vb.updateAutoRange()  # what the next paint pass does
+    (nx0, nx1), _ = vb.viewRange()
+    assert abs((nx1 - nx0) / span0 - 1.0) < 0.01  # held (was ×1.06 per cycle)
+
+
+def test_mpl_raster_updates_leave_limits_and_datalim_alone():
+    pytest.importorskip("matplotlib")
+    from matplotlib.figure import Figure
+
+    from qtviz.backends.matplotlib._raster import MplRasterTarget
+
+    fig = Figure()
+    ax = fig.add_subplot()
+    img = ax.imshow(np.zeros((8, 8, 4)), extent=(0.0, 10.0, 0.0, 10.0),
+                    origin="lower", aspect="auto")
+    ax.autoscale(True)
+    ax.set_xlim(0.0, 10.0)
+    ax.set_ylim(0.0, 10.0)
+    ax.set_autoscalex_on(True)
+    ax.set_autoscaley_on(True)
+    target = MplRasterTarget(img, ax)
+
+    datalim0 = ax.dataLim.get_points().copy()
+    for _ in range(8):
+        (x0, x1), (y0, y1) = target.viewport()
+        dx, dy = (x1 - x0) / 100.0, (y1 - y0) / 100.0
+        # datashader bounds sit at pixel centers — half a pixel inside the view
+        target.set_raster(np.zeros((8, 8, 4), dtype=np.uint8),
+                          (x0 + dx / 2, y0 + dy / 2, x1 - dx / 2, y1 - dy / 2))
+    assert ax.get_xlim() == (0.0, 10.0)  # held (drifted inward before the fix)
+    assert ax.get_ylim() == (0.0, 10.0)
+    np.testing.assert_allclose(ax.dataLim.get_points(), datalim0)  # not polluted
+    assert ax.get_autoscalex_on() and ax.get_autoscaley_on()  # state preserved
+
+
+def test_pg_streaming_datashaded_view_holds_viewport(qtbot):
+    """Roadmap acceptance (bounded): a streaming datashaded view holds its
+    viewport across append → re-aggregate → autorange cycles."""
+    pytest.importorskip("datashader")
+    if "pyqtgraph" not in qv.backends.list_available():
+        pytest.skip("pyqtgraph backend not registered")
+
+    rng = np.random.default_rng(3)
+    feed = qv.stream({"t": float, "v": float})
+    feed.append(t=rng.normal(0, 1, 5000), v=rng.normal(0, 1, 5000))
+    el = qv.Scatter(feed, x="t", y="v", scale="datashader")
+    handle = qv.backends.get("pyqtgraph").render(el, theme=qv.Theme.light())
+    qtbot.addWidget(handle.widget)
+    handle.widget.resize(600, 400)
+    handle.widget.show()
+    vb = handle.plots[0].getViewBox()
+    controller = next(c for c in vb._qtviz_rasters if getattr(c, "element_id", None) == el.id)
+
+    # settle: layout + initial framing of the static raster (span ≈ data extent)
+    qtbot.waitUntil(lambda: vb.viewRange()[0][1] - vb.viewRange()[0][0] > 2.0, timeout=5000)
+    vb.updateAutoRange()
+    (x0, x1), _ = vb.viewRange()
+    span0 = x1 - x0
+    for _ in range(4):
+        builds = controller._build_id
+        feed.append(t=rng.normal(0, 1, 200), v=rng.normal(0, 1, 200))
+        assert handle.set_element_data(el.id, {"t": np.empty(0), "v": np.empty(0)}) is True
+        qtbot.waitUntil(lambda b=builds: controller._build_id > b, timeout=5000)
+        qtbot.wait(50)  # let the queued set_raster land
+        vb.updateAutoRange()  # the paint-time pass that compounded the drift
+    (nx0, nx1), _ = vb.viewRange()
+    assert abs((nx1 - nx0) / span0 - 1.0) < 0.01
+    handle.dispose()
+
+
 def test_matplotlib_reaggregates_to_zoom_window(qtbot):
     pytest.importorskip("datashader")
     pytest.importorskip("matplotlib")
