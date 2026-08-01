@@ -20,7 +20,9 @@ the popular libraries, declaratively" ([D83]).
   ~400-cell guard ([D113]); `norm="symlog"` (`linthresh=`) and
   `norm="boundary"` (`levels=`) on Image/Heatmap/Mesh with honest
   colorbars ([D114]); Mesh edge validation that names the curvilinear
-  boundary ([D111]).
+  boundary ([D111]); `ErrorBars(lo_limit=, hi_limit=)` arrow caps —
+  "the true value lies beyond" — via the [D107] quiver construction
+  ([D116]).
 - **Fixed:** datashader autorange drift — a datashaded view no longer
   zooms out over time; the raster stops feeding autorange/dataLim after
   the first re-aggregation (P2 bug).

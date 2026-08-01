@@ -426,8 +426,9 @@ def _apply_norm(trace: dict, element, values) -> None:
 def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
     d = element.data
     color = _css(_element_color(element, theme, idx))
-    err = {"type": "data", "array": _floats(d.series("err_hi")),
-           "arrayminus": _floats(d.series("err_lo")), "symmetric": False, "color": color}
+    lo, hi, arrows = element.resolved_limits()  # limited sides zeroed ([D116])
+    err = {"type": "data", "array": hi, "arrayminus": lo,
+           "symmetric": False, "color": color}
     trace = {
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
@@ -438,7 +439,16 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
         trace["error_y"] = err
     if element.direction in ("x", "both"):
         trace["error_x"] = dict(err)  # not aliased to error_y
-    return [trace]
+    if arrows is None:
+        return [trace]
+    (sx, sy), (hx, hy) = arrows  # the same two-polyline primitive Quiver uses
+    gap = np.array([np.nan])
+    return [trace, {
+        "type": "scattergl", "mode": "lines",
+        "x": np.concatenate([sx, gap, hx]), "y": np.concatenate([sy, gap, hy]),
+        "line": {"color": color, "width": 1.5}, "hoverinfo": "skip",
+        "name": element.label or element.id, "showlegend": False,
+    }]
 
 
 def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
@@ -727,7 +737,7 @@ HONORED: dict[type, frozenset[str]] = {
                      "linthresh", "levels"}),
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
                        "levels", "cell_labels"}),
-    ErrorBars: frozenset({"direction", "color", "label"}),
+    ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

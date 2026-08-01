@@ -714,7 +714,7 @@ def render_errorbars(element: ErrorBars, ctx):
     d = element.data
     x_log, y_log = _xy_log(ctx)
     x, y = _col(d, "x"), _col(d, "y")
-    hi, lo = _col(d, "err_hi"), _col(d, "err_lo")
+    lo, hi, arrows = element.resolved_limits()  # limited sides zeroed ([D116])
     lx, ly = logify(x, x_log), logify(y, y_log)
     kwargs: dict = {}
     if element.direction in ("y", "both"):
@@ -724,7 +724,15 @@ def render_errorbars(element: ErrorBars, ctx):
     pen = pg.mkPen(_color(element.color, ctx.theme, ctx.series_index).qt(), width=1.5)
     item = pg.ErrorBarItem(x=lx, y=ly, beam=0.0, pen=pen, **kwargs)
     ctx.parent_axes.addItem(item)
-    return item
+    if arrows is None:
+        return item
+    items = [item]
+    for xs, ys in arrows:  # shafts + heads — the same primitive Quiver uses
+        curve = pg.PlotCurveItem(x=logify(xs, x_log), y=logify(ys, y_log),
+                                 pen=pen, connect="finite")
+        ctx.parent_axes.addItem(curve)
+        items.append(curve)
+    return items
 
 
 def render_area(element: Area, ctx):
@@ -1142,7 +1150,7 @@ HONORED: dict[type, frozenset[str]] = {
     Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
                        "levels", "cell_labels"}),
-    ErrorBars: frozenset({"color", "direction", "label"}),
+    ErrorBars: frozenset({"color", "direction", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

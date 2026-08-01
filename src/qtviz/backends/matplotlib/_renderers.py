@@ -707,17 +707,23 @@ def render_contour(element: Contour, ctx):
 
 def render_errorbars(element: ErrorBars, ctx):
     d = element.data
-    lo, hi = _col(d, "err_lo"), _col(d, "err_hi")
+    lo, hi, arrows = element.resolved_limits()  # limited sides zeroed ([D116])
     err = np.vstack([lo, hi])  # [below, above]
     kwargs = {}
     if element.direction in ("y", "both"):
         kwargs["yerr"] = err
     if element.direction in ("x", "both"):
         kwargs["xerr"] = err
-    return ctx.parent_axes.errorbar(
-        _col(d, "x"), _col(d, "y"), fmt="o",
-        color=_color(element.color, ctx.theme, ctx.series_index).mpl(), **kwargs,
+    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
+    container = ctx.parent_axes.errorbar(
+        _col(d, "x"), _col(d, "y"), fmt="o", color=color, **kwargs,
     )
+    if arrows is None:
+        return container
+    (sx, sy), (hx, hy) = arrows  # the two-polyline primitive Quiver uses
+    (shafts,) = ctx.parent_axes.plot(sx, sy, color=color, lw=1.5)
+    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=1.5)
+    return [container, shafts, heads]
 
 
 def render_spread(element: Spread, ctx):
@@ -956,7 +962,7 @@ HONORED: dict[type, frozenset[str]] = {
                      "linthresh", "levels"}),
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
                        "levels", "cell_labels"}),
-    ErrorBars: frozenset({"direction", "color", "label"}),
+    ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
     VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

@@ -55,6 +55,36 @@ def quiver_scale(x, y, u, v) -> float:
     return 0.9 * cell / max_mag
 
 
+def limit_arrow_segments(x, y, err_lo, err_hi, lo_limit, hi_limit, *,
+                         direction: str = "y"):
+    """ErrorBars limit arrows ([D116]): where a limit flag is true, that
+    side's bar becomes an arrow from the datum to the bar end — "the true
+    value lies beyond". Each is literally a quiver arrow (`u`/`v` = the
+    signed error), so heads share the [D107] construction: ±25° barbs, 30%
+    of the bar, in data space. Returns the same `(shaft, head)` NaN-separated
+    polyline pair `quiver_segments` emits (empty arrays when no flags)."""
+    x = np.asarray(x, dtype="float64")
+    y = np.asarray(y, dtype="float64")
+    xs, ys, us, vs = [], [], [], []
+    for mask, sign, err in ((lo_limit, -1.0, err_lo), (hi_limit, 1.0, err_hi)):
+        if mask is None:
+            continue
+        m = np.asarray(mask, dtype=bool)
+        if not m.any():
+            continue
+        e = np.asarray(err, dtype="float64")[m] * sign
+        zeros = np.zeros(int(m.sum()))
+        xs.append(x[m])
+        ys.append(y[m])
+        us.append(e if direction == "x" else zeros)
+        vs.append(zeros if direction == "x" else e)
+    if not xs:
+        empty = np.empty(0)
+        return (empty, empty.copy()), (empty.copy(), empty.copy())
+    return quiver_segments(np.concatenate(xs), np.concatenate(ys),
+                           np.concatenate(us), np.concatenate(vs), 1.0)
+
+
 def stem_segments(x, y, baseline: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
     """Stem geometry ([D115]): per-point vertical segments
     `(x, baseline) → (x, y)` as pair-connected arrays — index 2i is the foot,

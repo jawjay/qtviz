@@ -250,8 +250,8 @@ all.
 | `customized_violin.py` | ◑ | quartile whisker overlays via extra elements only *(recreated: `violin_vs_box`)* |
 | `errorbar.py` | ✅ | ErrorBars *(recreated: `errorbars`)* |
 | `errorbar_features.py` | ✅ | asymmetric (lo,hi) + direction='both' *(recreated: `errorbars`)* |
-| `errorbar_limits.py` | ❌ | lolims/uplims arrow caps not modeled (probe) *(probe: `PROBE_errorbar_limits_arrows`)* |
-| `errorbar_limits_simple.py` | ❌ | same *(recreated: `errorbars`)* |
+| `errorbar_limits.py` | ✅ | `ErrorBars(lo_limit=, hi_limit=)` — arrow caps via the [D107] quiver construction ([D116], wave 1.4) *(guard: `test_errorbar_limits.py`)* |
+| `errorbar_limits_simple.py` | ✅ | same ([D116], wave 1.4) *(recreated: `errorbars`)* |
 | `errorbar_subsample.py` | ◑ | errorevery= → subsample upstream *(recreated: `errorbars`)* |
 | `errorbars_and_boxes.py` | ◑ | per-point filled Rects + ErrorBars compose it; no collection element *(recreated: `v2:broken_barh_rects`)* |
 | `hexbin_demo.py` | ◑ | no hex binning (probe); the datashader raster covers the density job *(probe: `PROBE_hexbin`)* |
