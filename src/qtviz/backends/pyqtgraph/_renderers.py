@@ -41,6 +41,7 @@ from ...elements import (
     Scatter,
     Span,
     Spread,
+    Stem,
     Text,
     Violin,
     VLine,
@@ -640,6 +641,26 @@ def render_quiver(element: Quiver, ctx):
     return items
 
 
+def render_stem(element: Stem, ctx):
+    """Stem series ([D115]): ONE pair-connected curve carries every stem
+    (never an item per stem) + a scatter head layer that picks like Scatter."""
+    sx, sy = element.resolved_segments()
+    x_log, y_log = _xy_log(ctx)
+    color = _color(element.color, ctx.theme, ctx.series_index).qt()
+    color.setAlphaF(element.alpha)
+    stems = pg.PlotCurveItem(x=logify(sx, x_log), y=logify(sy, y_log),
+                             pen=pg.mkPen(color, width=element.line_width),
+                             connect="pairs")
+    ctx.parent_axes.addItem(stems)
+    d = element.data
+    heads = pg.ScatterPlotItem(
+        x=logify(_col(d, "x"), x_log), y=logify(_col(d, "y"), y_log),
+        symbol=_MARKER[element.marker], size=7, brush=pg.mkBrush(color),
+        pen=None, useCache=True, hoverable=True)
+    ctx.parent_axes.addItem(heads)
+    return [stems, heads]
+
+
 def render_mesh(element: Mesh, ctx):
     """Non-uniform rectilinear grid ([D106]) via `PColorMeshItem` (spiked:
     edge-corner meshgrids, explicit levels). Shares the [D105] norm path."""
@@ -1097,6 +1118,7 @@ RENDERERS: dict[type, Any] = {
     Contour: render_contour,
     Mesh: render_mesh,
     Quiver: render_quiver,
+    Stem: render_stem,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -1138,5 +1160,6 @@ HONORED: dict[type, frozenset[str]] = {
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
+    Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

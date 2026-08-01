@@ -33,7 +33,7 @@ _NON_DEFAULT = {
     "head": "both", "fill": True, "rotation": 30.0, "anchor_v": "top", "frame": True,
     "bar_labels": "auto", "marker_every": 3,
     "norm": "power", "vmin": 0.2, "vmax": 0.9,  # ("gamma" needs norm="power")
-    "arrow_scale": 0.5, "head_scale": 2.0,
+    "arrow_scale": 0.5, "head_scale": 2.0, "baseline": 0.5,
     # ("mode" is skipped: stacking requires group=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
     "group": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,

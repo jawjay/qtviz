@@ -49,6 +49,7 @@ from ...elements import (
     Scatter,
     Span,
     Spread,
+    Stem,
     Text,
     Violin,
     VLine,
@@ -624,6 +625,29 @@ def _quiver_traces(element: Quiver, theme, idx: int) -> list[dict]:
     return traces
 
 
+def _stem_traces(element: Stem, theme, idx: int) -> list[dict]:
+    """Stem series ([D115]): one NaN-gapped line trace for every stem + a
+    marker head trace (native picks ride the head trace's source-id row)."""
+    sx, sy = element.resolved_segments()
+    n = len(sx) // 2
+    gap = np.full(n, np.nan)
+    gx = np.column_stack([sx[0::2], sx[1::2], gap]).ravel()
+    gy = np.column_stack([sy[0::2], sy[1::2], gap]).ravel()
+    color = _css(_element_color(element, theme, idx))
+    d = element.data
+    return [
+        {"type": "scattergl", "mode": "lines", "x": gx, "y": gy,
+         "line": {"color": color, "width": element.line_width},
+         "opacity": element.alpha, "hoverinfo": "skip",
+         "name": element.label or element.id, "showlegend": False},
+        {"type": "scattergl", "mode": "markers",
+         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
+         "marker": {"color": color, "size": 7, "symbol": _SYMBOL[element.marker]},
+         "opacity": element.alpha, "name": element.label or element.id,
+         "showlegend": element.label is not None},
+    ]
+
+
 def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
     """Non-uniform grid ([D106]): a Plotly heatmap whose x/y carry one more
     entry than z — Plotly reads them as block boundaries (the edges)."""
@@ -686,6 +710,7 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Contour: _contour_trace,
     Mesh: _mesh_trace,
     Quiver: _quiver_traces,
+    Stem: _stem_traces,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -721,6 +746,7 @@ HONORED: dict[type, frozenset[str]] = {
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
+    Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 

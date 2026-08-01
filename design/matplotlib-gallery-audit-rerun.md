@@ -99,8 +99,8 @@ Every verdict change from the baseline (56 total):
 | `markevery_demo.py` | ❌ | ◑ | marker_every=N covers the integer stride; list/fraction/slice forms not modeled |
 | `multicolored_line.py` | ❌ | ✅ | Curve(color_by=continuous) → LineCollection ramp + colorbar (matplotlib; warns to solid elsewhere) |
 | `scatter_star_poly.py` | ❌ | ◑ | star/pentagon/hexagon/plus shipped; arbitrary polygon/path glyphs still absent |
-| `stem_plot.py` | ❌ | ◑ | no Stem element; Arrow(head='none') segments + markers approximate it |
-| `timeline.py` | ❌ | ◑ | Arrow stems + leveled Text recreate it; no stem element |
+| `stem_plot.py` | ❌ | ✅ | `Stem(x=, y=, baseline=)` — one pair-connected polyline + head markers ([D115], wave 1.4) |
+| `timeline.py` | ❌ | ✅ | `Stem` + leveled Text ([D115], wave 1.4) |
 | `confidence_ellipse.py` | ❌ | ✅ | Scatter * Ellipse(angle=) — eigendecomposition upstream |
 | `errorbars_and_boxes.py` | ❌ | ◑ | per-point filled Rects + ErrorBars compose it; no collection element |
 | `barb_demo.py` | ❌ | ◑ | Quiver shows the field; wind-barb glyphs (flags/pennants) not modeled |
@@ -229,9 +229,9 @@ all.
 | `spectrum_demo.py` | ◑ | compute spectra upstream (numpy) → Curve; no spectral API by design *(recreated: `spectrum_upstream`)* |
 | `stackplot_demo.py` | ✅ | Area(group=, mode='stacked') *(recreated: `stackplot`)* |
 | `stairs_demo.py` | ✅ | Curve(step=) *(recreated: `step_stairs`)* |
-| `stem_plot.py` | ◑ | no Stem element; Arrow(head='none') segments + markers approximate it *(recreated: `v2:timeline_arrows`)* |
+| `stem_plot.py` | ✅ | `Stem(x=, y=, baseline=)` — one pair-connected polyline + head markers ([D115], wave 1.4) *(guard: `test_stem.py`)* |
 | `step_demo.py` | ✅ | Curve(step='pre'/'mid'/'post') *(recreated: `step_stairs`)* |
-| `timeline.py` | ◑ | Arrow stems + leveled Text recreate it; no stem element *(recreated: `v2:timeline_arrows`)* |
+| `timeline.py` | ✅ | `Stem` + leveled Text ([D115], wave 1.4) *(guard: `test_stem.py`)* |
 | `vline_hline_demo.py` | ✅ | HLine/VLine/Span *(recreated: `hlines_vlines_spans`)* |
 
 ### Statistics — 28 examples (✅ 8 · ◑ 18 · 🔧 0 · ❌ 2 · 🚫 0 · 〰 0)
@@ -265,7 +265,7 @@ all.
 | `psd_demo.py` | ◑ | upstream compute → Curve (+ log axes) *(recreated: `spectrum_upstream`)* |
 | `time_series_histogram.py` | ✅ | scale='datashader' is exactly this technique *(recreated: `time_series_density`)* |
 | `violinplot.py` | ◑ | Violin ✓; means/extrema toggles + horizontal orientation not modeled *(recreated: `violin_vs_box`)* |
-| `xcorr_acorr_demo.py` | ◑ | upstream compute; stem look unavailable → Bars/Curve *(recreated: `spectrum_upstream`)* |
+| `xcorr_acorr_demo.py` | ◑ | upstream compute; `Stem` now gives the native look ([D115]) *(recreated: `spectrum_upstream`)* |
 
 ### Images, contours and fields — 48 examples (✅ 12 · ◑ 16 · 🔧 2 · ❌ 17 · 🚫 1 · 〰 0)
 

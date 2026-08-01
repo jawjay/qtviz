@@ -13,7 +13,7 @@ from __future__ import annotations
 import numpy as np
 
 from ...core.event import PickEvent, RangeEvent, SelectEvent
-from ...elements import Curve, Scatter
+from ...elements import Curve, Scatter, Stem
 
 
 def emit_bounds_select(selectables, bus, xmin, ymin, xmax, ymax) -> None:
@@ -96,7 +96,7 @@ def attach(element, artist, ctx, selectables: list) -> None:
         # a y2 element is not brush-selectable ([D88]). Pick stays off too —
         # the PathCollection picker reports primary-axes coordinates.
         return
-    if isinstance(element, (Scatter, Curve)):
+    if isinstance(element, (Scatter, Curve, Stem)):
         from ...core._time import as_float_seconds  # noqa: PLC0415
 
         x = as_float_seconds(element.data.series("x"))  # resolved role; epoch s ([D94])
@@ -109,3 +109,5 @@ def attach(element, artist, ctx, selectables: list) -> None:
         selectables.append(raster)  # brush a datashaded view → source rows ([D78])
     if isinstance(element, Scatter) and artist is not None and hasattr(artist, "get_offsets"):
         wire_pick(artist, element.id, ctx.event_bus)
+    if isinstance(element, Stem) and isinstance(artist, list) and len(artist) == 2:
+        wire_pick(artist[1], element.id, ctx.event_bus)  # heads pick ([D115])

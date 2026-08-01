@@ -12,6 +12,18 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Wave 1.4 — finish & honesty** (roadmap-post-rerun [D111]–[D115]):
+  `Stem(data, x=, y=, baseline=, marker=)` — lollipop/stem series drawn as
+  one pair-connected polyline + a pickable head layer ([D115]);
+  `Quiver(key=, key_label=)` — a truthful legend-based reference key
+  ([D112]); `Heatmap(cell_labels=)` with core-computed WCAG contrast and a
+  ~400-cell guard ([D113]); `norm="symlog"` (`linthresh=`) and
+  `norm="boundary"` (`levels=`) on Image/Heatmap/Mesh with honest
+  colorbars ([D114]); Mesh edge validation that names the curvilinear
+  boundary ([D111]).
+- **Fixed:** datashader autorange drift — a datashaded view no longer
+  zooms out over time; the raster stops feeding autorange/dataLim after
+  the first re-aggregation (P2 bug).
 - **Meshes & vector fields (roadmap wave 3).** `Mesh(values, x_edges=,
   y_edges=)` — pcolormesh with non-uniform cell edges, sharing the [D105]
   norm pipeline (`colormap`/`norm`/`vmin`/`vmax`/`gamma`) — and

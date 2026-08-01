@@ -36,6 +36,7 @@ from ...elements import (
     Scatter,
     Span,
     Spread,
+    Stem,
     Text,
     Violin,
     VLine,
@@ -655,6 +656,24 @@ def render_quiver(element: Quiver, ctx):
     return [shafts, heads]
 
 
+def render_stem(element: Stem, ctx):
+    """Stem series ([D115]): a LineCollection carries every stem in one artist
+    (not ax.stem — its container fights the handle contract) + scatter heads."""
+    from matplotlib.collections import LineCollection  # noqa: PLC0415
+
+    sx, sy = element.resolved_segments()
+    segs = list(np.stack([sx, sy], axis=1).reshape(-1, 2, 2))  # n × (2 pts, xy)
+    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
+    stems = LineCollection(segs, colors=[color], linewidths=element.line_width,
+                           alpha=element.alpha)
+    ctx.parent_axes.add_collection(stems)
+    d = element.data
+    heads = ctx.parent_axes.scatter(
+        _col(d, "x"), _col(d, "y"), color=color, s=7.0 ** 2,
+        alpha=element.alpha, marker=_MARKER[element.marker])
+    return [stems, heads]
+
+
 def render_mesh(element: Mesh, ctx):
     """Non-uniform rectilinear grid ([D106]) — edges straight to pcolormesh;
     the [D105] norm surface shared with Image/Heatmap."""
@@ -912,6 +931,7 @@ RENDERERS: dict[type, Any] = {
     Contour: render_contour,
     Mesh: render_mesh,
     Quiver: render_quiver,
+    Stem: render_stem,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -955,5 +975,6 @@ HONORED: dict[type, frozenset[str]] = {
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
+    Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

@@ -55,6 +55,18 @@ def quiver_scale(x, y, u, v) -> float:
     return 0.9 * cell / max_mag
 
 
+def stem_segments(x, y, baseline: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
+    """Stem geometry ([D115]): per-point vertical segments
+    `(x, baseline) → (x, y)` as pair-connected arrays — index 2i is the foot,
+    2i+1 the head, so pg draws them with one `connect="pairs"` item and the
+    other backends reshape to `(n, 2)` segments / NaN-gapped polylines."""
+    x = np.asarray(x, dtype="float64")
+    y = np.asarray(y, dtype="float64")
+    sx = np.repeat(x, 2)
+    sy = np.column_stack([np.full(len(y), float(baseline)), y]).ravel()
+    return sx, sy
+
+
 def arrow_key_points(head_scale: float = 1.0) -> tuple[np.ndarray, np.ndarray]:
     """The quiver legend key's sample glyph ([D112]): one unit arrow along +x,
     built by `quiver_segments` itself — same ±25° barbs, same 30% head — so the

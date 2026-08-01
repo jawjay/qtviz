@@ -9,7 +9,7 @@ is the single dispatch the renderer calls per element.
 from __future__ import annotations
 
 from ...core.event import HoverEvent, PickEvent
-from ...elements import Curve, Image, Scatter
+from ...elements import Curve, Image, Scatter, Stem
 
 
 def raster_source_xy(element):
@@ -63,7 +63,7 @@ def attach(element, item, ctx) -> None:
     (in data space — select masks run there, R1) and (for scatters) connect
     pick/hover."""
     vb = ctx.parent_axes.getViewBox()
-    if isinstance(element, (Scatter, Curve)) and hasattr(vb, "add_selectable"):
+    if isinstance(element, (Scatter, Curve, Stem)) and hasattr(vb, "add_selectable"):
         from ...core._time import as_float_seconds  # noqa: PLC0415
 
         x = as_float_seconds(element.data.series("x"))  # resolved role; epoch s ([D94])
@@ -74,3 +74,5 @@ def attach(element, item, ctx) -> None:
         vb.add_selectable(*raster)  # brush a datashaded view → source rows ([D78])
     if isinstance(element, Scatter) and item is not None and hasattr(item, "sigClicked"):
         wire_scatter(item, element.id, ctx.event_bus, vb)
+    if isinstance(element, Stem) and isinstance(item, list) and len(item) == 2:
+        wire_scatter(item[1], element.id, ctx.event_bus, vb)  # heads pick ([D115])
