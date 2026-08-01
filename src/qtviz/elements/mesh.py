@@ -11,6 +11,23 @@ from ..errors import ValidationError
 from .image import check_norm
 
 
+def _check_edges(name: str, edges) -> tuple[float, ...]:
+    """[D111]: edges are 1-D and strictly increasing, with the rectilinear
+    boundary named explicitly instead of a raw numpy error."""
+    try:
+        arr = np.asarray(edges, dtype="float64")
+    except (TypeError, ValueError) as e:
+        raise ValidationError(f"Mesh {name} must be numeric: {e}") from e
+    if arr.ndim != 1:
+        raise ValidationError(
+            f"Mesh {name} must be 1-D (rectilinear); curvilinear meshes are not "
+            "supported — see design/roadmap-post-rerun.md §6"
+        )
+    if arr.size < 2 or np.any(np.diff(arr) <= 0):
+        raise ValidationError(f"Mesh {name} must be ≥2 strictly increasing values")
+    return tuple(float(v) for v in arr)
+
+
 class Mesh(Element):
     """A 2-D value grid over **explicit cell edges**: `values[j, i]` fills the
     cell `x_edges[i]..x_edges[i+1] × y_edges[j]..y_edges[j+1]` — edges are the
@@ -37,13 +54,8 @@ class Mesh(Element):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_norm(norm, vmin, vmax, gamma, who="Mesh")
-        xe = tuple(float(v) for v in x_edges)
-        ye = tuple(float(v) for v in y_edges)
-        for name, edges in (("x_edges", xe), ("y_edges", ye)):
-            if len(edges) < 2 or any(b <= a for a, b in zip(edges, edges[1:], strict=False)):
-                raise ValidationError(
-                    f"Mesh {name} must be ≥2 strictly increasing values"
-                )
+        xe = _check_edges("x_edges", x_edges)
+        ye = _check_edges("y_edges", y_edges)
         self.data = as_data_ref(data)
         self.x_edges, self.y_edges = xe, ye
         self.colormap = colormap
@@ -52,6 +64,19 @@ class Mesh(Element):
         self.vmax = float(vmax) if vmax is not None else None
         self.gamma = float(gamma)
         require_gridded(self.data, who="Mesh")
+        shape = self.data.schema().shape
+        if shape is not None and len(shape) == 2:  # lazy refs without a shape defer
+            nrows, ncols = shape
+            if len(xe) != ncols + 1:
+                raise ValidationError(
+                    f"Mesh x_edges has {len(xe)} values for {ncols} value columns "
+                    f"(want ncols+1 = {ncols + 1})"
+                )
+            if len(ye) != nrows + 1:
+                raise ValidationError(
+                    f"Mesh y_edges has {len(ye)} values for {nrows} value rows "
+                    f"(want nrows+1 = {nrows + 1})"
+                )
         self._freeze()
 
     def check_shape(self, values) -> np.ndarray:

@@ -43,6 +43,24 @@ def test_validation():
 
 
 @pytest.mark.tier1
+def test_edge_validation_names_the_failure():
+    """[D111] — the re-audit wart: 2-D edge arrays used to surface as a raw
+    numpy TypeError; off-by-one lengths only failed at the render seam."""
+    from qtviz.errors import ValidationError
+
+    with pytest.raises(ValidationError, match="curvilinear"):
+        qv.Mesh(_Z, x_edges=np.tile(_XE, (5, 1)), y_edges=_YE)       # 2-D edges
+    with pytest.raises(ValidationError, match="curvilinear"):
+        qv.Mesh(_Z, x_edges=_XE, y_edges=np.tile(_YE, (5, 1)))
+    with pytest.raises(ValidationError, match="strictly increasing"):
+        qv.Mesh(_Z, x_edges=_XE[::-1], y_edges=_YE)                  # reversed
+    with pytest.raises(ValidationError, match=r"x_edges has 4 .*want ncols\+1 = 5"):
+        qv.Mesh(_Z, x_edges=_XE[:-1], y_edges=_YE)                   # off-by-one
+    with pytest.raises(ValidationError, match=r"y_edges has 4 .*want nrows\+1 = 5"):
+        qv.Mesh(_Z, x_edges=_XE, y_edges=_YE[:-1])
+
+
+@pytest.mark.tier1
 def test_webengine_mesh_edges_as_boundaries():
     from qtviz.backends.webengine import _figure
 
@@ -88,8 +106,10 @@ def test_pg_mesh(qtbot):
 
 @pytest.mark.tier2
 def test_mesh_render_shape_mismatch_raises(qtbot):
+    # since [D111] an eager shape mismatch is caught at construction, before
+    # any backend is involved; check_shape stays as the render-seam guard for
+    # refs whose shape is unknown at init (covered in test_validation).
     from qtviz.errors import ValidationError
 
-    el = qv.Mesh(np.ones((3, 3)), x_edges=[0, 1, 2], y_edges=[0, 1, 2])  # 2x2 cells
-    with pytest.raises(ValidationError, match="shape"):
-        _backend("pyqtgraph").render(el, theme=qv.Theme.light())
+    with pytest.raises(ValidationError, match=r"want ncols\+1"):
+        qv.Mesh(np.ones((3, 3)), x_edges=[0, 1, 2], y_edges=[0, 1, 2, 3])
