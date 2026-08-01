@@ -42,6 +42,7 @@ from ...elements import (
     Span,
     Spread,
     Stem,
+    Streamlines,
     Text,
     Violin,
     VLine,
@@ -641,6 +642,23 @@ def render_quiver(element: Quiver, ctx):
     return items
 
 
+def render_streamlines(element: Streamlines, ctx):
+    """Field lines ([D118]) from the shared core integrator — lines + heads
+    as two NaN-separated curves, exactly the Quiver primitive pair."""
+    (lx, ly), (hx, hy) = element.resolved_segments()
+    x_log, y_log = _xy_log(ctx)
+    color = _color(element.color, ctx.theme, ctx.series_index).qt()
+    color.setAlphaF(element.alpha)
+    pen = pg.mkPen(color, width=element.line_width)
+    items = []
+    for xs, ys in ((lx, ly), (hx, hy)):
+        item = pg.PlotCurveItem(x=logify(xs, x_log), y=logify(ys, y_log),
+                                pen=pen, connect="finite")
+        ctx.parent_axes.addItem(item)
+        items.append(item)
+    return items
+
+
 def render_stem(element: Stem, ctx):
     """Stem series ([D115]): ONE pair-connected curve carries every stem
     (never an item per stem) + a scatter head layer that picks like Scatter."""
@@ -1142,6 +1160,7 @@ RENDERERS: dict[type, Any] = {
     Mesh: render_mesh,
     Quiver: render_quiver,
     Stem: render_stem,
+    Streamlines: render_streamlines,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -1184,5 +1203,6 @@ HONORED: dict[type, frozenset[str]] = {
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
     Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
+    Streamlines: frozenset({"density", "color", "line_width", "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

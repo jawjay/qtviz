@@ -69,6 +69,7 @@ from .elements import (
     Span,
     Spread,
     Stem,
+    Streamlines,
     Text,
     Violin,
     VLine,
@@ -86,8 +87,8 @@ __all__ = [
     "BoxPlot", "Violin",
     # composition vocabulary (parity program increment 3, [D84b]/[D90]/[D91])
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
-    # wave 1.4 ([D115])
-    "Stem",
+    # waves 1.4/1.5 ([D115]/[D118])
+    "Stem", "Streamlines",
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters (Phase 3)

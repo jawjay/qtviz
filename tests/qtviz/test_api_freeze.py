@@ -26,6 +26,7 @@ FROZEN_1_0 = frozenset({
     "Contour",                                    # parity increment 6 ([D89])
     "Mesh", "Quiver",                             # wave 3 ([D106]/[D107])
     "Stem",                                       # wave 1.4 ([D115])
+    "Streamlines",                                # wave 1.5 ([D118])
     # composition + view
     "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
     # adapters

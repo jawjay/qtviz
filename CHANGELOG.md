@@ -12,6 +12,13 @@ the popular libraries, declaratively" ([D83]).
 
 ### Added
 
+- **Wave 1.5 — fields & flow** (roadmap-post-rerun [D117]/[D118]):
+  `Contour(labels=)` — inline level labels placed once in core (marching
+  squares → longest-line midpoint, upright tangent angle, background mask
+  segment), identical across backends; and `Streamlines(u, v, bounds=,
+  density=)` — the last member of the 2-D field quartet, integrated in
+  core (RK4 both directions, bilinear interpolation, a 30×30·density
+  spacing mask) and drawn as the same two-polyline primitive as Quiver.
 - **Wave 1.4 — finish & honesty** (roadmap-post-rerun [D111]–[D115]):
   `Stem(data, x=, y=, baseline=, marker=)` — lollipop/stem series drawn as
   one pair-connected polyline + a pickable head layer ([D115]);

@@ -74,7 +74,7 @@ def test_supports_the_data_vocabulary():
         "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars", "Spread",
         "BoxPlot", "Violin",
         "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",  # parity 3+6, wave 3
-        "Stem",                                              # wave 1.4 ([D115])
+        "Stem", "Streamlines",                               # waves 1.4/1.5
     }
 
 

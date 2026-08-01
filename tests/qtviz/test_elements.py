@@ -28,8 +28,8 @@ def test_curated_vocabulary_constructs(make_elements):
         "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
         # wave-1 annotations ([D96]/[D97]/[D99])
         "Arrow", "Rect", "Ellipse", "Polygon", "RefLine",
-        # wave 1.4 ([D115])
-        "Stem",
+        # waves 1.4/1.5 ([D115]/[D118])
+        "Stem", "Streamlines",
     }
 
 

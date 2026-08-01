@@ -28,6 +28,7 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Mesh
         - Quiver
         - Stem
+        - Streamlines
         - RawFigure
 
 ## Annotation & reference elements

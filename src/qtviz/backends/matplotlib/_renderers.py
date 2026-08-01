@@ -37,6 +37,7 @@ from ...elements import (
     Span,
     Spread,
     Stem,
+    Streamlines,
     Text,
     Violin,
     VLine,
@@ -656,6 +657,18 @@ def render_quiver(element: Quiver, ctx):
     return [shafts, heads]
 
 
+def render_streamlines(element: Streamlines, ctx):
+    """Field lines ([D118]) from the shared core integrator — two NaN-gapped
+    polylines (lines, heads), the Quiver primitive pair."""
+    (lx, ly), (hx, hy) = element.resolved_segments()
+    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
+    (lines,) = ctx.parent_axes.plot(lx, ly, color=color, lw=element.line_width,
+                                    alpha=element.alpha)
+    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=element.line_width,
+                                    alpha=element.alpha)
+    return [lines, heads]
+
+
 def render_stem(element: Stem, ctx):
     """Stem series ([D115]): a LineCollection carries every stem in one artist
     (not ax.stem — its container fights the handle contract) + scatter heads."""
@@ -957,6 +970,7 @@ RENDERERS: dict[type, Any] = {
     Mesh: render_mesh,
     Quiver: render_quiver,
     Stem: render_stem,
+    Streamlines: render_streamlines,
     Arrow: render_arrow,
     Rect: render_rect,
     Ellipse: render_ellipse,
@@ -1001,5 +1015,6 @@ HONORED: dict[type, frozenset[str]] = {
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
     Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
+    Streamlines: frozenset({"density", "color", "line_width", "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

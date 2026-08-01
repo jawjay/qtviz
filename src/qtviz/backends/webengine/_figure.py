@@ -50,6 +50,7 @@ from ...elements import (
     Span,
     Spread,
     Stem,
+    Streamlines,
     Text,
     Violin,
     VLine,
@@ -635,6 +636,20 @@ def _quiver_traces(element: Quiver, theme, idx: int) -> list[dict]:
     return traces
 
 
+def _streamlines_traces(element: Streamlines, theme, idx: int) -> list[dict]:
+    """Field lines ([D118]): two NaN-gapped line traces (lines, heads)."""
+    (lx, ly), (hx, hy) = element.resolved_segments()
+    color = _css(_element_color(element, theme, idx))
+    line = {"color": color, "width": element.line_width}
+    common = {"type": "scattergl", "mode": "lines", "line": line,
+              "opacity": element.alpha, "hoverinfo": "skip",
+              "name": element.label or element.id}
+    return [
+        {**common, "x": lx, "y": ly, "showlegend": element.label is not None},
+        {**common, "x": hx, "y": hy, "showlegend": False},
+    ]
+
+
 def _stem_traces(element: Stem, theme, idx: int) -> list[dict]:
     """Stem series ([D115]): one NaN-gapped line trace for every stem + a
     marker head trace (native picks ride the head trace's source-id row)."""
@@ -743,6 +758,7 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Mesh: _mesh_trace,
     Quiver: _quiver_traces,
     Stem: _stem_traces,
+    Streamlines: _streamlines_traces,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -779,6 +795,7 @@ HONORED: dict[type, frozenset[str]] = {
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
     Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
+    Streamlines: frozenset({"density", "color", "line_width", "alpha", "label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 

@@ -304,7 +304,7 @@ all.
 | `pcolor_demo.py` | ✅ | Mesh — non-uniform rectilinear cell edges *(recreated: `v2:mesh_nonuniform`)* |
 | `pcolormesh_grids.py` | ✅ | Mesh edge contract matches (flat shading; gouraud not modeled) *(recreated: `v2:mesh_nonuniform`)* |
 | `pcolormesh_levels.py` | ✅ | Mesh + norm='boundary' (levels=) — discrete colors, level-ticked colorbar ([D114], wave 1.4) *(guard: `test_norms_tail.py`)* |
-| `plot_streamplot.py` | ❌ | no streamlines (probe) *(probe: `PROBE_streamplot`)* |
+| `plot_streamplot.py` | ✅ | `Streamlines(u, v, bounds=, density=)` — RK4 + spacing mask in core ([D118], wave 1.5; graduated from the parked register) *(guard: `test_streamlines.py`)* |
 | `quadmesh_demo.py` | ❌ | curvilinear (2-D coordinate) meshes not modeled (probe — fails with a raw TypeError, a validation wart) *(probe: `v2:PROBE_curvilinear_mesh`)* |
 | `quiver_demo.py` | ✅ | Quiver ✓ (auto scale); `key=`/`key_label=` reference key as a legend entry ([D112], wave 1.4) *(recreated: `v2:quiver_field`; key guard: `test_quiver.py`)* |
 | `quiver_simple_demo.py` | ✅ | Quiver(x=, y=, u=, v=, arrow_scale=) *(recreated: `v2:quiver_field`)* |

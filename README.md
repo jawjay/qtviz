@@ -38,7 +38,7 @@ and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 > **Status — `1.0` stable + the parity program.** The public surface is frozen
 > and policy-backed ([docs/stability.md](docs/stability.md)); everything since is
 > additive ([`design/parity-program.md`](design/parity-program.md), [D83]–[D95]):
-> **26 elements** across three backends, first-class axes (log/symlog,
+> **27 elements** across three backends, first-class axes (log/symlog,
 > **calendar-time axes**, **twin y axes**, tick formatting, explicit/minor
 > ticks — with data-space events everywhere), legends, raster norms
 > (log/power/symlog/boundary with honest colorbars),
@@ -134,7 +134,7 @@ uv sync --extra datashader --extra dask         # big-data + out-of-core
 
 Everything below is real, runnable code. The point is how little of it there is.
 
-**Elements** — twenty-six immutable plot types, each pure data:
+**Elements** — twenty-seven immutable plot types, each pure data:
 
 ```python
 qv.Scatter(table, x="x", y="y")
@@ -150,8 +150,9 @@ qv.Heatmap(table, x="x", y="y", z="z", aggregator="mean",   # real data coordina
            cell_labels="auto")                   # contrast-aware value labels
 qv.Image(array2d, bounds=(0, 0, 10, 10), norm="log")        # also power/symlog/boundary
 qv.Mesh(spec2d, x_edges=t_edges, y_edges=np.geomspace(1, 64, 13))  # non-uniform cells
-qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, filled=True)
+qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, labels=True)  # inline labels
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
+qv.Streamlines(u2d, v2d, bounds=(0, 0, 10, 10), density=1.5)  # field-line flow
 qv.Pie(table, values="share", labels="browser", hole=0.4)   # donut (mpl/webengine)
 qv.ErrorBars(table, x="x", y="y", err="sigma", lo_limit="is_lo")  # "beyond" arrows
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
@@ -409,7 +410,7 @@ See [`examples/README.md`](examples/README.md) for the full index.
 | Area | Support |
 |------|---------|
 | **Backends** | pyqtgraph (native, default) · matplotlib (extra) · webengine / Plotly (extra) — third-party backends via the registry ([writing a backend](docs/backends.md)) |
-| **Elements** | Scatter · Curve (step modes, markers, `color_by` segments) · Bars (grouped/stacked, horizontal, `bar_labels`) · Area (stacked bands) · Histogram (one shared binning) · Ecdf · Stem (lollipops) · Image · Heatmap (real aggregation, data coordinates, `cell_labels` with computed contrast) · Mesh (non-uniform cell edges) · Contour (shared levels, filled) · Quiver (vector fields + reference key) · Pie (donuts) · ErrorBars (x/y/both, `lo_limit`/`hi_limit` arrows) · Spread · BoxPlot · Violin · HLine/VLine/Span/Text/Arrow/Rect/Ellipse/Polygon/RefLine (annotations & reference chrome) · `RawFigure` (passthrough) |
+| **Elements** | Scatter · Curve (step modes, markers, `color_by` segments) · Bars (grouped/stacked, horizontal, `bar_labels`) · Area (stacked bands) · Histogram (one shared binning) · Ecdf · Stem (lollipops) · Image · Heatmap (real aggregation, data coordinates, `cell_labels` with computed contrast) · Mesh (non-uniform cell edges) · Contour (shared levels, filled, core-placed inline labels) · Quiver (vector fields + reference key) · Streamlines (RK4 field lines, spacing mask) · Pie (donuts) · ErrorBars (x/y/both, `lo_limit`/`hi_limit` arrows) · Spread · BoxPlot · Violin · HLine/VLine/Span/Text/Arrow/Rect/Ellipse/Polygon/RefLine (annotations & reference chrome) · `RawFigure` (passthrough) |
 | **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · `Layout.mosaic("AAB\nCCB", …)` spanning panes · `width_ratios`/`height_ratios` · figure suptitle · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
 | **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** |

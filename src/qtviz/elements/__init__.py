@@ -21,6 +21,7 @@ from .shapes import Ellipse, Polygon, Rect
 from .spread import Spread
 from .stats import BoxPlot, Violin
 from .stem import Stem
+from .streamlines import Streamlines
 
 __all__ = [
     "Scatter", "Curve", "Bars", "Image",
@@ -30,5 +31,5 @@ __all__ = [
     "Arrow", "Rect", "Ellipse", "Polygon", "RefLine",
     "BoxPlot", "Violin",
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
-    "Stem",
+    "Stem", "Streamlines",
 ]
