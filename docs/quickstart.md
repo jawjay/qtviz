@@ -5,24 +5,41 @@ composition (`*` / `+`), `View`, `Theme`, typed events — cover everything.
 
 ## Elements
 
-Nineteen immutable plot types, each pure data:
+An immutable plot vocabulary, each element pure data:
 
 ```python
 qv.Scatter(table, x="x", y="y", color_by="category")
 qv.Curve(table,   x="t", y="v", step="post", marker="circle")
-qv.Bars(table,    x="category", y="count", group="region", orient="h")
+qv.Curve(table,   x="t", y="v", color_by="regime")            # per-segment coloring
+qv.Bars(table,    x="category", y="count", group="region", orient="h",
+        bar_labels="auto")                                    # value labels on bars
 qv.Area(table,    x="t", y="load", group="service", mode="stacked")
 qv.Histogram(table, column="value", bins="fd")
 qv.Ecdf(table, column="latency")
-qv.Heatmap(table, x="x", y="y", z="z")
-qv.Image(array2d, bounds=(0, 0, 10, 10))
+qv.Stem(table, x="day", y="delta", baseline=0.0)              # lollipop series
+qv.Heatmap(table, x="x", y="y", z="z", cell_labels="auto")    # contrast-aware labels
+qv.Image(array2d, bounds=(0, 0, 10, 10), norm="log")          # also "power",
+qv.Mesh(array2d,  x_edges=xe, y_edges=np.geomspace(1, 64, 13),  # "symlog",
+        norm="boundary", levels=[0, 1, 2, 4, 8])                # "boundary"
 qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, filled=True)
+qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
 qv.Pie(table, values="share", labels="browser", hole=0.4)
-qv.ErrorBars(table, x="x", y="y", err="sigma")
+qv.ErrorBars(table, x="x", y="y", err="sigma",
+             lo_limit="is_lo", hi_limit="is_hi")              # "beyond" arrow caps
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
 qv.BoxPlot(table, column="score", by="cohort")
 qv.Violin(table,  column="score", by="cohort")
-qv.HLine(4.5, label="alarm") ; qv.VLine(0.0) ; qv.Span(2, 4) ; qv.Text(5, 2, "peak")
+```
+
+Annotations & references share the same tree — lines, spans, shapes, text,
+arrows, and slope references:
+
+```python
+qv.HLine(4.5, label="alarm") ; qv.VLine(0.0) ; qv.Span(2, 4)
+qv.Text(5, 2, "peak", rotation=30, frame=True)
+qv.Arrow(1, 0.2, 4, 0.8) ; qv.Rect(2, -0.5, 4, 0.5)
+qv.Ellipse(5, 0, 1.5, 0.4, angle=20) ; qv.Polygon([(6, 0), (7, 0.6), (8, -0.2)])
+qv.RefLine(0.1, -0.2, label="1:10 slope")
 ```
 
 ![The everyday figures in one grid](images/examples/35_everyday_figures.png)
@@ -35,10 +52,14 @@ Per-axis `AxisSpec` on the shared surface; events stay in data space (R1):
 qv.Overlay([a, b], options=qv.OverlayOptions(
     title="Spectrum",
     x=qv.AxisSpec(scale="log", lim=(1, 1e4)),
-    y=qv.AxisSpec(tick_format="eng"),        # SI ticks; also ".0%", ",d", "%H:%M"
+    y=qv.AxisSpec(tick_format="eng"),        # SI ticks; also ".0%", ",d", "%H:%M",
+                                             # and templates: "{:.0f} ms", "${:,.0f}"
     y2=qv.AxisSpec(label="Pa"),              # twin right axis — put a series on it
     grid=False,                              # with Curve(..., axis="y2")
 ))
+
+qv.AxisSpec(ticks=[0, 5, 10], tick_labels=["lo", "mid", "hi"],  # pinned positions
+            minor=True, tick_rotation=45)                       # minor ticks, tilt
 
 qv.Curve({"t": dt64_stamps, "v": values}, x="t", y="v")   # datetime64 → calendar
                                                           # ticks on every backend
@@ -57,7 +78,9 @@ qv.Layout.mosaic("AAB\nCCB", A=a, B=b, C=c)                        # spanning pa
 ```
 
 Mosaic grids take `LayoutOptions(width_ratios=…, height_ratios=…)` for track
-sizes and `title=` for a figure-level suptitle.
+sizes and `title=` for a figure-level suptitle:
+
+![Mosaic layout: spanning panes and a suptitle](images/examples/36_mosaic_layout.png)
 
 ## Views & backends
 

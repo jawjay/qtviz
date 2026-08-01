@@ -38,12 +38,15 @@ and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 > **Status — `1.0` stable + the parity program.** The public surface is frozen
 > and policy-backed ([docs/stability.md](docs/stability.md)); everything since is
 > additive ([`design/parity-program.md`](design/parity-program.md), [D83]–[D95]):
-> **19 elements** across three backends, first-class axes (log/symlog,
-> **calendar-time axes**, **twin y axes**, tick formatting — with data-space
-> events everywhere), legends, statistical/annotation/composition vocabularies,
-> screen-cost rendering for huge zarr/dask/xarray grids, live streaming sources
-> with in-place updates, and brush-selection through datashaded views —
-> **630+ passing tests**, mypy-clean, 91% coverage. Private by design; install
+> **26 elements** across three backends, first-class axes (log/symlog,
+> **calendar-time axes**, **twin y axes**, tick formatting, explicit/minor
+> ticks — with data-space events everywhere), legends, raster norms
+> (log/power/symlog/boundary with honest colorbars),
+> statistical/annotation/composition vocabularies (meshes, vector fields,
+> stems, mosaic layouts), screen-cost rendering for huge zarr/dask/xarray
+> grids, live streaming sources with in-place updates, and brush-selection
+> through datashaded views — **760+ passing tests**, mypy-clean, 92%
+> coverage. Private by design; install
 > from source / `git+`.
 
 ---
@@ -55,10 +58,12 @@ and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 | ![Sensor monitoring: baseline, tolerance band, flagged anomalies, linked residual panel](docs/images/examples/26_telemetry_monitoring.png) *Telemetry monitoring — rolling baseline, 3σ band, flagged anomalies, X-linked residual panel ([`examples/26`](examples/26_telemetry_monitoring.py))* | ![Market analytics: price, moving averages, Bollinger band over a linked volume panel](docs/images/examples/27_market_analytics.png) *Market analytics — price + moving averages + Bollinger `Spread` over linked volume `Bars` ([`examples/27`](examples/27_market_analytics.py))* |
 | ![2M events datashaded into a categorical density map with a legend](docs/images/examples/28_event_density_map.png) *2M events → a Datashaded categorical density map; hover reports the count under the cursor ([`examples/28`](examples/28_event_density_map.py))* | ![A Plotly 3-D surface hosted through RawFigure in a Qt WebEngine view](docs/images/examples/18_webengine_raw_figure.png) *A Plotly 3-D surface hosted via `RawFigure` — events still arrive as typed qtviz events ([`examples/18`](examples/18_webengine_raw_figure.py))* |
 
-![The everyday figures: step curve, stacked area, horizontal bars, donut, ECDF, filled contour, SI ticks, dual axis](docs/images/examples/35_everyday_figures.png)
+![The everyday figures: step curve, stacked area, horizontal bars, donut, ECDF, filled contour, SI ticks, dual axis, quiver key, boundary-level mesh, stem, annotated heatmap](docs/images/examples/35_everyday_figures.png)
 *The everyday figures of the popular libraries, declaratively — step + markers,
 stacked `Area`, horizontal grouped `Bars`, a `Pie` donut, `Ecdf`, filled
-`Contour`, SI tick formatting, and a dual-axis pair, with the native toolbar
+`Contour`, SI tick formatting, a dual-axis pair, a `Quiver` field with a
+reference key, a `Mesh` with discrete boundary levels, a `Stem` series, and an
+annotated `Heatmap` with computed label contrast, with the native toolbar
 ([`examples/35_everyday_figures.py`](examples/35_everyday_figures.py))*
 
 All screenshots are captured straight from the runnable scripts in
@@ -129,25 +134,33 @@ uv sync --extra datashader --extra dask         # big-data + out-of-core
 
 Everything below is real, runnable code. The point is how little of it there is.
 
-**Elements** — nineteen immutable plot types, each pure data:
+**Elements** — twenty-six immutable plot types, each pure data:
 
 ```python
 qv.Scatter(table, x="x", y="y")
 qv.Curve(table,   x="t", y="v", step="post", marker="circle")   # stepped, markered
+qv.Curve(table,   x="t", y="v", color_by="regime")   # per-segment category colors
 qv.Bars(table,    x="category", y="count", group="region", mode="stacked", orient="h")
+qv.Bars(table,    x="category", y="count", bar_labels="auto")   # value labels
 qv.Area(table,    x="t", y="load", group="service", mode="stacked")  # stacked bands
 qv.Histogram(table, column="value", bins="fd")   # int or numpy rule — one binning, all backends
 qv.Ecdf(table, column="latency")                 # empirical CDF, shared numbers
-qv.Heatmap(table, x="x", y="y", z="z", aggregator="mean")   # real data coordinates
-qv.Image(array2d, bounds=(0, 0, 10, 10))
+qv.Stem(table, x="day", y="delta")               # lollipop series, pickable heads
+qv.Heatmap(table, x="x", y="y", z="z", aggregator="mean",   # real data coordinates
+           cell_labels="auto")                   # contrast-aware value labels
+qv.Image(array2d, bounds=(0, 0, 10, 10), norm="log")        # also power/symlog/boundary
+qv.Mesh(spec2d, x_edges=t_edges, y_edges=np.geomspace(1, 64, 13))  # non-uniform cells
 qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, filled=True)
+qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
 qv.Pie(table, values="share", labels="browser", hole=0.4)   # donut (mpl/webengine)
-qv.ErrorBars(table, x="x", y="y", err="sigma", direction="both")
+qv.ErrorBars(table, x="x", y="y", err="sigma", lo_limit="is_lo")  # "beyond" arrows
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
 qv.BoxPlot(table, column="score", by="cohort")   # shared stats core, all backends
 qv.Violin(table,  column="score", by="cohort")
 qv.HLine(4.5, line_style="dashed", label="alarm")   # reference chrome:
-qv.VLine(0.0) ; qv.Span(2.0, 4.0) ; qv.Text(5, 2, "peak")
+qv.VLine(0.0) ; qv.Span(2.0, 4.0) ; qv.Text(5, 2, "peak", rotation=30, frame=True)
+qv.Arrow(1, 0.2, 4, 0.8) ; qv.Rect(2, -0.5, 4, 0.5) ; qv.Ellipse(5, 0, 1.5, 0.4)
+qv.Polygon([(6, 0), (7, 0.6), (8, -0.2)]) ; qv.RefLine(0.1, -0.2)  # slope guide
 ```
 
 ![Eight element types rendered in one grid layout](docs/images/examples/08_gallery.png)
@@ -159,9 +172,14 @@ qv.VLine(0.0) ; qv.Span(2.0, 4.0) ; qv.Text(5, 2, "peak")
 qv.Overlay([a, b], options=qv.OverlayOptions(
     title="Spectrum",
     x=qv.AxisSpec(scale="log", lim=(1, 1e4)),   # events stay in DATA space (R1)
-    y=qv.AxisSpec(tick_format="eng"),           # SI ticks; ".0%", ",d", "%H:%M" …
-    legend=True, legend_position="right", grid=False,
+    y=qv.AxisSpec(tick_format="eng"),           # SI ticks; ".0%", ",d", "%H:%M",
+    legend=True, legend_position="right",       # templates: "{:.0f} ms", "${:,.0f}"
+    grid=False,
 ))
+
+# Explicit ticks, minor ticks, rotated labels ([D101]/[D103])
+qv.AxisSpec(ticks=[0, 5, 10], tick_labels=["lo", "mid", "hi"],
+            minor=True, tick_rotation=45)
 
 # Twin y axes: put a series on the right-hand axis
 qv.Overlay(
@@ -193,7 +211,14 @@ scatter * curve                 # Overlay: same axes, layered
 scatter + histogram             # Layout: side-by-side panels
 qv.Layout([a, b, c], kind="tabs")                 # or "grid" | "splitter" | "dock"
 qv.Layout([a, b], options=qv.LayoutOptions(cols=2, link_x=True))   # shared X axis
+qv.Layout.mosaic("AAB\nCCB", A=a, B=b, C=c,       # spanning panes from an ASCII
+    options=qv.LayoutOptions(width_ratios=[1, 1, 0.8],  # plan + track ratios
+                             title="Suptitle"))
 ```
+
+![Mosaic layout with spanning panes and a suptitle](docs/images/examples/36_mosaic_layout.png)
+*Spanning panes from an ASCII plan, track ratios, and a figure suptitle
+([`examples/36_mosaic_layout.py`](examples/36_mosaic_layout.py))*
 
 **Views & backends** — a `View` is a `QWidget`; choose an engine or let qtviz pick:
 
@@ -384,13 +409,14 @@ See [`examples/README.md`](examples/README.md) for the full index.
 | Area | Support |
 |------|---------|
 | **Backends** | pyqtgraph (native, default) · matplotlib (extra) · webengine / Plotly (extra) — third-party backends via the registry ([writing a backend](docs/backends.md)) |
-| **Elements** | Scatter · Curve (step modes, markers) · Bars (grouped/stacked, horizontal) · Area (stacked bands) · Histogram (one shared binning) · Ecdf · Image · Heatmap (real aggregation, data coordinates) · Contour (shared levels, filled) · Pie (donuts) · ErrorBars (x/y/both) · Spread · BoxPlot · Violin · HLine/VLine/Span/Text (reference chrome) · `RawFigure` (passthrough) |
-| **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · mixed-backend panes |
+| **Elements** | Scatter · Curve (step modes, markers, `color_by` segments) · Bars (grouped/stacked, horizontal, `bar_labels`) · Area (stacked bands) · Histogram (one shared binning) · Ecdf · Stem (lollipops) · Image · Heatmap (real aggregation, data coordinates, `cell_labels` with computed contrast) · Mesh (non-uniform cell edges) · Contour (shared levels, filled) · Quiver (vector fields + reference key) · Pie (donuts) · ErrorBars (x/y/both, `lo_limit`/`hi_limit` arrows) · Spread · BoxPlot · Violin · HLine/VLine/Span/Text/Arrow/Rect/Ellipse/Polygon/RefLine (annotations & reference chrome) · `RawFigure` (passthrough) |
+| **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · `Layout.mosaic("AAB\nCCB", …)` spanning panes · `width_ratios`/`height_ratios` · figure suptitle · mixed-backend panes |
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
 | **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** |
 | **Data inputs** | dict · NumPy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
 | **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom; **hover a raster for the aggregated value** (`HoverEvent.value`) |
-| **Axes & legends** | `AxisSpec`: log/symlog + **calendar-time** scales (data-space events everywhere, R1; datetime64 auto-detected, epoch-seconds canonical) · tick formatting (format specs, SI, strftime) · **twin y axes** (`axis="y2"`) · limits · invert · aspect · grid toggle · multi-series legends (`label` + aggregation) · gradient colorbars · `color_norm="log"` with honest endpoint keys |
+| **Axes & legends** | `AxisSpec`: log/symlog + **calendar-time** scales (data-space events everywhere, R1; datetime64 auto-detected, epoch-seconds canonical) · tick formatting (format specs, SI, strftime, one-field templates) · explicit `ticks`/`tick_labels` · minor ticks · label rotation · **twin y axes** (`axis="y2"`) · limits · invert · aspect · grid toggle · multi-series legends (`label` + aggregation, quiver reference key) · gradient colorbars · `color_norm="log"` with honest endpoint keys |
+| **Raster norms** | `norm="linear" \| "log" \| "power" \| "symlog" \| "boundary"` + `vmin`/`vmax`/`gamma`/`linthresh`/`levels` on Image/Heatmap/Mesh — normalized once in core (bit-identical grids per backend) with [D48]-honest colorbars (mpl denormalized/discrete ticks · pg endpoints key · Plotly hidden non-linear scale) |
 | **Interaction** | pan / zoom · brush-select — **including through datashaded views** (row indices when eager, bounds-predicate when lazy) · pick · hover · tap · linked axes · typed events via `View.on` · `View(toolbar=True)` native toolbar + rubber-band brush on matplotlib |
 | **Live / streaming** | `qv.stream(...)`: thread-safe appends, rolling windows, in-place item updates on pyqtgraph (one refresh per tick), honest fallbacks elsewhere |
 | **HoloViews / hvplot** | `from_holoviews(obj)` translates a HoloViews tree to native Elements (8 elements + containers; `RawFigure` fallback) · `DynamicMap` → `Signal[Node]` (kdim-driven re-render) · `from_hvplot(df, kind, …)` one-liner |

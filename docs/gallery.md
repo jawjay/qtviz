@@ -63,10 +63,20 @@ and a brush-driven detail panel wired through a `Signal`.
 
 The everyday figures of the popular libraries in one grid: step curve with
 markers, stacked `Area`, horizontal grouped `Bars`, a `Pie` donut, `Ecdf` with
-percent ticks, filled `Contour`, SI tick formatting with the grid off, and a
-dual-axis pair — under the native toolbar (`View(toolbar=True)`).
+percent ticks, filled `Contour`, SI tick formatting with the grid off, a
+dual-axis pair — plus a `Quiver` field with a reference key, a `Mesh` with
+discrete boundary levels, a `Stem` series, and an annotated `Heatmap` with
+computed label contrast — under the native toolbar (`View(toolbar=True)`).
 
-![Step, area, bars, donut, ECDF, contour, SI ticks, dual axis in one grid](images/examples/35_everyday_figures.png)
+![Step, area, bars, donut, ECDF, contour, SI ticks, dual axis, quiver, mesh, stem, annotated heatmap in one grid](images/examples/35_everyday_figures.png)
+
+### `36_mosaic_layout` — spanning panes from an ASCII plan
+
+`Layout.mosaic("AAB\nCCB", …)` — a wide price curve over a wide annotated
+heatmap, a tall distribution panel spanning both rows, `width_ratios` track
+sizing, and a figure-level suptitle ([D108]).
+
+![Mosaic layout with spanning panes and a suptitle](images/examples/36_mosaic_layout.png)
 
 ### `dashboard_native` — linked dashboard
 

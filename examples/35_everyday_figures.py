@@ -1,11 +1,15 @@
 """The everyday figures — the parity-program vocabulary in one window.
 
-Eight panels, one Element tree: a step curve with markers, a stacked area,
+Twelve panels, one Element tree: a step curve with markers, a stacked area,
 horizontal grouped bars, a donut, an ECDF, filled contours, a dual-axis
-telemetry pair, and SI/percent tick formatting ([D83]–[D95],
-design/parity-program.md). Everything here warns-or-honors per backend —
-swap `BACKEND` to "pyqtgraph" or "webengine" and the same tree renders
-(the pie routes itself to a capable backend automatically).
+telemetry pair, SI/percent tick formatting ([D83]–[D95],
+design/parity-program.md) — plus the wave 1.3/1.4 additions: a vector field
+with a reference key ([D107]/[D112]), a non-uniform mesh with discrete
+boundary levels ([D106]/[D114]), a stem series ([D115]), and an annotated
+heatmap with computed label contrast ([D113]). Everything here
+warns-or-honors per backend — swap `BACKEND` to "pyqtgraph" or "webengine"
+and the same tree renders (the pie routes itself to a capable backend
+automatically).
 
 Run:
     uv run python examples/35_everyday_figures.py
@@ -93,10 +97,48 @@ ticks_panel = qv.Overlay(
                               y=qv.AxisSpec(tick_format="eng")),
 )
 
+# 9 — vector field with a reference key ([D107]/[D112])
+fy, fx = np.mgrid[0:5, 0:7].astype(float)
+field_pts = {"x": fx.ravel(), "y": fy.ravel(),
+             "u": np.cos(fy.ravel() / 2), "v": np.sin(fx.ravel() / 2)}
+quiver_panel = qv.Overlay(
+    [qv.Quiver(field_pts, x="x", y="y", u="u", v="v",
+               key=1.0, key_label="1 m/s")],
+    options=qv.OverlayOptions(title="Vector field + key"),
+)
+
+# 10 — non-uniform mesh, discrete boundary levels ([D106]/[D114])
+freq_edges = np.geomspace(1.0, 64.0, 13)          # log-spaced rows
+time_edges = np.linspace(0.0, 10.0, 21)
+spec = rng.gamma(2.0, 1.0, (12, 20)) * np.linspace(2.0, 0.3, 12)[:, None]
+mesh_panel = qv.Overlay(
+    [qv.Mesh(spec, x_edges=time_edges, y_edges=freq_edges,
+             norm="boundary", levels=[0.0, 0.5, 1.0, 2.0, 4.0, 8.0])],
+    options=qv.OverlayOptions(title="Mesh, boundary levels"),
+)
+
+# 11 — stem series ([D115])
+events = {"day": np.arange(14.0),
+          "delta": rng.normal(0.0, 1.0, 14).cumsum()}
+stem_panel = qv.Overlay(
+    [qv.Stem(events, x="day", y="delta", label="drift")],
+    options=qv.OverlayOptions(title="Stem"),
+)
+
+# 12 — annotated heatmap with computed contrast ([D113])
+hx_, hy_ = np.meshgrid(np.arange(5.0), np.arange(4.0))
+heat = {"col": hx_.ravel(), "row": hy_.ravel(),
+        "score": (rng.random(20) * 100).round()}
+heat_panel = qv.Overlay(
+    [qv.Heatmap(heat, x="col", y="row", z="score", cell_labels=".0f")],
+    options=qv.OverlayOptions(title="Annotated heatmap"),
+)
+
 root = qv.Layout(
     [step_panel, area_panel, bars_panel, pie_panel,
-     ecdf_panel, contour_panel, ticks_panel, dual_panel],  # dual last: its right
-    options=qv.LayoutOptions(cols=4),                      # axis gets the margin
+     ecdf_panel, contour_panel, ticks_panel, dual_panel,
+     quiver_panel, mesh_panel, stem_panel, heat_panel],
+    options=qv.LayoutOptions(cols=4),
 )
 
 
