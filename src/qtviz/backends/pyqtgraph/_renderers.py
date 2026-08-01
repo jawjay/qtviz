@@ -571,6 +571,7 @@ def render_heatmap(element: Heatmap, ctx):
     d = element.data
     xs, ys, grid = grid_reduce(d.series("x"), d.series("y"), _col(d, "z"),
                                element.aggregator)  # real reduction ([D69])
+    raw_grid = grid  # labels state raw values, not normalized ones ([D113])
     grid, levels, norm_legend = _norm_display(element, grid, ctx)  # ([D105])
     # row-major: grid[j, i] is (ys[j], xs[i]) — the pg default (col-major) drew
     # every heatmap transposed relative to matplotlib/webengine ([D92]).
@@ -586,6 +587,11 @@ def render_heatmap(element: Heatmap, ctx):
     y0, y1 = _heat_extent(ctx.parent_axes, ys, "y")
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
+    labels = element.resolved_cell_labels(xs, ys, raw_grid, ctx.theme)  # ([D113])
+    for lb in labels:
+        text = pg.TextItem(lb.text, color=lb.color.qt(), anchor=(0.5, 0.5))
+        text.setPos(lb.x, lb.y)
+        ctx.parent_axes.addItem(text)
     return item
 
 
@@ -1109,7 +1115,7 @@ HONORED: dict[type, frozenset[str]] = {
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),  # interpolation unwired
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "cell_labels"}),
     ErrorBars: frozenset({"color", "direction", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

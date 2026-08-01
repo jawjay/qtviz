@@ -287,7 +287,7 @@ all.
 | `contours_in_optimization_demo.py` | ✅ | Contour + Curve/Scatter overlay *(recreated: `contours`)* |
 | `demo_bboximage.py` | 🔧 | figure-space images — escape hatch |
 | `figimage_demo.py` | 🔧 | same |
-| `image_annotated_heatmap.py` | ◑ | Heatmap + per-cell Text ✓; single text color → unreadable on dark cells (no per-cell contrast) *(recreated: `annotated_heatmap`)* |
+| `image_annotated_heatmap.py` | ✅ | `Heatmap(cell_labels=)` — core-computed per-cell contrast (WCAG luminance → theme fg/bg), ~400-cell guard ([D113], wave 1.4) *(recreated: `annotated_heatmap`; guard: `test_heatmap_cell_labels.py`)* |
 | `image_antialiasing.py` | ◑ | nearest/bilinear only *(recreated: `image_interpolation`)* |
 | `image_clip_path.py` | ❌ | no clip paths |
 | `image_demo.py` | ✅ | Image(bounds=, colormap=) *(recreated: `image_basic`)* |

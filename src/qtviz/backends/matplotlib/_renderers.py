@@ -551,10 +551,15 @@ def render_heatmap(element: Heatmap, ctx):
     ax = ctx.parent_axes
     x0, x1 = _heat_extent(ax, xs, "x")
     y0, y1 = _heat_extent(ax, ys, "y")
+    labels = element.resolved_cell_labels(xs, ys, grid, ctx.theme)  # pre-norm grid ([D113])
     grid, norm_kw = _norm_display(element, grid, ctx, ax)  # ([D105])
-    return ax.imshow(grid, origin="lower", aspect="auto",
-                     cmap=_mpl_cmap(element.colormap), extent=(x0, x1, y0, y1),
-                     **norm_kw)
+    artist = ax.imshow(grid, origin="lower", aspect="auto",
+                       cmap=_mpl_cmap(element.colormap), extent=(x0, x1, y0, y1),
+                       **norm_kw)
+    for lb in labels:
+        ax.text(lb.x, lb.y, lb.text, color=lb.color.mpl(),
+                ha="center", va="center", fontsize=8)
+    return artist
 
 
 def render_area(element: Area, ctx):
@@ -913,7 +918,7 @@ HONORED: dict[type, frozenset[str]] = {
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "cell_labels"}),
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

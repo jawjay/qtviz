@@ -183,6 +183,110 @@ def denormalize(t: float, lo: float, hi: float, norm: str = "linear",
     return float(lo + t * (hi - lo))
 
 
+# ── heatmap cell labels ([D113]) ─────────────────────────────────────────────
+@dataclass(frozen=True)
+class CellLabel:
+    """One heatmap cell's label ([D113]): grid indices, the cell-center
+    position (numeric axes: the center value; categorical axes: the index
+    position — the same convention the renderers' extents use), the formatted
+    text, and the contrast-picked text color."""
+
+    i: int
+    j: int
+    x: float
+    y: float
+    text: str
+    color: Color
+
+
+CELL_LABEL_MAX = 400  # ≈ matplotlib's practical annotated-heatmap limit
+
+# Luminance threshold for flipping label text dark↔light; the constant was
+# chosen by eye against the mpl annotated-heatmap reference figure.
+_LABEL_LUMINANCE = 0.45
+
+
+def relative_luminance(color: Color) -> float:
+    """WCAG 2.x relative luminance of an sRGB color, in [0, 1]."""
+
+    def lin(c: float) -> float:
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = color.rgba[:3]
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+
+
+def label_color(cell: Color, foreground: Color, background: Color) -> Color:
+    """Text color for a label sitting on `cell` ([D113]): the darker of the
+    theme pair on a bright cell, the lighter on a dark cell."""
+    dark, light = sorted((foreground, background), key=relative_luminance)
+    return dark if relative_luminance(cell) > _LABEL_LUMINANCE else light
+
+
+def _label_ramp(name: str) -> Palette:
+    """Continuous ramp for contrast computation: core palettes first, then
+    matplotlib's registry when importable, else viridis. Only the *label
+    color* rides on this — a fallback can cost contrast, never correctness."""
+    from .palette import Palette, palettes  # noqa: PLC0415
+
+    try:
+        return palettes.get(name)
+    except KeyError:
+        pass
+    try:
+        return Palette.from_matplotlib(name, n=32)
+    except Exception:  # noqa: BLE001 — mpl absent or unknown name
+        return palettes.get("viridis")
+
+
+def _center_positions(centers) -> np.ndarray:
+    arr = np.asarray(centers)
+    if np.issubdtype(arr.dtype, np.number):
+        return arr.astype("float64")
+    return np.arange(len(arr), dtype="float64")
+
+
+def heatmap_cell_labels(
+    xs, ys, grid, *,
+    spec: str = "auto", norm: str = "linear", vmin=None, vmax=None,
+    gamma: float = 1.0, colormap: str = "viridis",
+    foreground: Color, background: Color, max_cells: int = CELL_LABEL_MAX,
+) -> list[CellLabel]:
+    """One `CellLabel` per finite cell of a heatmap grid ([D113]), computed
+    once in core so every backend draws identical text: value formatted by the
+    [D86] vocabulary (`"auto"` → `%g`), position at the cell center, color
+    from `label_color` over the [D105]-normalized ramp color. Above
+    `max_cells` it warns and returns nothing — honest, not silent."""
+    from ._ticks import format_tick  # noqa: PLC0415
+
+    g = np.asarray(grid, dtype="float64")
+    if g.size > max_cells:
+        import warnings  # noqa: PLC0415
+
+        from ..errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(
+            f"cell_labels: {g.size} cells exceed the ~{max_cells} readability "
+            "guard; labels skipped", QtvizWarning, stacklevel=2)
+        return []
+    normed, _lo, _hi = normalize_values(g, norm=norm, vmin=vmin, vmax=vmax, gamma=gamma)
+    ramp = _label_ramp(colormap)
+    fmt = "g" if spec == "auto" else spec
+    xpos, ypos = _center_positions(xs), _center_positions(ys)
+    out: list[CellLabel] = []
+    for j in range(g.shape[0]):
+        for i in range(g.shape[1]):
+            v = g[j, i]
+            if not np.isfinite(v):
+                continue  # empty cell — nothing to say
+            t = normed[j, i]
+            cell = ramp.at(float(t)) if np.isfinite(t) else background
+            out.append(CellLabel(i, j, float(xpos[i]), float(ypos[j]),
+                                 format_tick(float(v), fmt),
+                                 label_color(cell, foreground, background)))
+    return out
+
+
 def norm_engaged(element) -> bool:
     """Whether the [D105] norm surface is in use — legends/limits only then,
     so pre-existing plain rasters keep their exact look."""

@@ -383,6 +383,18 @@ def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
         "type": "heatmap", "x": xs, "y": ys, "z": grid,
         "colorscale": _colorscale(element.colormap), "name": element.id,
     }
+    labels = element.resolved_cell_labels(xs, ys, grid, theme)  # ([D113])
+    if labels:
+        numeric_x = np.issubdtype(np.asarray(xs).dtype, np.number)
+        numeric_y = np.issubdtype(np.asarray(ys).dtype, np.number)
+        trace["_annotations"] = [  # popped into layout.annotations by build()
+            {"x": lb.x if numeric_x else str(xs[lb.i]),
+             "y": lb.y if numeric_y else str(ys[lb.j]),
+             "text": lb.text, "showarrow": False,
+             "font": {"color": _css(lb.color), "size": 9},
+             "xref": "x", "yref": "y"}
+            for lb in labels
+        ]
     _apply_norm(trace, element, grid)
     return [trace]
 
@@ -685,7 +697,7 @@ HONORED: dict[type, frozenset[str]] = {
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "cell_labels"}),
     ErrorBars: frozenset({"direction", "color", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
@@ -941,6 +953,8 @@ def build(node, theme) -> tuple[dict, list[str]]:
                 f"webengine has no Plotly renderer for {type(element).__name__}"
             )
         el_traces = builder(element, theme, idx)
+        for tr in el_traces:  # element-computed text (heatmap cell labels, [D113])
+            notes.extend(tr.pop("_annotations", ()))
         idx += 1
         if getattr(element, "axis", "y") == "y2":  # twin axis ([D88])
             for tr in el_traces:
