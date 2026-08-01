@@ -700,9 +700,28 @@ def render_contour(element: Contour, ctx):
         if ctx.show_legend:
             bar = ax.figure.colorbar(cs, ax=ax)
             bar.ax.tick_params(colors=ctx.theme.foreground.mpl())
-        return cs
-    return ax.contour(values, levels=lv, extent=(x0, x1, y0, y1), origin="lower",
-                      cmap=_mpl_cmap(element.colormap), linewidths=element.line_width)
+    else:
+        cs = ax.contour(values, levels=lv, extent=(x0, x1, y0, y1), origin="lower",
+                        cmap=_mpl_cmap(element.colormap), linewidths=element.line_width)
+    _draw_contour_labels(element, ax, ctx.theme)
+    return cs
+
+
+def _draw_contour_labels(element, ax, theme) -> None:
+    """Core-placed inline labels ([D117]): a background mask segment breaks
+    the line, then the rotated text in the level's line color."""
+    labels = element.resolved_labels()
+    if not labels:
+        return
+    from ...core.encoding import _label_ramp  # noqa: PLC0415
+
+    ramp = _label_ramp(element.colormap)
+    bg = theme.background.mpl()
+    for lb in labels:
+        mx0, my0, mx1, my1 = lb.mask
+        ax.plot([mx0, mx1], [my0, my1], color=bg, lw=9.0, solid_capstyle="butt")
+        ax.text(lb.x, lb.y, lb.text, color=ramp.at(lb.t).mpl(), rotation=lb.angle,
+                rotation_mode="anchor", ha="center", va="center", fontsize=8)
 
 
 def render_errorbars(element: ErrorBars, ctx):
@@ -977,7 +996,7 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
-    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
+    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "labels"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),

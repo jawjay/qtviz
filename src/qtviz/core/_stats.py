@@ -40,6 +40,163 @@ def contour_levels(values, levels) -> np.ndarray:
     return np.linspace(lo, hi, levels + 2)[1:-1]
 
 
+# ── contour inline labels ([D117], wave 1.5) ─────────────────────────────────
+def _cell_crossings(values, level):
+    """Marching-squares segments of the `level` iso-line, in index coords
+    (x=col, y=row). Returns a list of ((x0, y0), (x1, y1)) segments."""
+    v = np.asarray(values, dtype="float64")
+    above = v >= level
+    ny, nx = v.shape
+    # cells with at least one corner on each side of the level
+    a00, a10 = above[:-1, :-1], above[:-1, 1:]
+    a01, a11 = above[1:, :-1], above[1:, 1:]
+    active = ~((a00 == a10) & (a00 == a01) & (a00 == a11))
+    segs: list = []
+    js, is_ = np.nonzero(active)
+    for j, i in zip(js.tolist(), is_.tolist(), strict=True):
+        v00, v10 = v[j, i], v[j, i + 1]
+        v01, v11 = v[j + 1, i], v[j + 1, i + 1]
+        if not np.isfinite([v00, v10, v01, v11]).all():
+            continue
+        pts = []  # crossing points on the four cell edges
+        if (v00 >= level) != (v10 >= level):  # bottom
+            pts.append((i + (level - v00) / (v10 - v00), float(j)))
+        if (v10 >= level) != (v11 >= level):  # right
+            pts.append((float(i + 1), j + (level - v10) / (v11 - v10)))
+        if (v01 >= level) != (v11 >= level):  # top
+            pts.append((i + (level - v01) / (v11 - v01), float(j + 1)))
+        if (v00 >= level) != (v01 >= level):  # left
+            pts.append((float(i), j + (level - v00) / (v01 - v00)))
+        if len(pts) == 2:
+            segs.append((pts[0], pts[1]))
+        elif len(pts) == 4:  # saddle — resolve by the cell-center average
+            center_above = (v00 + v10 + v01 + v11) / 4.0 >= level
+            # pts order: bottom, right, top, left
+            if (v00 >= level) == center_above:
+                segs.append((pts[0], pts[3]))  # bottom–left, right–top
+                segs.append((pts[1], pts[2]))
+            else:
+                segs.append((pts[0], pts[1]))  # bottom–right, left–top
+                segs.append((pts[3], pts[2]))
+    return segs
+
+
+def iso_polylines(values, level) -> list[np.ndarray]:
+    """The `level` iso-lines of a grid as chained polylines ([D117]) — a list
+    of `(n, 2)` arrays in index coordinates (x=col, y=row), closed rings
+    repeating their first point. Marching squares with the saddle resolved by
+    the cell-center average; pure numpy + dict chaining."""
+    segs = _cell_crossings(values, level)
+    if not segs:
+        return []
+
+    def key(p):
+        return (round(p[0] * 1e6), round(p[1] * 1e6))
+
+    adj: dict = {}
+    for si, (p, q) in enumerate(segs):
+        adj.setdefault(key(p), []).append((si, 0))
+        adj.setdefault(key(q), []).append((si, 1))
+    used = [False] * len(segs)
+    lines: list[np.ndarray] = []
+    for start in range(len(segs)):
+        if used[start]:
+            continue
+        used[start] = True
+        path = [segs[start][0], segs[start][1]]
+        for flip in (False, True):  # extend forward, then backward
+            while True:
+                end = path[-1] if not flip else path[0]
+                nxt = None
+                for si, side in adj.get(key(end), ()):
+                    if not used[si]:
+                        nxt = (si, side)
+                        break
+                if nxt is None:
+                    break
+                si, side = nxt
+                used[si] = True
+                other = segs[si][1 - side]
+                if not flip:
+                    path.append(other)
+                else:
+                    path.insert(0, other)
+        lines.append(np.asarray(path, dtype="float64"))
+    return lines
+
+
+@dataclass(frozen=True)
+class ContourLabel:
+    """One inline contour label ([D117]): data-space position, CCW angle in
+    (-90, 90] (never upside-down), the formatted text, the level's normalized
+    position `t` in the drawn range (for line-matched coloring), and the
+    background mask segment that breaks the line under the text."""
+
+    x: float
+    y: float
+    angle: float
+    text: str
+    t: float
+    mask: tuple[float, float, float, float]  # (x0, y0, x1, y1), data space
+
+
+def contour_label_specs(values, levels, bounds, *, spec: str | bool = "auto",
+                        char_frac: float = 0.016) -> list[ContourLabel]:
+    """Core-placed inline labels ([D117]): per level, the longest iso-line's
+    arc-length midpoint, angled along the local tangent. Computed once so
+    every backend places identical labels ([D110] over engine fidelity — the
+    recorded trade-off vs mpl's native `clabel`). The mask length estimates
+    text width as `char_frac` of the larger span per character."""
+    from ._ticks import format_tick  # noqa: PLC0415
+
+    v = np.asarray(values, dtype="float64")
+    lv = np.asarray(levels, dtype="float64")
+    ny, nx = v.shape
+    x0, y0, x1, y1 = (float(b) for b in bounds)
+    sx = (x1 - x0) / max(nx - 1, 1)
+    sy = (y1 - y0) / max(ny - 1, 1)
+    lo, hi = float(lv[0]), float(lv[-1])
+    span = (hi - lo) or 1.0
+    out: list[ContourLabel] = []
+    for level in lv:
+        lines = iso_polylines(v, float(level))
+        if not lines:
+            continue  # the level doesn't cross the field — nothing to say
+        pts = max(lines, key=lambda p: _arc_length(p, sx, sy))
+        if len(pts) < 2:
+            continue
+        # data-space path + its arc-length midpoint
+        data = np.column_stack([x0 + pts[:, 0] * sx, y0 + pts[:, 1] * sy])
+        d = np.hypot(*np.diff(data, axis=0).T)
+        cum = np.concatenate([[0.0], np.cumsum(d)])
+        if cum[-1] == 0.0:
+            continue
+        k = int(np.searchsorted(cum, cum[-1] / 2.0))
+        k = min(max(k, 1), len(data) - 1)
+        px, py = (data[k - 1] + data[k]) / 2.0
+        dx, dy = data[k] - data[k - 1]
+        angle = float(np.degrees(np.arctan2(dy, dx)))
+        if angle > 90.0:
+            angle -= 180.0
+        elif angle <= -90.0:
+            angle += 180.0
+        text = (format_tick(float(level), spec) if isinstance(spec, str)
+                and spec != "auto" else format(float(level), "g"))
+        half = (len(text) + 1) * char_frac * max(x1 - x0, y1 - y0) / 2.0
+        rad = np.deg2rad(angle)
+        ca, sa = float(np.cos(rad)), float(np.sin(rad))
+        out.append(ContourLabel(
+            float(px), float(py), angle, text,
+            (float(level) - lo) / span,
+            (px - ca * half, py - sa * half, px + ca * half, py + sa * half)))
+    return out
+
+
+def _arc_length(pts: np.ndarray, sx: float, sy: float) -> float:
+    d = np.diff(pts, axis=0)
+    return float(np.hypot(d[:, 0] * sx, d[:, 1] * sy).sum())
+
+
 def ecdf(values) -> tuple[np.ndarray, np.ndarray]:
     """Empirical CDF ([D91]): the sorted finite sample points and the fraction
     of data ≤ each point. Drawn as a `post` step curve — one implementation so

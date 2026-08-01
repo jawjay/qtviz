@@ -280,7 +280,7 @@ all.
 | `contour_corner_mask.py` | ❌ | corner_mask rendering control |
 | `contour_demo.py` | ✅ | Contour(levels=) *(recreated: `contours`)* |
 | `contour_image.py` | ✅ | Image * Contour overlay *(recreated: `contours`)* |
-| `contour_label_demo.py` | ❌ | no inline level labels (clabel) |
+| `contour_label_demo.py` | ✅ | `Contour(labels=)` — core-placed inline labels, identical across backends ([D117], wave 1.5) *(guard: `test_contour_labels.py`)* |
 | `contourf_demo.py` | ✅ | Contour(filled=True) + colorbar *(recreated: `contours`)* |
 | `contourf_hatching.py` | ❌ | no hatching anywhere *(probe: `PROBE_hatching`)* |
 | `contourf_log.py` | ◑ | explicit level values ✓; log-spaced levels computable upstream, raster norm='log'/'symlog' now covers the shading half ([D114]) *(recreated: `contours`)* |

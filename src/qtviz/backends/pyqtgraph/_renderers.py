@@ -707,6 +707,21 @@ def render_contour(element: Contour, ctx):
         item.setTransform(tr)
         ctx.parent_axes.addItem(item)
         items.append(item)
+    labels = element.resolved_labels()  # core-placed inline labels ([D117])
+    if labels:
+        from ...core.encoding import _label_ramp  # noqa: PLC0415
+
+        ramp = _label_ramp(element.colormap)
+        bg_pen = pg.mkPen(ctx.theme.background.qt(), width=9.0)
+        for lb in labels:
+            mx0, my0, mx1, my1 = lb.mask
+            mask = pg.PlotCurveItem(x=np.array([mx0, mx1]), y=np.array([my0, my1]),
+                                    pen=bg_pen)
+            ctx.parent_axes.addItem(mask)
+            text = pg.TextItem(lb.text, color=ramp.at(lb.t).qt(),
+                               anchor=(0.5, 0.5), angle=lb.angle)  # CCW ([D96])
+            text.setPos(lb.x, lb.y)
+            ctx.parent_axes.addItem(text)
     return items
 
 
@@ -1164,7 +1179,7 @@ HONORED: dict[type, frozenset[str]] = {
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
-    Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
+    Contour: frozenset({"levels", "colormap", "line_width", "label", "labels"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),

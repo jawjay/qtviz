@@ -691,7 +691,7 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
                       QtvizWarning, stacklevel=2)
     x0, y0, x1, y1 = element.bounds
     ny, nx = values.shape
-    return [{
+    trace = {
         "type": "contour", "z": values,
         "x": np.linspace(x0, x1, nx), "y": np.linspace(y0, y1, ny),
         "colorscale": _colorscale(element.colormap),
@@ -700,7 +700,29 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
         "line": {"width": element.line_width},
         "showscale": element.filled,  # colorbar for filled, like matplotlib
         "name": element.label or element.id, "showlegend": False,
-    }]
+    }
+    labels = element.resolved_labels()  # core-placed inline labels ([D117])
+    if not labels:
+        return [trace]
+    from ...core.encoding import _label_ramp  # noqa: PLC0415
+
+    ramp = _label_ramp(element.colormap)
+    trace["_annotations"] = [  # popped into layout.annotations by build()
+        {"x": lb.x, "y": lb.y, "text": lb.text, "showarrow": False,
+         "textangle": -lb.angle,  # Plotly rotates clockwise
+         "font": {"color": _css(ramp.at(lb.t)), "size": 9},
+         "xref": "x", "yref": "y"}
+        for lb in labels
+    ]
+    gap = [np.nan]
+    mask = {  # background segments break the lines under the labels
+        "type": "scattergl", "mode": "lines",
+        "x": np.concatenate([[lb.mask[0], lb.mask[2]] + gap for lb in labels]),
+        "y": np.concatenate([[lb.mask[1], lb.mask[3]] + gap for lb in labels]),
+        "line": {"color": _css(theme.background), "width": 9},
+        "hoverinfo": "skip", "name": element.id, "showlegend": False,
+    }
+    return [trace, mask]
 
 
 _TRACE_BUILDERS: dict[type, Any] = {
@@ -752,7 +774,7 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"labels", "hole", "alpha"}),
-    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label"}),
+    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "labels"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
