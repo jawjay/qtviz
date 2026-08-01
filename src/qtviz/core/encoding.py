@@ -137,16 +137,41 @@ def _continuous(arr, palette: Palette, vmin, vmax, title,
     return rgba, legend
 
 
-RASTER_NORMS = ("linear", "log", "power")
+RASTER_NORMS = ("linear", "log", "power", "symlog", "boundary")
+
+
+def _symlog_fwd(a, linthresh: float):
+    """mpl's symlog transform (linscale=1, base 10), one numpy expression:
+    linear within ±linthresh, logarithmic beyond — continuous at the seam."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        logged = np.sign(a) * linthresh * (1.0 + np.log10(np.abs(a) / linthresh))
+    return np.where(np.abs(a) <= linthresh, a, logged)
+
+
+def _symlog_inv(s: float, linthresh: float) -> float:
+    if abs(s) <= linthresh:
+        return float(s)
+    return float(np.sign(s) * linthresh * 10.0 ** (abs(s) / linthresh - 1.0))
 
 
 def normalize_values(values, *, norm: str = "linear", vmin=None, vmax=None,
-                     gamma: float = 1.0):
+                     gamma: float = 1.0, linthresh: float = 1.0, levels=None):
     """Raster color normalization ([D105]), computed once in core so every
     backend colors identically: → `(normed [0,1] float64, lo, hi)`. NaN is
     preserved; under `log`, non-positive values become NaN (blank cells) with
-    one warning — the masked-image convention."""
+    one warning — the masked-image convention.
+
+    [D114] tail: `symlog` is mpl's piecewise transform (linear within
+    ±`linthresh`); `boundary` bins values into `len(levels)-1` discrete
+    colors sampled evenly from the colormap (`searchsorted` forward), with
+    `lo`/`hi` pinned to the outer levels."""
     a = np.asarray(values, dtype="float64")
+    if norm == "boundary":
+        lv = np.asarray(levels, dtype="float64")
+        k = len(lv)
+        idx = np.clip(np.searchsorted(lv, a, side="right") - 1, 0, k - 2)
+        normed = np.where(np.isnan(a), np.nan, (idx + 0.5) / (k - 1))
+        return normed, float(lv[0]), float(lv[-1])
     finite = a[np.isfinite(a)]
     if norm == "log":
         if np.any(finite <= 0):
@@ -167,19 +192,32 @@ def normalize_values(values, *, norm: str = "linear", vmin=None, vmax=None,
             normed = (np.log10(a) - np.log10(lo)) / lspan
     elif norm == "power":
         normed = np.clip((a - lo) / span, 0.0, 1.0) ** gamma
+    elif norm == "symlog":
+        s_lo, s_hi = _symlog_fwd(np.array(lo), linthresh), _symlog_fwd(np.array(hi), linthresh)
+        sspan = float(s_hi - s_lo) or 1.0
+        normed = (_symlog_fwd(a, linthresh) - float(s_lo)) / sspan
     else:
         normed = (a - lo) / span
     return np.clip(normed, 0.0, 1.0), lo, hi
 
 
 def denormalize(t: float, lo: float, hi: float, norm: str = "linear",
-                gamma: float = 1.0) -> float:
+                gamma: float = 1.0, *, linthresh: float = 1.0, levels=None) -> float:
     """The inverse of `normalize_values` for one tick position in [0, 1] —
-    colorbar ticks label true data values."""
+    colorbar ticks label true data values. `boundary` maps a position back to
+    its bin's midpoint ([D114])."""
     if norm == "log":
         return float(10.0 ** (np.log10(lo) + t * (np.log10(hi) - np.log10(lo))))
     if norm == "power":
         return float(lo + (t ** (1.0 / gamma)) * (hi - lo))
+    if norm == "symlog":
+        s_lo = float(_symlog_fwd(np.array(lo), linthresh))
+        s_hi = float(_symlog_fwd(np.array(hi), linthresh))
+        return _symlog_inv(s_lo + t * (s_hi - s_lo), linthresh)
+    if norm == "boundary":
+        lv = np.asarray(levels, dtype="float64")
+        i = int(np.clip(np.floor(t * (len(lv) - 1)), 0, len(lv) - 2))
+        return float((lv[i] + lv[i + 1]) / 2.0)
     return float(lo + t * (hi - lo))
 
 
@@ -249,7 +287,8 @@ def _center_positions(centers) -> np.ndarray:
 def heatmap_cell_labels(
     xs, ys, grid, *,
     spec: str = "auto", norm: str = "linear", vmin=None, vmax=None,
-    gamma: float = 1.0, colormap: str = "viridis",
+    gamma: float = 1.0, linthresh: float = 1.0, levels=None,
+    colormap: str = "viridis",
     foreground: Color, background: Color, max_cells: int = CELL_LABEL_MAX,
 ) -> list[CellLabel]:
     """One `CellLabel` per finite cell of a heatmap grid ([D113]), computed
@@ -269,7 +308,8 @@ def heatmap_cell_labels(
             f"cell_labels: {g.size} cells exceed the ~{max_cells} readability "
             "guard; labels skipped", QtvizWarning, stacklevel=2)
         return []
-    normed, _lo, _hi = normalize_values(g, norm=norm, vmin=vmin, vmax=vmax, gamma=gamma)
+    normed, _lo, _hi = normalize_values(g, norm=norm, vmin=vmin, vmax=vmax,
+                                        gamma=gamma, linthresh=linthresh, levels=levels)
     ramp = _label_ramp(colormap)
     fmt = "g" if spec == "auto" else spec
     xpos, ypos = _center_positions(xs), _center_positions(ys)

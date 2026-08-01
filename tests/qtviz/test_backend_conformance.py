@@ -119,6 +119,10 @@ def test_recommended_options_are_honored_or_warned(backend, make_elements, qtbot
         for opt in et.RECOMMENDED_OPTIONS:
             if opt not in _NON_DEFAULT:
                 continue  # column-valued (color_by/size_by) — honored everywhere
+            if opt == "levels" and et.__name__ in ("Image", "Heatmap", "Mesh"):
+                # raster `levels` requires norm='boundary' (like gamma needs
+                # power) — cross-backend behavior is covered by test_norms_tail
+                continue
             variant = el.with_(**{opt: _NON_DEFAULT[opt]})
             _degrade.reset()  # re-arm the warn-once registry for this assertion
             with warnings.catch_warnings(record=True) as caught:

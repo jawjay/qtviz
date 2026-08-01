@@ -538,8 +538,10 @@ def _norm_display(element, values, ctx):
 
     if not norm_engaged(element):
         return values, None, None
-    normed, lo, hi = normalize_values(values, norm=element.norm, vmin=element.vmin,
-                                      vmax=element.vmax, gamma=element.gamma)
+    normed, lo, hi = normalize_values(
+        values, norm=element.norm, vmin=element.vmin, vmax=element.vmax,
+        gamma=element.gamma, linthresh=getattr(element, "linthresh", 1.0),
+        levels=getattr(element, "levels", None))
     lut = _pg_lut(element.colormap)
     step = max(len(lut) // 8, 1)
     ramp = tuple(Color(f"#{r:02x}{g:02x}{b:02x}") for r, g, b in
@@ -1114,8 +1116,10 @@ HONORED: dict[type, frozenset[str]] = {
     Bars: frozenset({"color", "color_by", "group", "mode", "orient",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),  # interpolation unwired
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "cell_labels"}),
+    # (Image "interpolation" unwired on pg)
+    Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
+                       "levels", "cell_labels"}),
     ErrorBars: frozenset({"color", "direction", "label"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
@@ -1131,7 +1135,7 @@ HONORED: dict[type, frozenset[str]] = {
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label"}),  # not filled
-    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma"}),
+    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),
     RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),

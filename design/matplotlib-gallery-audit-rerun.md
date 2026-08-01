@@ -104,13 +104,13 @@ Every verdict change from the baseline (56 total):
 | `confidence_ellipse.py` | ❌ | ✅ | Scatter * Ellipse(angle=) — eigendecomposition upstream |
 | `errorbars_and_boxes.py` | ❌ | ◑ | per-point filled Rects + ErrorBars compose it; no collection element |
 | `barb_demo.py` | ❌ | ◑ | Quiver shows the field; wind-barb glyphs (flags/pennants) not modeled |
-| `colormap_normalizations.py` | ❌ | ◑ | norm='log'/'power' + vmin/vmax ✓; symlog/boundary/two-slope not modeled (probe) |
+| `colormap_normalizations.py` | ❌ | ◑ | norm='log'/'power'/'symlog'/'boundary' ✓ ([D114], wave 1.4); two-slope not modeled |
 | `image_nonuniform.py` | ❌ | ✅ | Mesh(values, x_edges=, y_edges=) |
 | `irregulardatagrid.py` | ❌ | ◑ | Mesh covers the non-uniform-grid half; the triangulation half doesn't apply |
 | `multi_image.py` | ◑ | ✅ | shared vmin=/vmax= give a common normalization across images |
 | `pcolor_demo.py` | ❌ | ✅ | Mesh — non-uniform rectilinear cell edges |
 | `pcolormesh_grids.py` | ❌ | ✅ | Mesh edge contract matches (flat shading; gouraud not modeled) |
-| `pcolormesh_levels.py` | ❌ | ◑ | Mesh + norm ✓; BoundaryNorm discrete levels not modeled (probe) |
+| `pcolormesh_levels.py` | ❌ | ✅ | Mesh + norm='boundary' (levels=) — discrete colors, level-ticked colorbar ([D114], wave 1.4) |
 | `quiver_demo.py` | ❌ | ✅ | Quiver ✓ (auto scale); `key=`/`key_label=` reference key as a legend entry ([D112], wave 1.4) |
 | `quiver_simple_demo.py` | ❌ | ✅ | Quiver(x=, y=, u=, v=, arrow_scale=) |
 | `power_norm.py` | ❌ | ✅ | Image/Heatmap/Mesh norm='power' + gamma= |
@@ -275,15 +275,15 @@ all.
 | `barb_demo.py` | ◑ | Quiver shows the field; wind-barb glyphs (flags/pennants) not modeled *(probe: `PROBE_quiver`)* |
 | `barcode_demo.py` | ✅ | 1×N Image, nearest (colormap names case-insensitive since the v1 fix) *(recreated: `v2:colormap_case_insensitive`)* |
 | `colormap_interactive_adjustment.py` | 🚫 | mpl-toolbar interaction; qtviz interaction is its own *(recreated: `colorbar_continuous`)* |
-| `colormap_normalizations.py` | ◑ | norm='log'/'power' + vmin/vmax ✓; symlog/boundary/two-slope not modeled (probe) *(recreated: `v2:mesh_log_norm`)* |
-| `colormap_normalizations_symlognorm.py` | ❌ | same *(probe: `v2:PROBE_symlog_norm`)* |
+| `colormap_normalizations.py` | ◑ | norm='log'/'power'/'symlog'/'boundary' ✓ ([D114], wave 1.4); two-slope not modeled *(recreated: `v2:mesh_log_norm`; guard: `test_norms_tail.py`)* |
+| `colormap_normalizations_symlognorm.py` | ✅ | norm='symlog' (linthresh=) — mpl's piecewise transform in core ([D114], wave 1.4) *(guard: `test_norms_tail.py`)* |
 | `contour_corner_mask.py` | ❌ | corner_mask rendering control |
 | `contour_demo.py` | ✅ | Contour(levels=) *(recreated: `contours`)* |
 | `contour_image.py` | ✅ | Image * Contour overlay *(recreated: `contours`)* |
 | `contour_label_demo.py` | ❌ | no inline level labels (clabel) |
 | `contourf_demo.py` | ✅ | Contour(filled=True) + colorbar *(recreated: `contours`)* |
 | `contourf_hatching.py` | ❌ | no hatching anywhere *(probe: `PROBE_hatching`)* |
-| `contourf_log.py` | ◑ | explicit level values ✓; log-spaced locator/norm not modeled *(recreated: `contours`)* |
+| `contourf_log.py` | ◑ | explicit level values ✓; log-spaced levels computable upstream, raster norm='log'/'symlog' now covers the shading half ([D114]) *(recreated: `contours`)* |
 | `contours_in_optimization_demo.py` | ✅ | Contour + Curve/Scatter overlay *(recreated: `contours`)* |
 | `demo_bboximage.py` | 🔧 | figure-space images — escape hatch |
 | `figimage_demo.py` | 🔧 | same |
@@ -303,7 +303,7 @@ all.
 | `multi_image.py` | ✅ | shared vmin=/vmax= give a common normalization across images *(recreated: `v2:shared_norm_images`)* |
 | `pcolor_demo.py` | ✅ | Mesh — non-uniform rectilinear cell edges *(recreated: `v2:mesh_nonuniform`)* |
 | `pcolormesh_grids.py` | ✅ | Mesh edge contract matches (flat shading; gouraud not modeled) *(recreated: `v2:mesh_nonuniform`)* |
-| `pcolormesh_levels.py` | ◑ | Mesh + norm ✓; BoundaryNorm discrete levels not modeled (probe) *(recreated: `v2:mesh_log_norm`)* |
+| `pcolormesh_levels.py` | ✅ | Mesh + norm='boundary' (levels=) — discrete colors, level-ticked colorbar ([D114], wave 1.4) *(guard: `test_norms_tail.py`)* |
 | `plot_streamplot.py` | ❌ | no streamlines (probe) *(probe: `PROBE_streamplot`)* |
 | `quadmesh_demo.py` | ❌ | curvilinear (2-D coordinate) meshes not modeled (probe — fails with a raw TypeError, a validation wart) *(probe: `v2:PROBE_curvilinear_mesh`)* |
 | `quiver_demo.py` | ✅ | Quiver ✓ (auto scale); `key=`/`key_label=` reference key as a legend entry ([D112], wave 1.4) *(recreated: `v2:quiver_field`; key guard: `test_quiver.py`)* |

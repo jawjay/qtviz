@@ -36,7 +36,8 @@ class Mesh(Element):
     frequency rows, irregular time bins. Shares the [D105] norm surface."""
 
     REQUIRED_OPTIONS = ("x_edges", "y_edges")
-    RECOMMENDED_OPTIONS = ("colormap", "norm", "vmin", "vmax", "gamma")
+    RECOMMENDED_OPTIONS = ("colormap", "norm", "vmin", "vmax", "gamma",
+                           "linthresh", "levels")
 
     def __init__(
         self,
@@ -49,11 +50,14 @@ class Mesh(Element):
         vmin: float | None = None,
         vmax: float | None = None,
         gamma: float = 1.0,
+        linthresh: float = 1.0,
+        levels: tuple[float, ...] | list[float] | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        check_norm(norm, vmin, vmax, gamma, who="Mesh")
+        check_norm(norm, vmin, vmax, gamma, who="Mesh",
+                   linthresh=linthresh, levels=levels)
         xe = _check_edges("x_edges", x_edges)
         ye = _check_edges("y_edges", y_edges)
         self.data = as_data_ref(data)
@@ -63,6 +67,8 @@ class Mesh(Element):
         self.vmin = float(vmin) if vmin is not None else None
         self.vmax = float(vmax) if vmax is not None else None
         self.gamma = float(gamma)
+        self.linthresh = float(linthresh)
+        self.levels = tuple(float(v) for v in levels) if levels is not None else None
         require_gridded(self.data, who="Mesh")
         shape = self.data.schema().shape
         if shape is not None and len(shape) == 2:  # lazy refs without a shape defer

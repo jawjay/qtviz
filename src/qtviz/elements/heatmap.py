@@ -23,7 +23,7 @@ class Heatmap(Element):
 
     REQUIRED_OPTIONS = ("x", "y", "z")
     RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "vmin", "vmax", "gamma",
-                           "cell_labels")
+                           "cell_labels", "linthresh", "levels")
     CHANNELS = ("x", "y", "z")
 
     def __init__(
@@ -35,10 +35,12 @@ class Heatmap(Element):
         z: Accessor,
         colormap: str = "viridis",
         aggregator: Literal["mean", "sum", "count", "max", "min", "last"] = "mean",
-        norm: Literal["linear", "log", "power"] = "linear",
+        norm: Literal["linear", "log", "power", "symlog", "boundary"] = "linear",
         vmin: float | None = None,
         vmax: float | None = None,
         gamma: float = 1.0,
+        linthresh: float = 1.0,
+        levels: tuple[float, ...] | list[float] | None = None,
         cell_labels: str | None = None,
         backend_hint: str | None = None,
         id=None,
@@ -50,7 +52,8 @@ class Heatmap(Element):
             raise ValidationError(
                 f"aggregator must be one of {GRID_AGGS}, got {aggregator!r}"
             )
-        check_norm(norm, vmin, vmax, gamma, who="Heatmap")
+        check_norm(norm, vmin, vmax, gamma, who="Heatmap",
+                   linthresh=linthresh, levels=levels)
         if cell_labels is not None and cell_labels != "auto":
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
@@ -63,6 +66,8 @@ class Heatmap(Element):
         self.vmin = float(vmin) if vmin is not None else None
         self.vmax = float(vmax) if vmax is not None else None
         self.gamma = float(gamma)
+        self.linthresh = float(linthresh)
+        self.levels = tuple(float(v) for v in levels) if levels is not None else None
         self.cell_labels = cell_labels
         self._validate_tabular()
         self._freeze()
@@ -77,5 +82,6 @@ class Heatmap(Element):
         return heatmap_cell_labels(
             xs, ys, grid, spec=self.cell_labels, norm=self.norm,
             vmin=self.vmin, vmax=self.vmax, gamma=self.gamma,
+            linthresh=self.linthresh, levels=self.levels,
             colormap=self.colormap,
             foreground=theme.foreground, background=theme.background)
