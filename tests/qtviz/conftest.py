@@ -106,7 +106,8 @@ def make_elements(table, grid):
             "Quiver": qv.Quiver(table, x="x", y="y", u="z", v="y"),
             "Stem": qv.Stem(table, x="x", y="y"),
             "Streamlines": qv.Streamlines(values, -values, bounds=bounds),
-            "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"]},
+            "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"],
+                           "cat": ["p", "q", "p"]},  # the honor-matrix by= column
                           value="v", by="l"),
         }
 

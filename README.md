@@ -140,9 +140,9 @@ Everything below is real, runnable code. The point is how little of it there is.
 qv.Scatter(table, x="x", y="y")
 qv.Curve(table,   x="t", y="v", step="post", marker="circle")   # stepped, markered
 qv.Curve(table,   x="t", y="v", color_by="regime")   # per-segment category colors
-qv.Bars(table,    x="category", y="count", group="region", mode="stacked", orient="h")
+qv.Bars(table,    x="category", y="count", by="region", mode="stacked", orient="h")
 qv.Bars(table,    x="category", y="count", bar_labels="auto")   # value labels
-qv.Area(table,    x="t", y="load", group="service", mode="stacked")  # stacked bands
+qv.Area(table,    x="t", y="load", by="service", mode="stacked")  # stacked bands
 qv.Histogram(table, value="value", bins="fd")   # int or numpy rule — one binning, all backends
 qv.Ecdf(table, value="latency")                 # empirical CDF, shared numbers
 qv.Stem(table, x="day", y="delta")               # lollipop series, pickable heads

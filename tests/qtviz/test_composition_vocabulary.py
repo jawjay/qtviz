@@ -32,7 +32,7 @@ def test_area_validation():
     from qtviz.errors import ValidationError
 
     qv.Area(_T, x="x", y="y")
-    qv.Area(_T, x="x", y="y", group="g", mode="stacked")
+    qv.Area(_T, x="x", y="y", by="g", mode="stacked")
     with pytest.raises(ValidationError):
         qv.Area(_T, x="x", y="y", mode="stacked")  # stacking needs groups
     with pytest.raises(ValidationError):
@@ -83,7 +83,7 @@ def test_webengine_area_stacked_uses_stackgroup():
     from qtviz.backends.webengine import _figure
 
     traces = _figure.build_figure(
-        qv.Area(_T, x="x", y="y", group="g", mode="stacked"),
+        qv.Area(_T, x="x", y="y", by="g", mode="stacked"),
         qv.Theme.light())["data"]
     assert len(traces) == 2
     assert all(tr.get("stackgroup") for tr in traces)
@@ -118,7 +118,7 @@ def test_mpl_area_single_and_stacked(qtbot):
     h1 = b.render(qv.Area(_T, x="x", y="y"), theme=qv.Theme.light())
     qtbot.addWidget(h1.widget)
     assert len(h1.axes[0].collections) == 1  # one PolyCollection
-    h2 = b.render(qv.Area(_T, x="x", y="y", group="g", mode="stacked"),
+    h2 = b.render(qv.Area(_T, x="x", y="y", by="g", mode="stacked"),
                   theme=qv.Theme.light())
     qtbot.addWidget(h2.widget)
     assert len(h2.axes[0].collections) == 2  # one band per group
@@ -161,7 +161,7 @@ def test_pg_area_single_fill_level(qtbot):
 def test_pg_area_stacked_fill_between(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Area(_T, x="x", y="y", group="g", mode="stacked")
+    el = qv.Area(_T, x="x", y="y", by="g", mode="stacked")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     items = handle.native(el.id)

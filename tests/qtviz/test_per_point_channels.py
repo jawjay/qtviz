@@ -43,7 +43,7 @@ def test_validation_and_channels():
     with pytest.raises(ValidationError):
         qv.Curve(_T, x="x", y="y", color_by="state", marker="circle")
     with pytest.raises(ValidationError):
-        qv.Bars(_B, x="cat", y="v", group="kind", color_by="kind")
+        qv.Bars(_B, x="cat", y="v", by="kind", color_by="kind")
 
 
 @pytest.mark.tier1

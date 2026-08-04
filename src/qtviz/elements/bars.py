@@ -15,12 +15,12 @@ _MODES = ("grouped", "stacked")
 
 class Bars(Element):
     """Bars — `x` categories (or numeric positions) with `y` heights. With
-    `group=` each distinct group value becomes its own palette-colored series,
+    `by=` each distinct group value becomes its own palette-colored series,
     laid out side-by-side (`mode="grouped"`) or cumulatively (`"stacked"`)
-    ([D68]); `mode` is meaningful only with `group`."""
+    ([D68]); `mode` is meaningful only with `by`."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("group", "mode", "color", "color_by", "orient",
+    RECOMMENDED_OPTIONS = ("by", "mode", "color", "color_by", "orient",
                            "bar_labels", "label")
     CHANNELS = ("x", "y")
 
@@ -30,7 +30,7 @@ class Bars(Element):
         *,
         x: Accessor,
         y: Accessor,
-        group: str | None = None,
+        by: Accessor | None = None,  # full accessor union — never just a column name
         mode: Literal["grouped", "stacked"] = "grouped",
         orient: Literal["v", "h"] = "v",
         color: ColorSpec | None = None,
@@ -43,18 +43,18 @@ class Bars(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         if mode not in _MODES:
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")
-        if mode != "grouped" and group is None:
-            raise ValidationError(f"Bars mode={mode!r} requires group= (it stacks the groups)")
+        if mode != "grouped" and by is None:
+            raise ValidationError(f"Bars mode={mode!r} requires by= (it stacks the groups)")
         if bar_labels is not None:  # value labels format via the [D86] vocabulary
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
             validate_tick_format(bar_labels, who="Bars(bar_labels=)")
-        check_exclusive(color, group, names=("color", "group"), who="Bars")
+        check_exclusive(color, by, names=("color", "by"), who="Bars")
         check_exclusive(color, color_by, names=("color", "color_by"), who="Bars")
-        check_exclusive(group, color_by, names=("group", "color_by"), who="Bars")
+        check_exclusive(by, color_by, names=("by", "color_by"), who="Bars")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
-        self.group = group
+        self.by = by
         self.mode = mode
         self.orient = orient
         self.color = color
@@ -65,12 +65,12 @@ class Bars(Element):
         self._freeze()
 
     def channels(self) -> dict:
-        """x/y always; the `group` role when set, so the resolve pipeline
-        materializes the group column for the renderers (same pattern as
+        """x/y always; the `by` role when set, so the resolve pipeline
+        materializes the category column for the renderers (same pattern as
         Scatter's `color_by`)."""
         ch = {"x": self.x, "y": self.y}
-        if self.group is not None:
-            ch["group"] = self.group
+        if self.by is not None:
+            ch["by"] = self.by
         if self.color_by is not None:
             ch["color"] = self.color_by
         return ch

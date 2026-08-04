@@ -95,7 +95,7 @@ def test_milestone_0_4_acceptance(qtbot, tmp_path):
         v2 = qv.View(qv.BoxPlot(stats, value="v", by="g"), backend=backend)
         qtbot.addWidget(v2)
         v3 = qv.View(qv.Bars({"q": ["Q1", "Q1", "Q2"], "s": [1.0, 2.0, 3.0],
-                              "r": ["e", "w", "e"]}, x="q", y="s", group="r"),
+                              "r": ["e", "w", "e"]}, x="q", y="s", by="r"),
                      backend=backend)
         qtbot.addWidget(v3)
         assert v1.handle and v2.handle and v3.handle

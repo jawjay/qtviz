@@ -34,9 +34,9 @@ _NON_DEFAULT = {
     "bar_labels": "auto", "marker_every": 3,
     "norm": "power", "vmin": 0.2, "vmax": 0.9,  # ("gamma" needs norm="power")
     "arrow_scale": 0.5, "head_scale": 2.0, "baseline": 0.5,
-    # ("mode" is skipped: stacking requires group=)
+    # ("mode" is skipped: stacking requires by=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
-    "group": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,
+    "by": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,
     "color": "#ff0000", "size": 10.0, "label": "series-A", "anchor": "left",
 }
 

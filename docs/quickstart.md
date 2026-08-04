@@ -11,9 +11,9 @@ An immutable plot vocabulary, each element pure data:
 qv.Scatter(table, x="x", y="y", color_by="category")
 qv.Curve(table,   x="t", y="v", step="post", marker="circle")
 qv.Curve(table,   x="t", y="v", color_by="regime")            # per-segment coloring
-qv.Bars(table,    x="category", y="count", group="region", orient="h",
+qv.Bars(table,    x="category", y="count", by="region", orient="h",
         bar_labels="auto")                                    # value labels on bars
-qv.Area(table,    x="t", y="load", group="service", mode="stacked")
+qv.Area(table,    x="t", y="load", by="service", mode="stacked")
 qv.Histogram(table, value="value", bins="fd")
 qv.Ecdf(table, value="latency")
 qv.Stem(table, x="day", y="delta", baseline=0.0)              # lollipop series

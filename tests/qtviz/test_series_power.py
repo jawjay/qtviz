@@ -80,7 +80,7 @@ def test_webengine_curve_marker_trace():
 def test_webengine_grouped_bars_horizontal():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Bars(_TABLE, x="cat", y="y", group="cat", orient="h")
+    el = qv.Bars(_TABLE, x="cat", y="y", by="cat", orient="h")
     traces = _figure.build_figure(el, qv.Theme.light())["data"]
     assert all(tr["orientation"] == "h" for tr in traces)
     assert all(isinstance(tr["y"][0], str) for tr in traces)  # categories on y
@@ -128,7 +128,7 @@ def test_mpl_bars_horizontal(qtbot):
 @pytest.mark.tier2
 def test_mpl_grouped_bars_horizontal(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Bars(_TABLE, x="cat", y="y", group="cat", orient="h")
+    el = qv.Bars(_TABLE, x="cat", y="y", by="cat", orient="h")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     ax = handle.axes[0]

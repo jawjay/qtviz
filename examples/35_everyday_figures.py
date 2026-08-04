@@ -41,7 +41,7 @@ area = {
     "svc": np.repeat(["api", "worker", "cron"], len(t)),
 }
 area_panel = qv.Overlay(
-    [qv.Area(area, x="t", y="load", group="svc", mode="stacked", alpha=0.85)],
+    [qv.Area(area, x="t", y="load", by="svc", mode="stacked", alpha=0.85)],
     options=qv.OverlayOptions(title="Stacked area"),
 )
 
@@ -50,7 +50,7 @@ bars = {"region": ["north", "south", "east", "west"] * 2,
         "sales": [40.0, 65, 52, 30, 55, 45, 60, 42],
         "year": ["2025"] * 4 + ["2026"] * 4}
 bars_panel = qv.Overlay(
-    [qv.Bars(bars, x="region", y="sales", group="year", orient="h")],
+    [qv.Bars(bars, x="region", y="sales", by="year", orient="h")],
     options=qv.OverlayOptions(title="Horizontal grouped bars"),
 )
 

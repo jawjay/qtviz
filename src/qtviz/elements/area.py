@@ -14,14 +14,14 @@ _MODES = ("overlay", "stacked")
 
 
 class Area(Element):
-    """A series filled to the zero baseline. With `group=` each distinct group
+    """A series filled to the zero baseline. With `by=` each distinct group
     value becomes its own palette-colored band — layered translucently
     (`mode="overlay"`) or cumulatively stacked (`"stacked"`) — the [D68]
     grouping pattern, so stacking stays inside one element. Grouped data pivots
     on unique x (duplicate rows in a group sum, like `Bars`)."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("group", "mode", "color", "alpha", "label")
+    RECOMMENDED_OPTIONS = ("by", "mode", "color", "alpha", "label")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -30,7 +30,7 @@ class Area(Element):
         *,
         x: Accessor,
         y: Accessor,
-        group: str | None = None,
+        by: Accessor | None = None,  # full accessor union — never just a column name
         mode: Literal["overlay", "stacked"] = "overlay",
         color: ColorSpec | None = None,
         alpha: float = 0.6,
@@ -41,13 +41,13 @@ class Area(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         if mode not in _MODES:
             raise ValidationError(f"Area mode must be one of {_MODES}, got {mode!r}")
-        if mode != "overlay" and group is None:
-            raise ValidationError(f"Area mode={mode!r} requires group= (it stacks the groups)")
-        check_exclusive(color, group, names=("color", "group"), who="Area")
+        if mode != "overlay" and by is None:
+            raise ValidationError(f"Area mode={mode!r} requires by= (it stacks the groups)")
+        check_exclusive(color, by, names=("color", "by"), who="Area")
         check_alpha(alpha, who="Area")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
-        self.group = group
+        self.by = by
         self.mode = mode
         self.color = color
         self.alpha = alpha
@@ -57,6 +57,6 @@ class Area(Element):
 
     def channels(self) -> dict:
         ch = {"x": self.x, "y": self.y}
-        if self.group is not None:
-            ch["group"] = self.group
+        if self.by is not None:
+            ch["by"] = self.by
         return ch

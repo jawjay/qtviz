@@ -306,7 +306,7 @@ def _label_bars(ax, container, element, theme, *, inside: bool = False) -> None:
 
 
 def render_bars(element: Bars, ctx):
-    if element.group is not None:
+    if element.by is not None:
         return _render_group_bars(element, ctx)
     height = _col(element.data, "y")
     try:
@@ -335,7 +335,7 @@ def _render_group_bars(element: Bars, ctx):
 
     d = element.data
     xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
-                             np.asarray(d.series("group")))
+                             np.asarray(d.series("by")))
     numeric = np.issubdtype(xs.dtype, np.number)
     pos = xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")
     ax = ctx.parent_axes
@@ -360,7 +360,7 @@ def _render_group_bars(element: Bars, ctx):
             _label_bars(ax, artists[-1], element, ctx.theme, inside=True)
             bases = bases + mat[gi]
     if ctx.show_legend:
-        legend = Legend(kind="categorical", title=element.group,
+        legend = Legend(kind="categorical", title=element.by,
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         _add_legend(ax, legend, ctx.theme, ctx.legend_position)
     return artists
@@ -587,14 +587,14 @@ def render_area(element: Area, ctx):
 
     d = element.data
     ax = ctx.parent_axes
-    if element.group is None:
+    if element.by is None:
         return ax.fill_between(
             _col(d, "x"), 0.0, _col(d, "y"),
             color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
             alpha=element.alpha,
         )
     xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
-                             np.asarray(d.series("group")))
+                             np.asarray(d.series("by")))
     numeric = np.issubdtype(xs.dtype, np.number)
     pos = xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")
     if not numeric:
@@ -609,7 +609,7 @@ def render_area(element: Area, ctx):
         if element.mode == "stacked":
             bases = top
     if ctx.show_legend:
-        legend = Legend(kind="categorical", title=element.group,
+        legend = Legend(kind="categorical", title=element.by,
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         _add_legend(ax, legend, ctx.theme, ctx.legend_position)
     return artists
@@ -988,7 +988,7 @@ HONORED: dict[type, frozenset[str]] = {
                         "color_norm", "label", "axis"}),
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "color_by", "group", "mode", "orient",
+    Bars: frozenset({"color", "color_by", "by", "mode", "orient",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma",
@@ -1007,7 +1007,7 @@ HONORED: dict[type, frozenset[str]] = {
     Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
-    Area: frozenset({"group", "mode", "color", "alpha", "label"}),
+    Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "labels"}),

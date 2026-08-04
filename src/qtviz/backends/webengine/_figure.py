@@ -244,7 +244,7 @@ def _curve_trace(element: Curve, theme, idx: int) -> list[dict]:
 
 def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
     d = element.data
-    if element.group is not None:
+    if element.by is not None:
         return _group_bars_traces(element, theme)
     x = list(np.asarray(d.series("x")))            # keep categorical labels as-is
     if element.color_by is not None:  # per-bar colors ([D100])
@@ -289,7 +289,7 @@ def _group_bars_traces(element: Bars, theme) -> list[dict]:
     d = element.data
     xs, gs, mat = group_bars(np.asarray(d.series("x")),
                              np.asarray(d.series("y"), dtype="float64"),
-                             np.asarray(d.series("group")))
+                             np.asarray(d.series("by")))
     numeric = np.issubdtype(xs.dtype, np.number)
     cats = _floats(xs) if numeric else [str(c) for c in xs]
     swatches = category_swatches(gs, theme.palette)
@@ -552,7 +552,7 @@ def _area_traces(element: Area, theme, idx: int) -> list[dict]:
     from ...core.encoding import category_swatches  # noqa: PLC0415
 
     d = element.data
-    if element.group is None:
+    if element.by is None:
         color = _element_color(element, theme, idx)
         return [{
             "type": "scatter", "mode": "lines",
@@ -564,7 +564,7 @@ def _area_traces(element: Area, theme, idx: int) -> list[dict]:
         }]
     xs, gs, mat = group_bars(np.asarray(d.series("x")),
                              np.asarray(d.series("y"), dtype="float64"),
-                             np.asarray(d.series("group")))
+                             np.asarray(d.series("by")))
     numeric = np.issubdtype(xs.dtype, np.number)
     x = _floats(xs) if numeric else [str(c) for c in xs]
     swatches = category_swatches(gs, theme.palette)
@@ -768,7 +768,7 @@ HONORED: dict[type, frozenset[str]] = {
                         "color_norm", "label", "axis"}),
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "color_by", "orient", "group", "mode",
+    Bars: frozenset({"color", "color_by", "orient", "by", "mode",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma",
@@ -787,7 +787,7 @@ HONORED: dict[type, frozenset[str]] = {
     Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
-    Area: frozenset({"group", "mode", "color", "alpha", "label"}),
+    Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "labels"}),
@@ -1041,7 +1041,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
             y2_active = True
         traces.extend(el_traces)
         source_ids.extend([element.id] * len(el_traces))
-        if isinstance(element, Bars) and element.group is not None:
+        if isinstance(element, Bars) and element.by is not None:
             barmode = "stack" if element.mode == "stacked" else "group"
     y2 = None
     if y2_active:

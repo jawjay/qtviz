@@ -258,7 +258,7 @@ def _bar_label_items(ctx, positions, values, tops, element, *, inside=False) -> 
 
 
 def render_bars(element: Bars, ctx):
-    if element.group is not None:
+    if element.by is not None:
         return _render_group_bars(element, ctx)
     d = element.data
     height = _col(d, "y")
@@ -320,7 +320,7 @@ def _render_group_bars(element: Bars, ctx):
 
     d = element.data
     xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
-                             np.asarray(d.series("group")))
+                             np.asarray(d.series("by")))
     pos, numeric = _bar_positions(xs)
     horizontal = element.orient == "h"  # positions on y, lengths on x ([D85])
     if not numeric:
@@ -354,7 +354,7 @@ def _render_group_bars(element: Bars, ctx):
     if ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        legend = Legend(kind="categorical", title=element.group,
+        legend = Legend(kind="categorical", title=element.by,
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     return items
@@ -784,13 +784,13 @@ def render_area(element: Area, ctx):
         return pg.PlotDataItem(x=x, y=y, pen=pg.mkPen(sw.qt()), fillLevel=0.0,
                                brush=pg.mkBrush(c))
 
-    if element.group is None:
+    if element.by is None:
         item = _band(logify(_col(d, "x"), x_log), logify(_col(d, "y"), y_log),
                      _color(element.color, ctx.theme, ctx.series_index))
         ctx.parent_axes.addItem(item)
         return item
     xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
-                             np.asarray(d.series("group")))
+                             np.asarray(d.series("by")))
     pos, numeric = _bar_positions(xs)
     if not numeric:
         ctx.parent_axes.getAxis("bottom").setTicks(
@@ -818,7 +818,7 @@ def render_area(element: Area, ctx):
     if ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        legend = Legend(kind="categorical", title=element.group,
+        legend = Legend(kind="categorical", title=element.by,
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     return items
@@ -1177,7 +1177,7 @@ HONORED: dict[type, frozenset[str]] = {
                         "color_norm", "label", "axis"}),
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "color_by", "group", "mode", "orient",
+    Bars: frozenset({"color", "color_by", "by", "mode", "orient",
                      "bar_labels", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     # (Image "interpolation" unwired on pg)
@@ -1196,7 +1196,7 @@ HONORED: dict[type, frozenset[str]] = {
     Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
-    Area: frozenset({"group", "mode", "color", "alpha", "label"}),
+    Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label", "labels"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),

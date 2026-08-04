@@ -59,7 +59,7 @@ def test_grid_reduce_aggregations():
 @pytest.mark.tier1
 def test_bars_group_validation():
     with pytest.raises(ValidationError):
-        qv.Bars(_GROUPED, x="quarter", y="sales", group="region", color="#ff0000")
+        qv.Bars(_GROUPED, x="quarter", y="sales", by="region", color="#ff0000")
     with pytest.raises(ValidationError):
         qv.Bars(_GROUPED, x="quarter", y="sales", mode="sideways")
     with pytest.raises(ValidationError):
@@ -71,7 +71,7 @@ def test_bars_group_validation():
 @pytest.mark.tier2
 @pytest.mark.parametrize("mode", ["grouped", "stacked"])
 def test_pyqtgraph_group_bars_one_item_per_group(mode, qtbot):
-    el = qv.Bars(_GROUPED, x="quarter", y="sales", group="region", mode=mode)
+    el = qv.Bars(_GROUPED, x="quarter", y="sales", by="region", mode=mode)
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     items = view.native(el.id)
@@ -83,7 +83,7 @@ def test_pyqtgraph_group_bars_one_item_per_group(mode, qtbot):
 
 @pytest.mark.tier2
 def test_pyqtgraph_stacked_bases(qtbot):
-    el = qv.Bars(_GROUPED, x="quarter", y="sales", group="region", mode="stacked")
+    el = qv.Bars(_GROUPED, x="quarter", y="sales", by="region", mode="stacked")
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     east, west = view.native(el.id)
@@ -96,7 +96,7 @@ def test_pyqtgraph_stacked_bases(qtbot):
 def test_matplotlib_grouped_and_stacked(qtbot):
     if not _has("matplotlib"):
         pytest.skip("matplotlib not registered")
-    el = qv.Bars(_GROUPED, x="quarter", y="sales", group="region", mode="stacked")
+    el = qv.Bars(_GROUPED, x="quarter", y="sales", by="region", mode="stacked")
     view = qv.View(el, backend="matplotlib")
     qtbot.addWidget(view)
     ax = view.handle.axes[0]
@@ -128,7 +128,7 @@ def test_heatmap_aggregator_means_not_last(backend, qtbot):
 def test_webengine_group_bars_traces_and_barmode():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Bars(_GROUPED, x="quarter", y="sales", group="region", mode="stacked")
+    el = qv.Bars(_GROUPED, x="quarter", y="sales", by="region", mode="stacked")
     fig = _figure.build_figure(el, qv.Theme.light())
     assert fig["layout"]["barmode"] == "stack"
     assert [t["name"] for t in fig["data"]] == ["east", "west"]
