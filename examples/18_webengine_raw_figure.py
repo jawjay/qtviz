@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import numpy as np
 import plotly.graph_objects as go
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -40,14 +39,10 @@ def build():
     return view
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(860, 640)
-    view.setWindowTitle("qtviz — RawFigure (Plotly 3-D surface)")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — RawFigure (Plotly 3-D surface)", size=(860, 640))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

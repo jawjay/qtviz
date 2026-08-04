@@ -16,7 +16,6 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -40,14 +39,10 @@ def build():
     return qv.View(band * line * points, backend="webengine", theme=qv.Theme.dark())
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(880, 560)
-    view.setWindowTitle("qtviz — webengine elements (band + fit + points)")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — webengine elements (band + fit + points)", size=(880, 560))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

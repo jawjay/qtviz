@@ -13,7 +13,6 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -29,14 +28,10 @@ def build():
     return view
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(700, 700)
-    view.setWindowTitle("qtviz — interaction (Shift+drag to brush)")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — interaction (Shift+drag to brush)", size=(700, 700))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

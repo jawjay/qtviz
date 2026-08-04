@@ -11,7 +11,7 @@ Run (matplotlib is an optional extra):
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
 import qtviz as qv
 
@@ -47,14 +47,9 @@ def build():
     return BackendDemo()
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    w = build()
-    w.resize(820, 560)
-    w.setWindowTitle("qtviz — backends")
-    w.show()
-    return app.exec()
+def main() -> None:
+    qv.show(build(), title="qtviz — backends", size=(820, 560))  # [D134]: the Qt ceremony is gone
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

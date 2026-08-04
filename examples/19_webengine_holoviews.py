@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import holoviews as hv
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -44,14 +43,10 @@ def build():
     return view
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(880, 600)
-    view.setWindowTitle("qtviz — RawFigure (HoloViews)")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — RawFigure (HoloViews)", size=(880, 600))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

@@ -23,7 +23,7 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QPushButton, QVBoxLayout, QWidget
 
 import qtviz as qv
 
@@ -79,14 +79,10 @@ def build():
     return WebEngineDemo()
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    w = build()
-    w.resize(860, 600)
-    w.setWindowTitle("qtviz — webengine (Plotly)")
-    w.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — webengine (Plotly)", size=(860, 600))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

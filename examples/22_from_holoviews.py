@@ -30,16 +30,10 @@ def build(theme: qv.Theme | None = None):
     return qv.View(node, backend="pyqtgraph", theme=theme or qv.Theme.dark())
 
 
-def main() -> int:
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(1100, 450)
-    view.setWindowTitle("qtviz — from_holoviews")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — from_holoviews", size=(1100, 450))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

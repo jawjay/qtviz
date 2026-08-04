@@ -19,7 +19,6 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -44,28 +43,18 @@ def build(backend: str = "pyqtgraph"):
     )
 
     # Panel 2 — even a single element gets labels by wrapping it in an Overlay.
-    residuals = qv.Overlay(
-        [qv.Histogram(data, value="resid", color="#7bd47b")],
-        options=qv.OverlayOptions(
-            title="Residuals",
-            x="error (mV)",
-            y="count",
-        ),
-    )
+    residuals = (qv.Histogram(data, value="resid", color="#7bd47b")
+        ).opts(title="Residuals", x="error (mV)", y="count")
 
     # Two panes side by side — each keeps its own title and axis labels.
     figure = qv.Layout([response, residuals], options=qv.LayoutOptions(cols=2))
     return qv.View(figure, backend=backend, theme=qv.Theme.dark())
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()                               # try build(backend="matplotlib")
-    view.resize(1000, 480)
-    view.setWindowTitle("qtviz — axis labels & titles")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # try build(backend="matplotlib") — the labels come out the same
+    qv.show(build(), title="qtviz — axis labels & titles", size=(1000, 480))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

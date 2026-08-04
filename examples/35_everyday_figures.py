@@ -18,7 +18,6 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -29,10 +28,8 @@ t = np.linspace(0.0, 10.0, 200)
 
 # 1 — step curve with markers ([D84])
 steps = {"x": np.arange(12.0), "y": rng.integers(1, 9, 12).astype(float)}
-step_panel = qv.Overlay(
-    [qv.Curve(steps, x="x", y="y", step="post", marker="circle", label="requests")],
-    options=qv.OverlayOptions(title="Step curve"),
-)
+step_panel = (qv.Curve(steps, x="x", y="y", step="post", marker="circle", label="requests")
+    ).opts(title="Step curve")
 
 # 2 — stacked area ([D84b])
 area = {
@@ -40,27 +37,20 @@ area = {
     "load": np.concatenate([2 + np.sin(t), 1.5 + 0.5 * np.cos(t), 1 + 0.3 * t / 10]),
     "svc": np.repeat(["api", "worker", "cron"], len(t)),
 }
-area_panel = qv.Overlay(
-    [qv.Area(area, x="t", y="load", by="svc", mode="stacked", alpha=0.85)],
-    options=qv.OverlayOptions(title="Stacked area"),
-)
+area_panel = (qv.Area(area, x="t", y="load", by="svc", mode="stacked", alpha=0.85)
+    ).opts(title="Stacked area")
 
 # 3 — horizontal grouped bars ([D85])
 bars = {"region": ["north", "south", "east", "west"] * 2,
         "sales": [40.0, 65, 52, 30, 55, 45, 60, 42],
         "year": ["2025"] * 4 + ["2026"] * 4}
-bars_panel = qv.Overlay(
-    [qv.Bars(bars, x="region", y="sales", by="year", orient="h")],
-    options=qv.OverlayOptions(title="Horizontal grouped bars"),
-)
+bars_panel = (qv.Bars(bars, x="region", y="sales", by="year", orient="h")
+    ).opts(title="Horizontal grouped bars")
 
 # 4 — donut ([D90]; matplotlib/webengine — negotiation routes around pyqtgraph)
-pie_panel = qv.Overlay(
-    [qv.Pie({"share": [42.0, 31.0, 17.0, 10.0],
+pie_panel = (qv.Pie({"share": [42.0, 31.0, 17.0, 10.0],
              "browser": ["chrome", "safari", "firefox", "other"]},
-            value="share", by="browser", hole=0.45)],
-    options=qv.OverlayOptions(title="Donut"),
-)
+            value="share", by="browser", hole=0.45)).opts(title="Donut")
 
 # 5 — ECDF ([D91])
 latencies = {"ms": rng.lognormal(3.0, 0.4, 500)}
@@ -91,48 +81,35 @@ dual_panel = qv.Overlay(
 
 # 8 — SI ticks + grid off ([D86]/[D87])
 traffic = {"t": t, "bytes": (1 + np.sin(t / 2) ** 2) * 2e6}
-ticks_panel = qv.Overlay(
-    [qv.Curve(traffic, x="t", y="bytes", label="throughput")],
-    options=qv.OverlayOptions(title="SI ticks, no grid", grid=False,
-                              y=qv.AxisSpec(tick_format="eng")),
-)
+ticks_panel = (qv.Curve(traffic, x="t", y="bytes", label="throughput")
+    ).opts(title="SI ticks, no grid", grid=False, y=qv.AxisSpec(tick_format="eng"))
 
 # 9 — vector field with a reference key ([D107]/[D112])
 fy, fx = np.mgrid[0:5, 0:7].astype(float)
 field_pts = {"x": fx.ravel(), "y": fy.ravel(),
              "u": np.cos(fy.ravel() / 2), "v": np.sin(fx.ravel() / 2)}
-quiver_panel = qv.Overlay(
-    [qv.Quiver(field_pts, x="x", y="y", u="u", v="v",
-               key=1.0, key_label="1 m/s")],
-    options=qv.OverlayOptions(title="Vector field + key"),
-)
+quiver_panel = (qv.Quiver(field_pts, x="x", y="y", u="u", v="v",
+               key=1.0, key_label="1 m/s")).opts(title="Vector field + key")
 
 # 10 — non-uniform mesh, discrete boundary levels ([D106]/[D114])
 freq_edges = np.geomspace(1.0, 64.0, 13)          # log-spaced rows
 time_edges = np.linspace(0.0, 10.0, 21)
 spec = rng.gamma(2.0, 1.0, (12, 20)) * np.linspace(2.0, 0.3, 12)[:, None]
-mesh_panel = qv.Overlay(
-    [qv.Mesh(spec, x=time_edges, y=freq_edges,
-             norm="boundary", levels=[0.0, 0.5, 1.0, 2.0, 4.0, 8.0])],
-    options=qv.OverlayOptions(title="Mesh, boundary levels"),
-)
+mesh_panel = (qv.Mesh(spec, x=time_edges, y=freq_edges,
+                      norm=qv.Norm("boundary", levels=[0.0, 0.5, 1.0, 2.0, 4.0, 8.0]))
+              ).opts(title="Mesh, boundary levels")
 
 # 11 — stem series ([D115])
 events = {"day": np.arange(14.0),
           "delta": rng.normal(0.0, 1.0, 14).cumsum()}
-stem_panel = qv.Overlay(
-    [qv.Stem(events, x="day", y="delta", label="drift")],
-    options=qv.OverlayOptions(title="Stem"),
-)
+stem_panel = (qv.Stem(events, x="day", y="delta", label="drift")).opts(title="Stem")
 
 # 12 — annotated heatmap with computed contrast ([D113])
 hx_, hy_ = np.meshgrid(np.arange(5.0), np.arange(4.0))
 heat = {"col": hx_.ravel(), "row": hy_.ravel(),
         "score": (rng.random(20) * 100).round()}
-heat_panel = qv.Overlay(
-    [qv.Heatmap(heat, x="col", y="row", z="score", annotate=".0f")],
-    options=qv.OverlayOptions(title="Annotated heatmap"),
-)
+heat_panel = (qv.Heatmap(heat, x="col", y="row", z="score", annotate=".0f")
+    ).opts(title="Annotated heatmap")
 
 root = qv.Layout(
     [step_panel, area_panel, bars_panel, pie_panel,
@@ -147,12 +124,7 @@ def build() -> qv.View:
 
 
 def main() -> None:
-    app = QApplication([])
-    view = build()
-    view.resize(1600, 800)
-    view.setWindowTitle("qtviz — the everyday figures")
-    view.show()
-    app.exec()
+    qv.show(build(), title="qtviz — the everyday figures", size=(1600, 800))
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 import qtviz as qv
 
@@ -58,14 +58,10 @@ def build():
     return container
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    w = build()
-    w.resize(1040, 540)
-    w.setWindowTitle("qtviz — reactive crossfilter")
-    w.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — reactive crossfilter", size=(1040, 540))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

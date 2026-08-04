@@ -15,15 +15,11 @@ backends at runtime, and drops into any PySide6 application as a plain `QWidget`
 
 ```python
 import numpy as np
-from PySide6.QtWidgets import QApplication
+
 import qtviz as qv
 
-app = QApplication([])
 x = np.linspace(0, 10, 500)
-
-view = qv.View(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"))
-view.show()
-app.exec()
+qv.show(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"), title="hello")
 ```
 
 <p align="center">

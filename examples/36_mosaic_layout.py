@@ -33,10 +33,7 @@ a = qv.Overlay(
 
 # B — tall return distribution, spanning both rows
 returns = {"r": np.diff(np.log(price)) * 100}
-b = qv.Overlay(
-    [qv.Histogram(returns, value="r", bins="fd")],
-    options=qv.OverlayOptions(title="Returns (%)"),
-)
+b = (qv.Histogram(returns, value="r", bins="fd")).opts(title="Returns (%)")
 
 # C — wide annotated activity heatmap ([D113])
 hx, hy = np.meshgrid(np.arange(10.0), np.arange(3.0))

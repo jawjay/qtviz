@@ -34,16 +34,10 @@ def build(theme: qv.Theme | None = None):
     return view
 
 
-def main() -> int:
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(800, 600)
-    view.setWindowTitle("qtviz — raster inspect (hover for count)")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — raster inspect (hover for count)", size=(800, 600))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

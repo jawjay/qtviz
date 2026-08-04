@@ -10,7 +10,6 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -39,14 +38,10 @@ def build():
     return qv.View(layout, theme=qv.Theme.dark())
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(1280, 560)
-    view.setWindowTitle("qtviz — element gallery")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — element gallery", size=(1280, 560))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

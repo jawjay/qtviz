@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import numpy as np
 import plotly.graph_objects as go
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -39,14 +38,10 @@ def build():
     return view
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(1100, 560)
-    view.setWindowTitle("qtviz — native + webengine, one event stream")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — native + webengine, one event stream", size=(1100, 560))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

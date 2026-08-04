@@ -3,6 +3,26 @@
 A tour of the whole library in a handful of snippets. Five concepts — `Element`,
 composition (`*` / `+`), `View`, `Theme`, typed events — cover everything.
 
+```python
+import qtviz as qv
+
+qv.show(qv.Scatter({"x": x, "y": y}, x="x", y="y"), title="hello")   # one line
+```
+
+Configure any node's surface with `.opts()` — no wrapper construction needed:
+
+```python
+qv.Curve(d, x="t", y="v").opts(title="Voltage", x="t [s]", y=qv.AxisSpec(scale="log"))
+(a * b).opts(y="Temp", y2="RPM")                       # dual axis, configured after composing
+qv.Layout.mosaic("AAB;CCB", A=a, B=b, C=c).opts(title="Dashboard", link_x=True)
+```
+
+Elements are immutable — tweak one property with `.with_()`:
+
+```python
+s2 = scatter.with_(alpha=0.5)      # a new element; the original is untouched
+```
+
 ## Elements
 
 An immutable plot vocabulary, each element pure data:
@@ -19,9 +39,9 @@ qv.Ecdf(table, value="latency")
 qv.Stem(table, x="day", y="delta", baseline=0.0)              # lollipop series
 qv.Heatmap(table, x="x", y="y", z="z", annotate="auto")    # contrast-aware labels
 qv.Image(array2d, extent=(0, 0, 10, 10), norm="log")          # also "power",
-qv.Mesh(array2d,  x=xe, y=np.geomspace(1, 64, 13),  # "symlog",
-        norm="boundary", levels=[0, 1, 2, 4, 8])                # "boundary"
-qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, labels=True)
+qv.Mesh(array2d,  x=xe, y=np.geomspace(1, 64, 13),
+        norm=qv.Norm("boundary", levels=[0, 1, 2, 4, 8]))     # one norm spec ([D130])
+qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, annotate=True)
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
 qv.Streamlines({"u": u2d, "v": v2d}, extent=(0, 0, 10, 10), density=1.5)
 qv.Pie(table, value="share", by="browser", hole=0.4)

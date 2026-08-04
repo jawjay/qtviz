@@ -11,7 +11,6 @@ Run:
 from __future__ import annotations
 
 import numpy as np
-from PySide6.QtWidgets import QApplication
 
 import qtviz as qv
 
@@ -30,14 +29,10 @@ def build():
     return qv.View(figure, theme=qv.Theme.dark())
 
 
-def main() -> int:
-    app = QApplication.instance() or QApplication([])
-    view = build()
-    view.resize(1000, 500)
-    view.setWindowTitle("qtviz — composition")
-    view.show()
-    return app.exec()
+def main() -> None:
+    # [D134]: the Qt ceremony is gone
+    qv.show(build(), title="qtviz — composition", size=(1000, 500))
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

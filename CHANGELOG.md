@@ -41,6 +41,30 @@ Also:
   `Scatter(matplotlib_rasterized=)` (backend leak; `handle.native()` is the
   escape hatch).
 
+### Added (wave 5 — [D133]/[D134]/[D135] the surface payoff)
+
+- **`.opts()`** on Element/Overlay/Layout ([D133]): configure a surface
+  without abandoning the `*`/`+` algebra —
+  `curve.opts(title=…, x="t [s]", y=AxisSpec(scale="log"))`;
+  field-wise merge, chains, bare string = axis label. The
+  `Overlay([el], options=…)` wrapper idiom is gone from the examples.
+- **`qv.show(node, *, title, size, backend, theme, block=True)`** ([D134]):
+  the script one-liner — spins the QApplication, wraps in a View, runs the
+  loop; `block=False` returns the live widget. 23 examples dropped their Qt
+  ceremony.
+- **`View.on(…, source=element)`** filters events by emitting element —
+  replaces the `e.source_id == el.id` lambda idiom; survives rebuilds and
+  backend switches. **`set_default_theme()`** joins `set_default_backend()`.
+- **`OverlayOptions` 2.0**: `x`/`y`/`y2` accept a label string or `AxisSpec`
+  (`x_label`/`y_label` removed — one home); `legend` is one union field
+  (`True|False|"auto"|"right"|"top"|"none"`, replacing `legend_position`).
+  Overlay/Layout reprs now list their non-default options.
+- **`FROZEN_2_0`** ([D135]): the frozen surface is 70 names — removed
+  `negotiate`, `auto_negotiate`, `DMapBinding`, `Accessor`, `Expression`,
+  `ColorSpec`, `StreamRef` (importable from their submodules, no longer
+  contract); added `Norm`, `show`, `set_default_theme`. Docs finally teach
+  `.opts()` first and document `.with_()`.
+
 ### Changed (wave 4 — [D123]/[D124]/[D125]/[D132] structural cleanup)
 
 - **Honesty tables retired** ([D123]): every element now declares
