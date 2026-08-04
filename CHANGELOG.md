@@ -12,6 +12,35 @@ The Mark IR + uniform-surface arc
 surface change until the wave-1 renames; the freeze list flips to
 `FROZEN_2_0` last).
 
+### Changed (wave 1 — [D129]/[D131] mechanical channel renames, breaking)
+
+One channel-binding convention across all elements: *data first; every data
+binding is a keyword **accessor** (`str | Expression | Callable | ArrayLike`,
+[D14] — renames change names, never accepted types)*. Pure renames, no
+behavior change; examples/tests/docs migrated in the same commits.
+
+| Before | After | Elements |
+|---|---|---|
+| `column=` | `value=` | Histogram, Ecdf, BoxPlot, Violin |
+| `values=` / `labels=` | `value=` / `by=` | Pie |
+| `group=` | `by=` | Bars, Area |
+| `bounds=` | `extent=` | Image, Contour, Streamlines |
+| `x_edges=` / `y_edges=` | `x=` / `y=` | Mesh |
+| `scale=` | `raster=` | Scatter, Curve (`scale` now means only axis transform) |
+| `bar_labels=` / `cell_labels=` / `labels=` | `annotate=` | Bars, Heatmap, Contour |
+
+Also:
+
+- `Violin` gains an explicit signature (was `*args, **kw` — opaque to
+  `help()`/IDEs).
+- `by=`, `color_by=`, `size_by=` annotations widened to the full accessor
+  union; new `channel_title()` derives legend titles honestly (column name or
+  bare `col()` prints; derived/opaque accessors get no title instead of a
+  repr dump). Guard tests in `test_accessors.py` pin the union per keyword.
+- **Removed**: `Scatter(pyqtgraph_use_opengl=)` (deprecated, never wired) and
+  `Scatter(matplotlib_rasterized=)` (backend leak; `handle.native()` is the
+  escape hatch).
+
 ### Internal (wave 0 — IR foundation, no behavior change)
 
 - `core/marks.py` — the typed Mark vocabulary ([D121]): 8 frozen mark types
