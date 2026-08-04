@@ -43,9 +43,9 @@ def test_area_validation():
 def test_pie_validation():
     from qtviz.errors import ValidationError
 
-    qv.Pie(_PIE, values="v", hole=0.5)
+    qv.Pie(_PIE, value="v", hole=0.5)
     with pytest.raises(ValidationError):
-        qv.Pie(_PIE, values="v", hole=1.0)
+        qv.Pie(_PIE, value="v", hole=1.0)
 
 
 @pytest.mark.tier1
@@ -61,7 +61,7 @@ def test_core_ecdf():
 def test_pie_negotiates_around_pyqtgraph():
     from qtviz.errors import UnsupportedElementError
 
-    el = qv.Pie(_PIE, values="v")
+    el = qv.Pie(_PIE, value="v")
     assert qv.auto_negotiate(el) in ("matplotlib", "webengine")
     if "pyqtgraph" in qv.backends.list_available():
         with pytest.raises(UnsupportedElementError):
@@ -104,7 +104,7 @@ def test_webengine_ecdf_is_post_step():
 def test_webengine_pie_trace():
     from qtviz.backends.webengine import _figure
 
-    trace = _figure.build_figure(qv.Pie(_PIE, values="v", labels="l", hole=0.3),
+    trace = _figure.build_figure(qv.Pie(_PIE, value="v", by="l", hole=0.3),
                                  qv.Theme.light())["data"][0]
     assert trace["type"] == "pie" and trace["hole"] == 0.3
     assert trace["labels"] == ["x", "y", "z"]
@@ -139,7 +139,7 @@ def test_mpl_ecdf_steps_to_one(qtbot):
 @pytest.mark.tier2
 def test_mpl_pie_wedges(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Pie(_PIE, values="v", labels="l", hole=0.4)
+    el = qv.Pie(_PIE, value="v", by="l", hole=0.4)
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     wedges = handle.native(el.id)

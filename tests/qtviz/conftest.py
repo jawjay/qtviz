@@ -107,7 +107,7 @@ def make_elements(table, grid):
             "Stem": qv.Stem(table, x="x", y="y"),
             "Streamlines": qv.Streamlines(values, -values, bounds=bounds),
             "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"]},
-                          values="v", labels="l"),
+                          value="v", by="l"),
         }
 
     return build

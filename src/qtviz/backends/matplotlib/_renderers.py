@@ -628,9 +628,9 @@ def render_ecdf(element: Ecdf, ctx):
 
 def render_pie(element: Pie, ctx):
     d = element.data
-    vals = _col(d, "values")
-    labels = ([str(v) for v in np.asarray(d.series("labels"))]
-              if element.labels is not None else None)
+    vals = _col(d, "value")
+    labels = ([str(v) for v in np.asarray(d.series("by"))]
+              if element.by is not None else None)
     palette = ctx.theme.palette
     ax = ctx.parent_axes
     ax.set_axis_off()  # wedges have no axes; the surface title still draws
@@ -1009,7 +1009,7 @@ HONORED: dict[type, frozenset[str]] = {
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
-    Pie: frozenset({"labels", "hole", "alpha"}),
+    Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "labels"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",

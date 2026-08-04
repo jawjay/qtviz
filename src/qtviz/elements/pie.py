@@ -9,23 +9,23 @@ from ..errors import ValidationError
 
 
 class Pie(Element):
-    """Proportional wedges of a non-negative `values` column, optionally
-    labeled by a `labels` column; `hole` (0 ≤ hole < 1) makes a donut. Slice
+    """Proportional wedges of a non-negative `value` column, optionally
+    labeled by a `by` category column; `hole` (0 ≤ hole < 1) makes a donut. Slice
     colors cycle the theme palette in row order.
 
     Supported on matplotlib and webengine ([D90]); pyqtgraph has no pie
     primitive, so negotiation routes around it (the `RawFigure` precedent —
     an element need not render everywhere)."""
 
-    REQUIRED_OPTIONS = ("values",)
-    RECOMMENDED_OPTIONS = ("labels", "hole", "alpha")
+    REQUIRED_OPTIONS = ("value",)
+    RECOMMENDED_OPTIONS = ("by", "hole", "alpha")
 
     def __init__(
         self,
         data: DataLike,
         *,
-        values: Accessor,
-        labels: Accessor | None = None,
+        value: Accessor,
+        by: Accessor | None = None,
         hole: float = 0.0,
         alpha: float = 1.0,
         backend_hint: str | None = None,
@@ -36,15 +36,15 @@ class Pie(Element):
             raise ValidationError(f"Pie hole must be in [0, 1), got {hole!r}")
         check_alpha(alpha, who="Pie")
         self.data = as_data_ref(data)
-        self.values = values
-        self.labels = labels
+        self.value = value
+        self.by = by
         self.hole = float(hole)
         self.alpha = alpha
         self._validate_tabular()
         self._freeze()
 
     def channels(self) -> dict:
-        ch = {"values": self.values}
-        if self.labels is not None:
-            ch["labels"] = self.labels
+        ch = {"value": self.value}
+        if self.by is not None:
+            ch["by"] = self.by
         return ch

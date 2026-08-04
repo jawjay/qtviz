@@ -599,17 +599,17 @@ def _ecdf_trace(element: Ecdf, theme, idx: int) -> list[dict]:
 
 def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
     d = element.data
-    vals = _floats(d.series("values"))
+    vals = _floats(d.series("value"))
     trace = {
         "type": "pie", "values": vals, "hole": element.hole,
         "opacity": element.alpha,
         "marker": {"colors": [_css(theme.palette[i % len(theme.palette)])
                               for i in range(len(vals))]},
-        "name": element.id, "showlegend": element.labels is not None,
+        "name": element.id, "showlegend": element.by is not None,
         "sort": False,  # keep row order so slice colors match the native pie
     }
-    if element.labels is not None:
-        trace["labels"] = [str(v) for v in np.asarray(d.series("labels"))]
+    if element.by is not None:
+        trace["labels"] = [str(v) for v in np.asarray(d.series("by"))]
     return [trace]
 
 
@@ -789,7 +789,7 @@ HONORED: dict[type, frozenset[str]] = {
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"group", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
-    Pie: frozenset({"labels", "hole", "alpha"}),
+    Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "labels"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",

@@ -58,7 +58,7 @@ bars_panel = qv.Overlay(
 pie_panel = qv.Overlay(
     [qv.Pie({"share": [42.0, 31.0, 17.0, 10.0],
              "browser": ["chrome", "safari", "firefox", "other"]},
-            values="share", labels="browser", hole=0.45)],
+            value="share", by="browser", hole=0.45)],
     options=qv.OverlayOptions(title="Donut"),
 )
 

@@ -153,7 +153,7 @@ qv.Mesh(spec2d, x_edges=t_edges, y_edges=np.geomspace(1, 64, 13))  # non-uniform
 qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, labels=True)  # inline labels
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
 qv.Streamlines(u2d, v2d, bounds=(0, 0, 10, 10), density=1.5)  # field-line flow
-qv.Pie(table, values="share", labels="browser", hole=0.4)   # donut (mpl/webengine)
+qv.Pie(table, value="share", by="browser", hole=0.4)   # donut (mpl/webengine)
 qv.ErrorBars(table, x="x", y="y", err="sigma", lo_limit="is_lo")  # "beyond" arrows
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
 qv.BoxPlot(table, value="score", by="cohort")   # shared stats core, all backends
