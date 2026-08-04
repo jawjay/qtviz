@@ -1,9 +1,11 @@
 """Backend registry (spec §3.6).
 
-Backends are registered, never imported by core. Optional backends auto-detect
-at import in a try/except (added as each backend lands). This module holds the
-process-global registry, priority order, and default — the surface `negotiate`
-reads.
+Backends are registered, never imported by core. Discovery is the [D125]
+entry-point group `qtviz.backends` — the built-ins declare theirs in
+pyproject, and a third-party backend registers with zero qtviz edits. One
+INFO log per optional backend whose import fails; explicit `register()`
+stays for tests/embedding. This module holds the process-global registry,
+priority order, and default — the surface `negotiate` reads.
 """
 
 from __future__ import annotations
@@ -83,32 +85,39 @@ def priority_index(name: str) -> int:
     return _PRIORITY.index(name) if name in _PRIORITY else len(_PRIORITY)
 
 
+# canonical priority for the built-ins; third-party backends sort after, by name
+_BUILTIN_ORDER = ("pyqtgraph", "matplotlib", "webengine")
+
+
 def _autoregister() -> None:
-    """Register the always-available pyqtgraph backend (hard dep), and any
-    optional backends that import cleanly. One INFO log per missing optional."""
+    """[D125] entry-point discovery (group `qtviz.backends`). An optional
+    backend whose import fails logs one INFO; anything else failing logs a
+    warning. Falls back to the built-in list when no entry points are visible
+    (a stale editable install) so a working checkout never loses backends."""
     import logging
+    from importlib.metadata import entry_points
 
     log = logging.getLogger("qtviz")
-    try:
-        from .pyqtgraph import backend as _pg  # noqa: PLC0415
+    eps = list(entry_points(group="qtviz.backends"))
+    if not eps:  # pragma: no cover — stale metadata; behave like the built-ins
+        from importlib.metadata import EntryPoint  # noqa: PLC0415
 
-        register(_pg)
-    except Exception as e:  # pragma: no cover - pyqtgraph is a hard dep
-        log.warning("pyqtgraph backend failed to load: %s", e)
-
-    try:
-        from .matplotlib import backend as _mpl  # noqa: PLC0415
-
-        register(_mpl)
-    except ImportError:
-        log.info("matplotlib backend unavailable; install with: uv sync --extra matplotlib")
-
-    try:
-        from .webengine.render import backend as _web  # noqa: PLC0415
-
-        register(_web)
-    except ImportError:
-        log.info("webengine backend unavailable; install with: uv sync --extra webengine")
+        eps = [EntryPoint(name, value, "qtviz.backends") for name, value in (
+            ("pyqtgraph", "qtviz.backends.pyqtgraph:backend"),
+            ("matplotlib", "qtviz.backends.matplotlib:backend"),
+            ("webengine", "qtviz.backends.webengine.render:backend"),
+        )]
+    def _order(ep):
+        return (_BUILTIN_ORDER.index(ep.name) if ep.name in _BUILTIN_ORDER
+                else len(_BUILTIN_ORDER)), ep.name
+    for ep in sorted(eps, key=_order):
+        try:
+            register(ep.load())
+        except ImportError:
+            log.info("%s backend unavailable; install with: uv sync --extra %s",
+                     ep.name, ep.name)
+        except Exception as e:
+            log.warning("%s backend failed to load: %s", ep.name, e)
 
 
 _autoregister()

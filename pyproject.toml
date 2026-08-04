@@ -31,6 +31,13 @@ dependencies = [
     "pyqtgraph >=0.13",
 ]
 
+[project.entry-points."qtviz.backends"]
+# [D125]: backends register through entry points — a third-party backend needs
+# zero qtviz edits. `backends.register()` stays for tests/embedding.
+pyqtgraph = "qtviz.backends.pyqtgraph:backend"
+matplotlib = "qtviz.backends.matplotlib:backend"
+webengine = "qtviz.backends.webengine.render:backend"
+
 [project.optional-dependencies]
 plotly = ["plotly >=5.20"]
 bokeh = ["bokeh >=3.4"]
