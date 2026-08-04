@@ -18,6 +18,9 @@ class Image(NormedRaster, Element):
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("colormap", "interpolation", "norm", "clim")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"clim", "colormap", "interpolation", "norm"})
 
     def __init__(
         self,

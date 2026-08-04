@@ -57,10 +57,13 @@ class Element(Immutable):
     RECOMMENDED_OPTIONS: tuple[str, ...] = ()
     # Fixed channel roles bound to accessors; default role == field name.
     CHANNELS: tuple[str, ...] = ()
-    # [D123] the options this element's `lower()` carries into marks/legend —
-    # declared beside the lowering, proven honest by the perturbation guard
-    # (tests/qtviz/test_marks.py). Empty on elements that don't lower.
+    # [D123] honesty declarations: `HONORED_BY_LOWERING` sits beside `lower()`
+    # and is proven by the perturbation guard (tests/qtviz/test_marks.py);
+    # `HONORED_NATIVE` is the set every native renderer honors, from which a
+    # backend subtracts its declared deltas (HONORED_DELTAS). One declaration,
+    # in core — the triplicated per-backend tables are gone.
     HONORED_BY_LOWERING: frozenset[str] = frozenset()
+    HONORED_NATIVE: frozenset[str] = frozenset()
 
     def __init__(self, *, backend_hint: str | None = None, id: ElementId | None = None) -> None:
         self.backend_hint = backend_hint

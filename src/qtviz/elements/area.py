@@ -22,6 +22,9 @@ class Area(Element):
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("by", "mode", "color", "alpha", "label")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"alpha", "by", "color", "label", "mode"})
     CHANNELS = ("x", "y")
 
     def __init__(

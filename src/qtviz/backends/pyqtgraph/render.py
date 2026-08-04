@@ -27,7 +27,7 @@ from ...errors import RendererMissingError
 from . import _events
 from ._axes import link_axes
 from ._interaction import QtvizViewBox
-from ._renderers import HONORED, RENDERERS
+from ._renderers import HONORED_DELTAS, RENDERERS
 from ._surface import apply_surface
 from ._theme import apply_theme, style_plot
 
@@ -214,12 +214,11 @@ class PyQtGraphBackend:
     def honored_options(self, element_type: type) -> frozenset[str]:
         """Recommended options this backend honors (spec §3.4): the native
         table row, else the element's own [D123] lowering declaration."""
-        native = HONORED.get(element_type)
-        if native is not None:
-            return native
-        if issubclass(element_type, Element):
-            return element_type.HONORED_BY_LOWERING
-        return frozenset()
+        if not issubclass(element_type, Element):
+            return frozenset()
+        if self.renderers.get(element_type) is not None:
+            return element_type.HONORED_NATIVE - HONORED_DELTAS.get(element_type, frozenset())
+        return element_type.HONORED_BY_LOWERING
 
     def can_host(self, kind: str) -> bool:
         return kind in ("overlay", "grid")

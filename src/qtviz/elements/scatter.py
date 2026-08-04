@@ -17,6 +17,10 @@ class Scatter(Element):
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker",
                            "norm", "label", "axis")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"alpha", "axis", "color", "color_by", "label", "marker",
+                                "norm", "size", "size_by"})
     CHANNELS = ("x", "y")
 
     def __init__(

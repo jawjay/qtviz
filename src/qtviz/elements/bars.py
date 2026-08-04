@@ -22,6 +22,9 @@ class Bars(Element):
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("by", "mode", "color", "color_by", "orient",
                            "annotate", "label")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"annotate", "by", "color", "color_by", "label", "mode", "orient"})
     CHANNELS = ("x", "y")
 
     def __init__(

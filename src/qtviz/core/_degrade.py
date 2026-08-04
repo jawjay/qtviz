@@ -8,7 +8,8 @@ for any recommended option set to a *non-default* value the backend doesn't
 honor. It never raises — rendering proceeds (the honor-or-warn policy, over
 fail-fast).
 
-This is the seam the per-backend `HONORED` tables + the conformance test
+This is the seam the element honesty declarations (HONORED_NATIVE /
+HONORED_BY_LOWERING, [D123]) + the conformance test
 (`test_backend_conformance.py`) keep honest, so "never silent" is enforced by a
 test rather than convention (root cause R4 in `weakness-root-causes.md`).
 """

@@ -19,6 +19,9 @@ class Pie(Element):
 
     REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("by", "hole", "alpha")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"alpha", "by", "hole"})
 
     def __init__(
         self,

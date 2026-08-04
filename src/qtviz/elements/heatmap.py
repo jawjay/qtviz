@@ -26,6 +26,9 @@ class Heatmap(NormedRaster, Element):
     REQUIRED_OPTIONS = ("x", "y", "z")
     RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "clim",
                            "annotate")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"aggregator", "annotate", "clim", "colormap", "norm"})
     CHANNELS = ("x", "y", "z")
 
     def __init__(

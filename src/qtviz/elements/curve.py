@@ -56,6 +56,10 @@ class Curve(Element):
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "line_width", "line_style", "marker",
                            "marker_every", "step", "alpha", "label", "axis")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"alpha", "axis", "color", "color_by", "label", "line_style",
+                                "line_width", "marker", "marker_every", "step"})
     CHANNELS = ("x", "y")
 
     def __init__(

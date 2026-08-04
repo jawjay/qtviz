@@ -27,6 +27,9 @@ class Contour(Element):
     REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("levels", "filled", "colormap", "line_width", "label",
                            "annotate")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"annotate", "colormap", "filled", "label", "levels", "line_width"})
 
     def __init__(
         self,

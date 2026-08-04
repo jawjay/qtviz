@@ -903,24 +903,9 @@ RENDERERS: dict[type, Any] = {
     # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
 }
 
-# Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
-# Anything in an element's RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
-# Keep in sync with the renderers — the conformance test guards this.
-HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "norm", "label", "axis"}),
-    Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
-                      "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "color_by", "by", "mode", "orient",
-                     "annotate", "label"}),
-    Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    # (Image "interpolation" unwired on pg)
-    Image: frozenset({"colormap", "norm", "clim"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "clim", "annotate"}),
-    ErrorBars: frozenset({"color", "direction", "label", "lo_limit", "hi_limit"}),
-    BoxPlot: frozenset({"by", "color", "alpha", "label"}),
-    Violin: frozenset({"by", "color", "alpha", "label"}),
-    Area: frozenset({"by", "mode", "color", "alpha", "label"}),
-    Contour: frozenset({"levels", "colormap", "line_width", "label", "annotate"}),  # not filled
-    Mesh: frozenset({"colormap", "norm", "clim"}),
+# [D123] wave-4: the shared honored sets live on the elements
+# (`HONORED_NATIVE`); this backend declares only what it does NOT honor.
+HONORED_DELTAS: dict[type, frozenset[str]] = {
+    Contour: frozenset({"filled"}),        # pg draws iso-lines only (warns)
+    Image: frozenset({"interpolation"}),   # ImageItem has no smoothing knob
 }

@@ -23,6 +23,9 @@ class ErrorBars(Element):
 
     REQUIRED_OPTIONS = ("x", "y", "err")
     RECOMMENDED_OPTIONS = ("direction", "color", "label", "lo_limit", "hi_limit")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"color", "direction", "hi_limit", "label", "lo_limit"})
 
     def __init__(
         self,

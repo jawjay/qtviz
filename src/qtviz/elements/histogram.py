@@ -17,6 +17,9 @@ class Histogram(Element):
 
     REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("bins", "density", "color", "alpha", "label")
+    # [D123] wave-4: the honored set shared by every native renderer;
+    # backends subtract their declared deltas (HONORED_DELTAS).
+    HONORED_NATIVE = frozenset({"alpha", "bins", "color", "density", "label"})
     CHANNELS = ("value",)
 
     def __init__(

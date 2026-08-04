@@ -635,13 +635,13 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
 
 
 def honored_for(element_type: type) -> frozenset[str]:
-    """[D51]/[D123]: the native table row, else the lowering declaration."""
-    native = HONORED.get(element_type)
-    if native is not None:
-        return native
-    if isinstance(element_type, type) and issubclass(element_type, Element):
-        return element_type.HONORED_BY_LOWERING
-    return frozenset()
+    """[D51]/[D123]: `HONORED_NATIVE − deltas` for trace builders, else the
+    lowering declaration — the element carries its own honesty either way."""
+    if not (isinstance(element_type, type) and issubclass(element_type, Element)):
+        return frozenset()
+    if element_type in _TRACE_BUILDERS:
+        return element_type.HONORED_NATIVE - HONORED_DELTAS.get(element_type, frozenset())
+    return element_type.HONORED_BY_LOWERING
 
 
 _TRACE_BUILDERS: dict[type, Any] = {
@@ -662,24 +662,7 @@ _TRACE_BUILDERS: dict[type, Any] = {
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
 # [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
-HONORED: dict[type, frozenset[str]] = {
-    Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "norm", "label", "axis"}),
-    Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
-                      "marker_every", "step", "alpha", "label", "axis"}),
-    Bars: frozenset({"color", "color_by", "orient", "by", "mode",
-                     "annotate", "label"}),
-    Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap", "interpolation", "norm", "clim"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "clim", "annotate"}),
-    ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
-    BoxPlot: frozenset({"by", "color", "alpha", "label"}),
-    Violin: frozenset({"by", "color", "alpha", "label"}),
-    Area: frozenset({"by", "mode", "color", "alpha", "label"}),
-    Pie: frozenset({"by", "hole", "alpha"}),
-    Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
-    Mesh: frozenset({"colormap", "norm", "clim"}),
-}
+HONORED_DELTAS: dict[type, frozenset[str]] = {}
 
 
 def supported_types() -> set[type]:
