@@ -15,11 +15,11 @@ except PackageNotFoundError:  # source tree without installed metadata
     __version__ = "0.0.0+unknown"
 
 from . import backends, data, errors, threading  # data layer first, then backends auto-register
-from .adapter import DMapBinding, from_holoviews, from_holoviews_dmap, from_hvplot
+from .adapter import from_holoviews, from_holoviews_dmap, from_hvplot
 from .backends import set_backend_priority, set_default_backend
 from .core.capabilities import Capabilities
-from .core.color import Color, ColorSpec
-from .core.compose import Layout, Overlay, auto_negotiate, negotiate
+from .core.color import Color
+from .core.compose import Layout, Overlay
 from .core.encoding import Norm
 from .core.event import (
     Event,
@@ -34,9 +34,6 @@ from .core.palette import Palette, palettes
 from .core.theme import Theme, set_default_theme
 from .core.view import View, show
 from .data import (
-    Accessor,
-    Expression,
-    StreamRef,
     col,
     gridded,
     lit,
