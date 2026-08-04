@@ -33,7 +33,6 @@ from ...elements import (
     BoxPlot,
     Contour,
     Curve,
-    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
@@ -548,18 +547,6 @@ def _area_traces(element: Area, theme, idx: int) -> list[dict]:
     return traces
 
 
-def _ecdf_trace(element: Ecdf, theme, idx: int) -> list[dict]:
-    from ...core._stats import ecdf  # noqa: PLC0415
-
-    xs, fr = ecdf(element.data.series("value"))
-    return [{
-        "type": "scatter", "mode": "lines", "x": _floats(xs), "y": _floats(fr),
-        "line": {"color": _css(_element_color(element, theme, idx)),
-                 "width": element.line_width, "shape": "hv"},  # post-step
-        "opacity": element.alpha, "name": element.label or element.id,
-        "showlegend": element.label is not None,
-    }]
-
 
 def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
     d = element.data
@@ -668,7 +655,6 @@ _TRACE_BUILDERS: dict[type, Any] = {
     BoxPlot: _boxplot_trace,
     Violin: _violin_trace,
     Area: _area_traces,
-    Ecdf: _ecdf_trace,
     Pie: _pie_trace,
     Contour: _contour_trace,
     Mesh: _mesh_trace,
@@ -692,7 +678,6 @@ HONORED: dict[type, frozenset[str]] = {
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
-    Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
@@ -812,11 +797,15 @@ def build(node, theme) -> tuple[dict, list[str]]:
             lowered = element.lower(LowerContext(
                 theme=theme, series_index=idx if consumes_slot else 0,
                 show_legend=surf.legend_enabled))
+            on_y2 = getattr(element, "axis", "y") == "y2"  # twin axis ([D88])
             for kind, payload in lowered_ops(lowered, element, theme,
                                              x_scale, y_scale):
                 if not isinstance(payload, dict):
                     reflines.append(payload)  # a sloped Rule — final-span pass ([D99])
                 elif kind == "trace":
+                    if on_y2:
+                        payload["yaxis"] = "y2"
+                        y2_active = True
                     traces.append(payload)
                     source_ids.append(element.id)
                 elif kind == "shape":

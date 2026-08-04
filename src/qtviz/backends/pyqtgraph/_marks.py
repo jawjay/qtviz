@@ -52,11 +52,19 @@ def _scalar(value: float, is_log: bool) -> float | None:
     return float(v) if np.isfinite(v) else None
 
 
+# qtviz step vocabulary → pg stepMode ("left" holds each value rightward —
+# the post-step; pre-IR Ecdf used exactly this).
+_STEPMODE = {"post": "left", "pre": "right", "mid": "center"}
+
+
 def draw_polyline(m: Polyline, ctx):
     x_log, y_log = _xy_log(ctx)
     pen = _mk_pen(_qcolor(m.stroke.color, m.stroke.alpha), m.stroke.width, m.stroke.dash)
+    kwargs: dict = {}
+    if m.step is not None:
+        kwargs["stepMode"] = _STEPMODE[m.step]
     item = pg.PlotCurveItem(x=logify(m.x, x_log), y=logify(m.y, y_log),
-                            pen=pen, connect=m.connect)
+                            pen=pen, connect=m.connect, **kwargs)
     ctx.parent_axes.addItem(item)
     return item
 

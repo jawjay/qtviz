@@ -17,6 +17,7 @@ class Ecdf(Element):
     REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("color", "line_width", "alpha", "label")
     CHANNELS = ("value",)
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
     def __init__(
         self,
@@ -40,3 +41,16 @@ class Ecdf(Element):
         self.label = label
         self._validate_tabular()
         self._freeze()
+
+    def lower(self, ctx):
+        """[D122]: the empirical CDF as one post-step polyline from the shared
+        core `ecdf` ([D91]/[D93])."""
+        from ..core._stats import ecdf  # noqa: PLC0415
+        from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
+        from ..core.marks import Polyline, Stroke  # noqa: PLC0415
+
+        xs, fr = ecdf(self.data.series("value"))
+        stroke = Stroke(resolve_color(self.color, ctx.theme, ctx.series_index),
+                        width=self.line_width, alpha=self.alpha)
+        return Lowered(marks=(Polyline(xs, fr, stroke, step="post"),),
+                       legend=self.legend_entry(ctx.theme, ctx.series_index))

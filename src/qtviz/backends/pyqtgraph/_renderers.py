@@ -26,7 +26,6 @@ from ...elements import (
     BoxPlot,
     Contour,
     Curve,
-    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
@@ -761,21 +760,6 @@ def render_area(element: Area, ctx):
     return items
 
 
-def render_ecdf(element: Ecdf, ctx):
-    from ...core._stats import ecdf  # noqa: PLC0415
-
-    xs, fr = ecdf(_col(element.data, "value"))
-    x_log, y_log = _xy_log(ctx)
-    color = _color(element.color, ctx.theme, ctx.series_index).qt()
-    color.setAlphaF(element.alpha)
-    item = pg.PlotCurveItem(
-        x=logify(xs, x_log), y=logify(fr, y_log), stepMode="left",  # post-step
-        pen=pg.mkPen(color, width=element.line_width), connect="finite",
-    )
-    ctx.parent_axes.addItem(item)
-    return item
-
-
 
 def _ref_color(spec, theme) -> Color:
     """Annotation default: the theme foreground — a reference is chrome, not a
@@ -914,7 +898,6 @@ RENDERERS: dict[type, Any] = {
     BoxPlot: render_boxplot,
     Violin: render_violin,
     Area: render_area,
-    Ecdf: render_ecdf,
     Contour: render_contour,
     Mesh: render_mesh,
     # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
@@ -939,7 +922,6 @@ HONORED: dict[type, frozenset[str]] = {
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
-    Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label", "annotate"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
 }

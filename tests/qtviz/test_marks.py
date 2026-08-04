@@ -210,6 +210,7 @@ def _mk_stem(**kw):
 _LOWERED_CTORS = {
     "Quiver": _quiver,
     "Stem": _mk_stem,
+    "Ecdf": lambda **kw: qv.Ecdf({"v": [1.0, 2.0, 2.5]}, value="v", **kw),
     "Spread": lambda **kw: qv.Spread({"t": [0.0, 1.0], "a": [0.0, 0.5], "b": [1.0, 2.0]},
                                      x="t", lo="a", hi="b", **kw),
     "Streamlines": lambda **kw: qv.Streamlines({"u": _U2D, "v": -_U2D}, extent=(0, 1, 0, 1), **kw),

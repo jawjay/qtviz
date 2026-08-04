@@ -75,9 +75,9 @@ def test_supports_the_data_vocabulary():
     assert names == {
         "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars",
         "BoxPlot", "Violin",
-        "Area", "Ecdf", "Pie", "Contour", "Mesh",
+        "Area", "Pie", "Contour", "Mesh",
     }
-    for lowered in (qv.Quiver, qv.Stem, qv.Streamlines, qv.Spread, qv.HLine, qv.Text):
+    for lowered in (qv.Quiver, qv.Stem, qv.Streamlines, qv.Spread, qv.Ecdf, qv.HLine, qv.Text):
         assert qv.backends.get("webengine").supports(lowered)
 
 

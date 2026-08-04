@@ -20,7 +20,6 @@ from ...elements import (
     BoxPlot,
     Contour,
     Curve,
-    Ecdf,
     ErrorBars,
     Heatmap,
     Histogram,
@@ -601,16 +600,6 @@ def render_area(element: Area, ctx):
     return artists
 
 
-def render_ecdf(element: Ecdf, ctx):
-    from ...core._stats import ecdf  # noqa: PLC0415
-
-    xs, fr = ecdf(_col(element.data, "value"))
-    (line,) = ctx.parent_axes.plot(
-        xs, fr, color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
-        lw=element.line_width, alpha=element.alpha, drawstyle="steps-post",
-    )
-    return line
-
 
 def render_pie(element: Pie, ctx):
     d = element.data
@@ -796,7 +785,6 @@ RENDERERS: dict[type, Any] = {
     BoxPlot: render_boxplot,
     Violin: render_violin,
     Area: render_area,
-    Ecdf: render_ecdf,
     Pie: render_pie,
     Contour: render_contour,
     Mesh: render_mesh,
@@ -823,7 +811,6 @@ HONORED: dict[type, frozenset[str]] = {
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
-    Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
