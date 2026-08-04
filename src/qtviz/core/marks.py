@@ -35,11 +35,12 @@ def _arr(v) -> np.ndarray:
 @dataclass(frozen=True)
 class Stroke:
     """Resolved line style. `width` is px/pt (engine-native units, like today);
-    the default is the [D132] uniform 1.5."""
+    the default is the [D132] uniform 1.5. `dash` is a named style or a dash
+    tuple in points ([D99])."""
 
     color: Color
     width: float = 1.5
-    dash: Literal["solid", "dashed", "dotted", "dashdot"] = "solid"
+    dash: str | tuple[float, ...] = "solid"
     alpha: float = 1.0
 
 
@@ -115,7 +116,7 @@ class TextMark:
     y: float
     text: str
     color: Color
-    size: float = 10.0
+    size: float | None = None  # None = the engine's default font size
     anchor: Literal["left", "center", "right"] = "center"
     anchor_v: Literal["top", "center", "bottom"] = "center"
     rotation: float = 0.0  # CCW degrees ([D96]); adapters own engine sign flips
@@ -183,13 +184,30 @@ class SpanMark:
     fill: Fill
 
 
-Mark = Polyline | Markers | Band | Rects | PolygonMark | TextMark | Rule | SpanMark
+@dataclass(frozen=True)
+class ArrowMark:
+    """A point-to-point connector with **engine-native** (screen-space)
+    arrowheads — deliberately not data-space polylines like Quiver's, so heads
+    keep their size under zoom ([D96]). Each adapter draws its engine's arrow
+    primitive; that per-engine head styling is the one drawing fact this mark
+    does not pin."""
+
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    stroke: Stroke
+    head: Literal["end", "both", "none"] = "end"
+
+
+Mark = (Polyline | Markers | Band | Rects | PolygonMark | TextMark
+        | Rule | SpanMark | ArrowMark)
 
 # The closed vocabulary. A backend's MARK_DRAWERS must be total over this
 # tuple (guard-tested from wave 2 on): a mark a backend cannot draw is a
 # registration-time error, never a silent drop.
 MARK_TYPES: tuple[type, ...] = (
-    Polyline, Markers, Band, Rects, PolygonMark, TextMark, Rule, SpanMark,
+    Polyline, Markers, Band, Rects, PolygonMark, TextMark, Rule, SpanMark, ArrowMark,
 )
 
 

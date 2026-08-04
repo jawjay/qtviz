@@ -26,6 +26,14 @@ class _Reference(Element):
     DATA_KIND = "none"  # [D124]: annotations are data-less; `.data` is the base None
     label: str | None  # declared for typing; Text carries no label
 
+    def _ref_stroke(self, ctx):
+        """Shared [D122] stroke: theme-foreground default, [D99] dash vocab."""
+        from ..core.lowering import resolve_ref_color  # noqa: PLC0415
+        from ..core.marks import Stroke  # noqa: PLC0415
+
+        return Stroke(resolve_ref_color(self.color, ctx.theme),
+                      width=self.line_width, dash=self.line_style, alpha=self.alpha)
+
     def legend_entry(self, theme, index: int = 0):
         if getattr(self, "label", None) is None:
             return None
@@ -68,6 +76,15 @@ class HLine(_Reference):
         self.label = label
         self._freeze()
 
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def lower(self, ctx):
+        from ..core.lowering import Lowered  # noqa: PLC0415
+        from ..core.marks import Rule  # noqa: PLC0415
+
+        return Lowered(marks=(Rule("h", self._ref_stroke(ctx), at=self.y),),
+                       legend=self.legend_entry(ctx.theme, ctx.series_index))
+
 
 class VLine(_Reference):
     """A vertical reference line at `x`, spanning the full y extent."""
@@ -99,6 +116,15 @@ class VLine(_Reference):
         self.alpha = alpha
         self.label = label
         self._freeze()
+
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def lower(self, ctx):
+        from ..core.lowering import Lowered  # noqa: PLC0415
+        from ..core.marks import Rule  # noqa: PLC0415
+
+        return Lowered(marks=(Rule("v", self._ref_stroke(ctx), at=self.x),),
+                       legend=self.legend_entry(ctx.theme, ctx.series_index))
 
 
 class Span(_Reference):
@@ -132,6 +158,16 @@ class Span(_Reference):
         self.alpha = alpha
         self.label = label
         self._freeze()
+
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def lower(self, ctx):
+        from ..core.lowering import Lowered, resolve_ref_color  # noqa: PLC0415
+        from ..core.marks import Fill, SpanMark  # noqa: PLC0415
+
+        fill = Fill(resolve_ref_color(self.color, ctx.theme), self.alpha)
+        return Lowered(marks=(SpanMark(self.orient, self.lo, self.hi, fill),),
+                       legend=self.legend_entry(ctx.theme, ctx.series_index))
 
 
 class Text(_Reference):
@@ -174,6 +210,18 @@ class Text(_Reference):
         self.frame = bool(frame)
         self._freeze()
 
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def lower(self, ctx):
+        from ..core.lowering import Lowered, resolve_ref_color  # noqa: PLC0415
+        from ..core.marks import TextMark  # noqa: PLC0415
+
+        mark = TextMark(self.x, self.y, self.text,
+                        color=resolve_ref_color(self.color, ctx.theme),
+                        size=self.size, anchor=self.anchor, anchor_v=self.anchor_v,
+                        rotation=self.rotation, frame=self.frame)
+        return Lowered(marks=(mark,))
+
 
 class RefLine(_Reference):
     """An infinite reference line `y = slope·x + intercept` ([D99] — the
@@ -211,6 +259,17 @@ class RefLine(_Reference):
         self.alpha = alpha
         self.label = label
         self._freeze()
+
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def lower(self, ctx):
+        from ..core.lowering import Lowered  # noqa: PLC0415
+        from ..core.marks import Rule  # noqa: PLC0415
+
+        return Lowered(
+            marks=(Rule("slope", self._ref_stroke(ctx),
+                        at=self.intercept, slope=self.slope),),
+            legend=self.legend_entry(ctx.theme, ctx.series_index))
 
 
 _HEADS = ("end", "both", "none")
@@ -251,6 +310,19 @@ class Arrow(_Reference):
         self.alpha = alpha
         self.label = label
         self._freeze()
+
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def lower(self, ctx):
+        from ..core.lowering import Lowered, resolve_ref_color  # noqa: PLC0415
+        from ..core.marks import ArrowMark, Stroke  # noqa: PLC0415
+
+        stroke = Stroke(resolve_ref_color(self.color, ctx.theme),
+                        width=self.line_width, alpha=self.alpha)
+        return Lowered(
+            marks=(ArrowMark(self.x0, self.y0, self.x1, self.y1, stroke,
+                             head=self.head),),
+            legend=self.legend_entry(ctx.theme, ctx.series_index))
 
 
 from .shapes import Ellipse, Polygon, Rect  # noqa: E402 — shapes share the class

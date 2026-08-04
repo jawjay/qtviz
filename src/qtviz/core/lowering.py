@@ -53,3 +53,9 @@ def resolve_color(spec: ColorSpec | None, theme: Theme, index: int = 0) -> Color
     if spec is None:
         return theme.palette[index % len(theme.palette)]
     return Color(spec)
+
+
+def resolve_ref_color(spec: ColorSpec | None, theme: Theme) -> Color:
+    """The annotation default ([D70]): the theme *foreground* — a reference is
+    chrome, not a series, so it must never look like palette data."""
+    return Color(spec) if spec is not None else theme.foreground

@@ -21,6 +21,26 @@ class _Shape(_Reference):
     """Shared shape surface: outline color/width, opt-in fill, alpha, label."""
 
     RECOMMENDED_OPTIONS = ("color", "line_width", "alpha", "fill", "label")
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
+
+    def _outline_points(self):
+        raise NotImplementedError
+
+    def lower(self, ctx):
+        """[D122]: one closed outline from the shared [D97] geometry."""
+        import numpy as np  # noqa: PLC0415
+
+        from ..core.lowering import Lowered, resolve_ref_color  # noqa: PLC0415
+        from ..core.marks import Fill, PolygonMark, Stroke  # noqa: PLC0415
+
+        pts = np.asarray(self._outline_points(), dtype="float64")
+        color = resolve_ref_color(self.color, ctx.theme)
+        mark = PolygonMark(
+            pts[:, 0], pts[:, 1],
+            stroke=Stroke(color, width=self.line_width, alpha=self.alpha),
+            fill=Fill(color, self.alpha) if self.fill else None)
+        return Lowered(marks=(mark,),
+                       legend=self.legend_entry(ctx.theme, ctx.series_index))
 
     def _init_style(self, color, line_width, alpha, fill, label, who: str) -> None:
         check_alpha(alpha, who=who)
@@ -61,6 +81,11 @@ class Rect(_Shape):
         self._init_style(color, line_width, alpha, fill, label, "Rect")
         self._freeze()
 
+    def _outline_points(self):
+        from ..core._geometry import rect_points  # noqa: PLC0415
+
+        return rect_points(self.x0, self.y0, self.x1, self.y1)
+
 
 class Ellipse(_Shape):
     """An ellipse centered at `(cx, cy)` with radii `rx`/`ry`, rotated by
@@ -93,6 +118,11 @@ class Ellipse(_Shape):
         self._init_style(color, line_width, alpha, fill, label, "Ellipse")
         self._freeze()
 
+    def _outline_points(self):
+        from ..core._geometry import ellipse_points  # noqa: PLC0415
+
+        return ellipse_points(self.cx, self.cy, self.rx, self.ry, self.angle)
+
 
 class Polygon(_Shape):
     """A closed polygon through literal `points` (≥ 3 `(x, y)` pairs)."""
@@ -118,3 +148,8 @@ class Polygon(_Shape):
         self.points = pts
         self._init_style(color, line_width, alpha, fill, label, "Polygon")
         self._freeze()
+
+    def _outline_points(self):
+        from ..core._geometry import close_points  # noqa: PLC0415
+
+        return close_points(self.points)

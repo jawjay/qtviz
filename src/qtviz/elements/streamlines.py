@@ -30,6 +30,7 @@ class Streamlines(Element):
     DATA_KIND = "none"
     REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("density", "color", "line_width", "alpha", "label")
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
     def __init__(
         self,
@@ -67,6 +68,18 @@ class Streamlines(Element):
         self.alpha = alpha
         self.label = label
         self._freeze()
+
+    def lower(self, ctx):
+        """[D122]: lines + heads as two NaN-separated polylines — exactly the
+        Quiver primitive pair ([D118])."""
+        from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
+        from ..core.marks import Polyline, Stroke  # noqa: PLC0415
+
+        (lx, ly), (hx, hy) = self.resolved_segments()
+        stroke = Stroke(resolve_color(self.color, ctx.theme, ctx.series_index),
+                        width=self.line_width, alpha=self.alpha)
+        return Lowered(marks=(Polyline(lx, ly, stroke), Polyline(hx, hy, stroke)),
+                       legend=self.legend_entry(ctx.theme, ctx.series_index))
 
     def resolved_paths(self):
         """The shared core integration ([D110]): `(paths, heads)` polylines."""

@@ -102,8 +102,13 @@ def test_element_default_does_not_lower(table):
     s = qv.Scatter(table, x="x", y="y")
     assert s.lower(CTX) is None
     assert type(s).lower is qv.Scatter.__mro__[1].lower  # base impl → native-only
-    assert s.select_xy() is None
     assert frozenset() == s.HONORED_BY_LOWERING
+    # natives that brush declare their coordinates ([D124]) …
+    x, y = s.select_xy()
+    np.testing.assert_array_equal(x, table["x"])
+    # … and elements with no point identity default to None
+    h = qv.Image(np.zeros((2, 2)), extent=(0, 0, 1, 1))
+    assert h.select_xy() is None and h.lower(CTX) is None
 
 
 def test_data_kind_metadata():
@@ -189,3 +194,69 @@ def test_quiver_identity_fields_do_not_change_the_lowering():
     base = _quiver().lower(CTX)
     for kw in ({"id": "abc123"}, {"backend_hint": "matplotlib"}):
         assert structurally_equal(base, _quiver(**kw).lower(CTX))
+
+
+# ---------------------- [D123] guard — all lowered elements ------------------
+
+_U2D = np.linspace(0.1, 1.0, 16).reshape(4, 4)
+
+
+def _mk_stem(**kw):
+    return qv.Stem(dict(_FIELD), x="x", y="y", **kw)
+
+
+_LOWERED_CTORS = {
+    "Quiver": _quiver,
+    "Stem": _mk_stem,
+    "Streamlines": lambda **kw: qv.Streamlines(_U2D, -_U2D, extent=(0, 1, 0, 1), **kw),
+    "HLine": lambda **kw: qv.HLine(1.0, **kw),
+    "VLine": lambda **kw: qv.VLine(2.0, **kw),
+    "Span": lambda **kw: qv.Span(0.2, 0.8, **kw),
+    "Text": lambda **kw: qv.Text(1.0, 2.0, "note", **kw),
+    "Arrow": lambda **kw: qv.Arrow(0.0, 0.0, 1.0, 1.0, **kw),
+    "Rect": lambda **kw: qv.Rect(0.0, 0.0, 1.0, 1.0, **kw),
+    "Ellipse": lambda **kw: qv.Ellipse(0.0, 0.0, 1.0, 0.5, **kw),
+    "Polygon": lambda **kw: qv.Polygon([(0, 0), (1, 0), (1, 1)], **kw),
+    "RefLine": lambda **kw: qv.RefLine(0.5, 1.0, **kw),
+}
+
+_GUARD_NON_DEFAULT = {
+    **_NON_DEFAULT,
+    "line_style": "dashed", "size": 14.0, "anchor": "left", "anchor_v": "top",
+    "rotation": 30.0, "frame": True, "head": "both", "fill": True,
+    "baseline": 0.5, "marker": "square", "density": 2.0,
+}
+
+_GUARD_CASES = [
+    (name, opt)
+    for name, ctor in _LOWERED_CTORS.items()
+    for opt in sorted(type(ctor()).HONORED_BY_LOWERING)
+]
+
+
+@pytest.mark.parametrize("name,option", _GUARD_CASES,
+                         ids=[f"{n}-{o}" for n, o in _GUARD_CASES])
+def test_honored_by_lowering_is_honest(name, option):
+    """[D123]: an option declared honored-by-lowering must visibly change the
+    Lowered when perturbed — silent drops are structurally impossible."""
+    ctor = _LOWERED_CTORS[name]
+    prereq = _PREREQ.get(option, {}) if name == "Quiver" else {}
+    base = ctor(**prereq).lower(CTX)
+    perturbed = ctor(**{**prereq, option: _GUARD_NON_DEFAULT[option]}).lower(CTX)
+    assert not structurally_equal(base, perturbed), (
+        f"{name} declares {option!r} honored by lowering, but perturbing it "
+        f"left the Lowered unchanged — the declaration is dishonest")
+
+
+def test_stem_and_streamlines_lower_to_segment_parity():
+    st = _mk_stem()
+    sx, sy = st.resolved_segments()
+    low = st.lower(CTX)
+    assert np.array_equal(low.marks[0].x, sx) and low.marks[0].connect == "pairs"
+    assert low.marks[1].pickable and low.select_xy is not None
+
+    sl = _LOWERED_CTORS["Streamlines"]()
+    (lx, ly), (hx, hy) = sl.resolved_segments()
+    low = sl.lower(CTX)
+    assert np.array_equal(low.marks[0].x, lx, equal_nan=True)
+    assert np.array_equal(low.marks[1].y, hy, equal_nan=True)

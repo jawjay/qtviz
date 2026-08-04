@@ -22,6 +22,7 @@ class Stem(Element):
     RECOMMENDED_OPTIONS = ("baseline", "marker", "color", "line_width", "alpha",
                            "label")
     CHANNELS = ("x", "y")
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
     def __init__(
         self,
@@ -60,3 +61,26 @@ class Stem(Element):
         d = self.data
         return stem_segments(as_float_seconds(d.series("x")),
                              as_float_seconds(d.series("y")), self.baseline)
+
+    def select_xy(self):
+        """Brush registration ([D124]) — heads select like Scatter points."""
+        return self.data.series("x"), self.data.series("y")
+
+    def lower(self, ctx):
+        """[D122]: ONE pair-connected polyline for every stalk ([D115] — never
+        an item per stem) + a pickable marker layer for the heads."""
+        from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
+        from ..core.marks import Markers, Polyline, Stroke  # noqa: PLC0415
+
+        sx, sy = self.resolved_segments()
+        color = resolve_color(self.color, ctx.theme, ctx.series_index)
+        d = self.data
+        marks = (
+            Polyline(sx, sy, Stroke(color, width=self.line_width, alpha=self.alpha),
+                     connect="pairs"),
+            Markers(d.series("x"), d.series("y"), marker=self.marker, size=7.0,
+                    fill=color, alpha=self.alpha, pickable=True),
+        )
+        return Lowered(marks=marks,
+                       legend=self.legend_entry(ctx.theme, ctx.series_index),
+                       select_xy=self.select_xy())

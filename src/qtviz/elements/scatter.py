@@ -72,6 +72,11 @@ class Scatter(Element):
             return None
         return super().legend_entry(theme, index)
 
+    def select_xy(self):
+        """Brush/pick registration coordinates ([D124]) — replaces the
+        isinstance tuples in backend event wiring."""
+        return self.data.series("x"), self.data.series("y")
+
     def channels(self) -> dict:
         """x/y always; `color`/`size` roles when bound to a data column, so the
         resolve pipeline materializes them for the native renderers."""
