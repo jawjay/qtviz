@@ -19,6 +19,7 @@ from PySide6.QtCore import Qt
 
 from ...core._scales import logify
 from ...core.color import Color
+from ...core.encoding import channel_title
 from ...elements import (
     Area,
     Arrow,
@@ -354,7 +355,7 @@ def _render_group_bars(element: Bars, ctx):
     if ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        legend = Legend(kind="categorical", title=element.by,
+        legend = Legend(kind="categorical", title=channel_title(element.by),
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     return items
@@ -818,7 +819,7 @@ def render_area(element: Area, ctx):
     if ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        legend = Legend(kind="categorical", title=element.by,
+        legend = Legend(kind="categorical", title=channel_title(element.by),
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     return items
@@ -1056,7 +1057,7 @@ def _dist_prep(element, ctx):
         if ctx.show_legend:
             from ._legend import add_legend  # noqa: PLC0415
 
-            legend = Legend(kind="categorical", title=element.by,
+            legend = Legend(kind="categorical", title=channel_title(element.by),
                             entries=tuple((str(c), swatches[i]) for i, c in enumerate(cats)))
             add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     else:

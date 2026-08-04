@@ -25,6 +25,18 @@ _LUT_N = 256
 _RAMP_STOPS = (0.0, 0.25, 0.5, 0.75, 1.0)
 
 
+def channel_title(accessor) -> str | None:
+    """Legend title for a data-bound channel ([D129]): accessors are the full
+    `str | Expression | Callable | ArrayLike` union, but only a column name —
+    plain or a bare `col()` (duck-typed on `.name` to keep core import-light) —
+    has a printable name. Derived/opaque accessors get no title rather than a
+    repr dump."""
+    if isinstance(accessor, str):
+        return accessor
+    name = getattr(accessor, "name", None)
+    return name if isinstance(name, str) else None
+
+
 @dataclass(frozen=True)
 class Legend:
     """Backend-agnostic description of a color legend. Backends render it."""

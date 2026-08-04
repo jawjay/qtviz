@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 
 from ...core.color import Color
+from ...core.encoding import channel_title
 from ...elements import (
     Area,
     Arrow,
@@ -360,7 +361,7 @@ def _render_group_bars(element: Bars, ctx):
             _label_bars(ax, artists[-1], element, ctx.theme, inside=True)
             bases = bases + mat[gi]
     if ctx.show_legend:
-        legend = Legend(kind="categorical", title=element.by,
+        legend = Legend(kind="categorical", title=channel_title(element.by),
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         _add_legend(ax, legend, ctx.theme, ctx.legend_position)
     return artists
@@ -609,7 +610,7 @@ def render_area(element: Area, ctx):
         if element.mode == "stacked":
             bases = top
     if ctx.show_legend:
-        legend = Legend(kind="categorical", title=element.by,
+        legend = Legend(kind="categorical", title=channel_title(element.by),
                         entries=tuple((str(g), swatches[i]) for i, g in enumerate(gs)))
         _add_legend(ax, legend, ctx.theme, ctx.legend_position)
     return artists
@@ -899,7 +900,7 @@ def _dist_prep(element, ctx):
     if cats is not None:
         swatches = category_swatches(cats, ctx.theme.palette)
         if ctx.show_legend:
-            legend = Legend(kind="categorical", title=element.by,
+            legend = Legend(kind="categorical", title=channel_title(element.by),
                             entries=tuple((str(c), swatches[i]) for i, c in enumerate(cats)))
             _add_legend(ax, legend, ctx.theme, ctx.legend_position)
     else:
