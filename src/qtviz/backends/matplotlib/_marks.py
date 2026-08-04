@@ -44,7 +44,7 @@ def draw_polyline(m: Polyline, ctx):
         return item
     (line,) = ctx.parent_axes.plot(
         m.x, m.y, color=color, lw=st.width, ls=_ls(st.dash), alpha=st.alpha,
-        drawstyle=_DRAWSTYLE.get(m.step, "default"))
+        drawstyle=_DRAWSTYLE[m.step] if m.step is not None else "default")
     if m.fill_to is not None:
         fill = m.fill or m.stroke
         ctx.parent_axes.fill_between(m.x, m.y, m.fill_to,
@@ -53,7 +53,8 @@ def draw_polyline(m: Polyline, ctx):
 
 
 def draw_markers(m: Markers, ctx):
-    color = m.fill if isinstance(m.fill, np.ndarray) else m.fill.mpl()
+    color: object = (m.fill if isinstance(m.fill, np.ndarray)
+                     else (m.fill or ctx.theme.foreground).mpl())
     size = np.asarray(m.size, dtype="float64") ** 2  # mpl `s` is pt²
     return ctx.parent_axes.scatter(
         m.x, m.y, color=color, s=size, alpha=m.alpha, marker=_MARKER[m.marker],

@@ -62,7 +62,8 @@ def draw_polyline(m: Polyline, ctx):
 
 def draw_markers(m: Markers, ctx):
     x_log, y_log = _xy_log(ctx)
-    color = m.fill if isinstance(m.fill, np.ndarray) else _qcolor(m.fill, m.alpha)
+    color = (m.fill if isinstance(m.fill, np.ndarray)
+             else _qcolor(m.fill or ctx.theme.foreground, m.alpha))
     item = pg.ScatterPlotItem(
         x=logify(m.x, x_log), y=logify(m.y, y_log),
         symbol=_MARKER[m.marker], size=m.size, brush=pg.mkBrush(color),
