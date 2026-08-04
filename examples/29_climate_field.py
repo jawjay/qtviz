@@ -44,7 +44,7 @@ def build(theme: qv.Theme | None = None):
     da = _field()
     lon, lat = da["lon"].values, da["lat"].values
 
-    field_map = qv.Image(da, bounds=(lon[0], lat[0], lon[-1], lat[-1]), colormap="magma")
+    field_map = qv.Image(da, extent=(lon[0], lat[0], lon[-1], lat[-1]), colormap="magma")
 
     cut = int(np.argmin(np.abs(lat - 55.0)))                  # cross-section at ~55°N
     profile = da.isel(lat=cut)                                # 1-D over lon → tabular

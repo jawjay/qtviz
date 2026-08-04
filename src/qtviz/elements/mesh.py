@@ -30,13 +30,13 @@ def _check_edges(name: str, edges) -> tuple[float, ...]:
 
 class Mesh(Element):
     """A 2-D value grid over **explicit cell edges**: `values[j, i]` fills the
-    cell `x_edges[i]..x_edges[i+1] × y_edges[j]..y_edges[j+1]` — edges are the
+    cell `x[i]..x[i+1] × y[j]..y[j+1]` — edges are the
     canonical contract (`Heatmap` owns the centers convention; `Image` the
     uniform-bounds one). Non-uniform spacing is the point: log-spaced
     frequency rows, irregular time bins. Shares the [D105] norm surface."""
 
     DATA_KIND = "gridded"  # [D124]
-    REQUIRED_OPTIONS = ("x_edges", "y_edges")
+    REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("colormap", "norm", "vmin", "vmax", "gamma",
                            "linthresh", "levels")
 
@@ -44,8 +44,8 @@ class Mesh(Element):
         self,
         data: DataLike,
         *,
-        x_edges,
-        y_edges,
+        x,
+        y,
         colormap: str = "viridis",
         norm: str = "linear",
         vmin: float | None = None,
@@ -59,10 +59,10 @@ class Mesh(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         check_norm(norm, vmin, vmax, gamma, who="Mesh",
                    linthresh=linthresh, levels=levels)
-        xe = _check_edges("x_edges", x_edges)
-        ye = _check_edges("y_edges", y_edges)
+        xe = _check_edges("x", x)
+        ye = _check_edges("y", y)
         self.data = as_data_ref(data)
-        self.x_edges, self.y_edges = xe, ye
+        self.x, self.y = xe, ye
         self.colormap = colormap
         self.norm = norm
         self.vmin = float(vmin) if vmin is not None else None
@@ -76,20 +76,20 @@ class Mesh(Element):
             nrows, ncols = shape
             if len(xe) != ncols + 1:
                 raise ValidationError(
-                    f"Mesh x_edges has {len(xe)} values for {ncols} value columns "
+                    f"Mesh x has {len(xe)} values for {ncols} value columns "
                     f"(want ncols+1 = {ncols + 1})"
                 )
             if len(ye) != nrows + 1:
                 raise ValidationError(
-                    f"Mesh y_edges has {len(ye)} values for {nrows} value rows "
+                    f"Mesh y has {len(ye)} values for {nrows} value rows "
                     f"(want nrows+1 = {nrows + 1})"
                 )
         self._freeze()
 
     def check_shape(self, values) -> np.ndarray:
-        """Render-seam guard: `(len(y_edges)-1, len(x_edges)-1)` values."""
+        """Render-seam guard: `(len(y)-1, len(x)-1)` values."""
         a = np.asarray(values, dtype="float64")
-        want = (len(self.y_edges) - 1, len(self.x_edges) - 1)
+        want = (len(self.y) - 1, len(self.x) - 1)
         if a.shape != want:
             raise ValidationError(
                 f"Mesh values shape {a.shape} does not match edges (want {want})"

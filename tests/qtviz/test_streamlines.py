@@ -35,16 +35,16 @@ def _backend(name):
 def test_validation():
     from qtviz.errors import ValidationError
 
-    qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS)
-    qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS, density=2.0)
+    qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS)
+    qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS, density=2.0)
     with pytest.raises(ValidationError):
-        qv.Streamlines(_SWIRL_U, _SWIRL_V[:, :-1], bounds=_BOUNDS)  # shape mismatch
+        qv.Streamlines(_SWIRL_U, _SWIRL_V[:, :-1], extent=_BOUNDS)  # shape mismatch
     with pytest.raises(ValidationError):
-        qv.Streamlines(_SWIRL_U.ravel(), _SWIRL_V.ravel(), bounds=_BOUNDS)  # 1-D
+        qv.Streamlines(_SWIRL_U.ravel(), _SWIRL_V.ravel(), extent=_BOUNDS)  # 1-D
     with pytest.raises(ValidationError):
-        qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS, density=0.0)
+        qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS, density=0.0)
     with pytest.raises(ValidationError):
-        qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS, density=50.0)
+        qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS, density=50.0)
 
 
 # ── core integrator properties ───────────────────────────────────────────────
@@ -121,7 +121,7 @@ def test_heads_sit_on_their_lines():
 def test_webengine_streamline_traces():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS, label="flow")
+    el = qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS, label="flow")
     traces = _figure.build_figure(el, qv.Theme.light())["data"]
     assert len(traces) == 2                      # lines + heads
     lines, heads = traces
@@ -134,7 +134,7 @@ def test_webengine_streamline_traces():
 def test_pg_two_polyline_items(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS)
+    el = qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS)
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     items = handle.native(el.id)
@@ -146,7 +146,7 @@ def test_pg_two_polyline_items(qtbot):
 def test_backends_draw_identical_lines(qtbot):
     """[D110] payoff: matplotlib and pyqtgraph plot the same polylines."""
     pytest.importorskip("matplotlib")
-    el = qv.Streamlines(_SWIRL_U, _SWIRL_V, bounds=_BOUNDS)
+    el = qv.Streamlines(_SWIRL_U, _SWIRL_V, extent=_BOUNDS)
     h1 = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(h1.widget)
     h2 = _backend("pyqtgraph").render(el, theme=qv.Theme.light())

@@ -358,7 +358,7 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
                                continuous_palette=palettes.get("viridis")).rgba
         return [{"type": "image", "z": rgba, "name": element.id}]
     values = np.asarray(element.data.grid().values)
-    x0, y0, x1, y1 = element.bounds
+    x0, y0, x1, y1 = element.extent
     if values.ndim == 2:
         nrows, ncols = values.shape
         trace = {
@@ -679,8 +679,8 @@ def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
     values = element.check_shape(element.data.grid().values)
     trace = {
         "type": "heatmap", "z": values,
-        "x": np.asarray(element.x_edges, dtype="float64"),
-        "y": np.asarray(element.y_edges, dtype="float64"),
+        "x": np.asarray(element.x, dtype="float64"),
+        "y": np.asarray(element.y, dtype="float64"),
         "colorscale": _colorscale(element.colormap), "name": element.id,
     }
     _apply_norm(trace, element, values)
@@ -704,7 +704,7 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
         warnings.warn("webengine: Plotly contours are uniformly spaced; the "
                       "non-uniform `levels` sequence was approximated.",
                       QtvizWarning, stacklevel=2)
-    x0, y0, x1, y1 = element.bounds
+    x0, y0, x1, y1 = element.extent
     ny, nx = values.shape
     trace = {
         "type": "contour", "z": values,

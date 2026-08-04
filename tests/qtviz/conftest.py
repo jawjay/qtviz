@@ -81,7 +81,7 @@ def make_elements(table, grid):
             "Histogram": qv.Histogram(table, value="y"),
             "ErrorBars": qv.ErrorBars(table, x="x", y="y", err="err"),
             "Spread": qv.Spread(table, x="x", y_lo="y_lo", y_hi="y_hi"),
-            "Image": qv.Image(values, bounds=bounds),
+            "Image": qv.Image(values, extent=bounds),
             "Heatmap": qv.Heatmap(table, x="x", y="y", z="z"),
             # annotation / reference elements ([D70], 0.4)
             "HLine": qv.HLine(0.5),
@@ -100,12 +100,12 @@ def make_elements(table, grid):
             # composition vocabulary (parity increment 3, [D84b]/[D90]/[D91])
             "Area": qv.Area(table, x="x", y="y"),
             "Ecdf": qv.Ecdf(table, value="y"),
-            "Contour": qv.Contour(values, bounds=bounds),
-            "Mesh": qv.Mesh(values, x_edges=np.linspace(0.0, 30.0, 31),
-                            y_edges=np.geomspace(1.0, 20.0, 21)),
+            "Contour": qv.Contour(values, extent=bounds),
+            "Mesh": qv.Mesh(values, x=np.linspace(0.0, 30.0, 31),
+                            y=np.geomspace(1.0, 20.0, 21)),
             "Quiver": qv.Quiver(table, x="x", y="y", u="z", v="y"),
             "Stem": qv.Stem(table, x="x", y="y"),
-            "Streamlines": qv.Streamlines(values, -values, bounds=bounds),
+            "Streamlines": qv.Streamlines(values, -values, extent=bounds),
             "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"],
                            "cat": ["p", "q", "p"]},  # the honor-matrix by= column
                           value="v", by="l"),

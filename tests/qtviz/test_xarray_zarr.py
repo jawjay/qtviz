@@ -79,7 +79,7 @@ def test_zarr_image_renders_async(qtbot):
     if "pyqtgraph" not in qv.backends.list_available():
         pytest.skip("pyqtgraph backend not registered")
     z = zarr.array(np.outer(np.hanning(30), np.hanning(40)), chunks=(15, 40))
-    view = qv.View(qv.Image(z, bounds=(0, 0, 40, 30)), backend="pyqtgraph")
+    view = qv.View(qv.Image(z, extent=(0, 0, 40, 30)), backend="pyqtgraph")
     qtbot.addWidget(view)
     qtbot.waitUntil(lambda: view.handle is not None, timeout=5000)
     assert view.handle is not None

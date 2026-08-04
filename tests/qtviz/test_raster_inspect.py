@@ -31,7 +31,7 @@ from qtviz.ext.datashader import RasterAggregate, RasterResult  # noqa: E402
 def test_value_at_maps_each_cell():
     agg = RasterAggregate(
         values=np.array([[1.0, 2.0], [3.0, 4.0]]),  # row0=ymin, row1=ymax
-        bounds=(0.0, 0.0, 2.0, 2.0),
+        bounds=(0.0, 0.0, 2.0, 2.0),  # RasterAggregate keeps its internal naming
         kind="count",
     )
     assert agg.value_at(0.5, 0.5) == 1.0   # x col0, y row0 (ymin)

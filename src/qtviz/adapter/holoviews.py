@@ -193,7 +193,7 @@ def _convert(obj: Any, hv) -> Any:
     if isinstance(obj, hv.Image):  # gridded value array + bounds
         arr = obj.dimension_values(2, flat=False)
         b0, b1, b2, b3 = (float(b) for b in obj.bounds.lbrt())
-        return Image(arr, bounds=(b0, b1, b2, b3))
+        return Image(arr, extent=(b0, b1, b2, b3))
 
     # ── fallback: host the whole figure on webengine, unchanged ([D28]) ───────
     if isinstance(obj, hv.core.Element):

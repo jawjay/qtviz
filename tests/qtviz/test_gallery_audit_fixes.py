@@ -105,7 +105,7 @@ def test_webengine_histogram_honors_alpha():
 @pytest.mark.tier2
 def test_mpl_colormap_case_insensitive(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Image(np.arange(12.0).reshape(3, 4), bounds=(0, 0, 4, 3),
+    el = qv.Image(np.arange(12.0).reshape(3, 4), extent=(0, 0, 4, 3),
                   colormap="greys")  # mpl registry name is "Greys"
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

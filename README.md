@@ -148,11 +148,11 @@ qv.Ecdf(table, value="latency")                 # empirical CDF, shared numbers
 qv.Stem(table, x="day", y="delta")               # lollipop series, pickable heads
 qv.Heatmap(table, x="x", y="y", z="z", aggregator="mean",   # real data coordinates
            cell_labels="auto")                   # contrast-aware value labels
-qv.Image(array2d, bounds=(0, 0, 10, 10), norm="log")        # also power/symlog/boundary
-qv.Mesh(spec2d, x_edges=t_edges, y_edges=np.geomspace(1, 64, 13))  # non-uniform cells
-qv.Contour(field2d, bounds=(0, 0, 10, 10), levels=8, labels=True)  # inline labels
+qv.Image(array2d, extent=(0, 0, 10, 10), norm="log")        # also power/symlog/boundary
+qv.Mesh(spec2d, x=t_edges, y=np.geomspace(1, 64, 13))  # non-uniform cells
+qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, labels=True)  # inline labels
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
-qv.Streamlines(u2d, v2d, bounds=(0, 0, 10, 10), density=1.5)  # field-line flow
+qv.Streamlines(u2d, v2d, extent=(0, 0, 10, 10), density=1.5)  # field-line flow
 qv.Pie(table, value="share", by="browser", hole=0.4)   # donut (mpl/webengine)
 qv.ErrorBars(table, x="x", y="y", err="sigma", lo_limit="is_lo")  # "beyond" arrows
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band

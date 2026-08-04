@@ -66,7 +66,7 @@ def test_matplotlib_curve_honors_line_style(qtbot):
 def test_matplotlib_image_honors_interpolation(qtbot):
     pytest.importorskip("matplotlib")
     np = pytest.importorskip("numpy")
-    el = qv.Image(np.arange(12.0).reshape(3, 4), bounds=(0, 0, 4, 3), interpolation="nearest")
+    el = qv.Image(np.arange(12.0).reshape(3, 4), extent=(0, 0, 4, 3), interpolation="nearest")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     imgs = handle.axes[0].images

@@ -6,7 +6,7 @@ xarray grid re-reads only the visible window at widget resolution on pan/zoom
 and *sharpens* instead of pixelating. Pure data + numpy — no Qt, no optional
 imports beyond what the ref itself uses.
 
-Coordinate model: the rendered `Image` places its raster by `element.bounds`
+Coordinate model: the rendered `Image` places its raster by `element.extent`
 (data space); the array itself is indexed. `make_regrid` closes over the bounds
 and maps viewport data-coords ⇄ array indices linearly.
 """

@@ -129,7 +129,7 @@ def test_image_maps_array_and_bounds():
     arr = np.random.default_rng(0).random((8, 10))
     node = from_holoviews(hv.Image(arr))
     assert isinstance(node, qv.Image)
-    assert len(node.bounds) == 4  # (l, b, r, t) from hv bounds.lbrt()
+    assert len(node.extent) == 4  # (l, b, r, t) from hv bounds.lbrt()
 
 
 @pytest.mark.tier1

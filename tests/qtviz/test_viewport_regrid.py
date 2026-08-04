@@ -89,7 +89,7 @@ def test_regrid_clamps_out_of_bounds_viewport():
 # ── Tier-2: the render path wires the loop ───────────────────────────────────
 def _lazy_image(qtbot, backend):
     z, store = _big_zarr(shape=(2048, 2048), chunks=(256, 256))
-    el = qv.Image(z, bounds=(0.0, 0.0, 10.0, 10.0))
+    el = qv.Image(z, extent=(0.0, 0.0, 10.0, 10.0))
     view = qv.View(el, backend=backend)
     qtbot.addWidget(view)
     view.resize(600, 400)
@@ -150,7 +150,7 @@ def test_milestone_0_5_acceptance(qtbot):
     store = _CountingStore()
     z = zarr.create_array(store=store, shape=(16_384, 16_384), chunks=(512, 512),
                           dtype="f8")                  # unwritten → fill-value reads
-    el = qv.Image(z, bounds=(0.0, 0.0, 100.0, 100.0))
+    el = qv.Image(z, extent=(0.0, 0.0, 100.0, 100.0))
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     view.resize(600, 400)
@@ -171,7 +171,7 @@ def test_milestone_0_5_acceptance(qtbot):
     dask_array = pytest.importorskip("dask.array")
     xr = pytest.importorskip("xarray")
     da = xr.DataArray(dask_array.zeros((4096, 4096), chunks=512), dims=("y", "x"))
-    el2 = qv.Image(da, bounds=(0.0, 0.0, 1.0, 1.0))
+    el2 = qv.Image(da, extent=(0.0, 0.0, 1.0, 1.0))
     v2 = qv.View(el2, backend="pyqtgraph")
     qtbot.addWidget(v2)
     v2.resize(400, 300)
@@ -184,7 +184,7 @@ def test_milestone_0_5_acceptance(qtbot):
 @pytest.mark.tier2
 def test_small_eager_grid_regression(qtbot):
     """Under-budget / eager grids render exactly as before — raw values, no loop."""
-    el = qv.Image(np.arange(16.0).reshape(4, 4), bounds=(0.0, 0.0, 1.0, 1.0))
+    el = qv.Image(np.arange(16.0).reshape(4, 4), extent=(0.0, 0.0, 1.0, 1.0))
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     item = view.native(el.id)

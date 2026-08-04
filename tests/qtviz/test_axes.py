@@ -174,7 +174,7 @@ def test_effective_scales_gates_rasters():
     plain = _surface(qv.Scatter(_LOG_DATA, x="x", y="y"), x=qv.AxisSpec(scale="log"))
     assert effective_scales(plain, surface_of(plain), scales, "pyqtgraph") == ("log", "linear")
 
-    raster = _surface(qv.Image(np.zeros((4, 4)), bounds=(0.0, 0.0, 1.0, 1.0)),
+    raster = _surface(qv.Image(np.zeros((4, 4)), extent=(0.0, 0.0, 1.0, 1.0)),
                       x=qv.AxisSpec(scale="log"))
     with pytest.warns(QtvizWarning, match="raster"):
         eff = effective_scales(raster, surface_of(raster), scales, "pyqtgraph")

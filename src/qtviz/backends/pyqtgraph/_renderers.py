@@ -409,7 +409,7 @@ def render_image(element: Image, ctx):
 
                 add_legend(ctx.parent_axes, norm_legend, ctx.theme,
                            ctx.legend_position)
-    x0, y0, x1, y1 = element.bounds
+    x0, y0, x1, y1 = element.extent
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
     if legend is not None and ctx.show_legend:
@@ -507,7 +507,7 @@ def _wire_dynamic_regrid(element, item, ctx) -> None:
     )
     controller = RasterController(
         source=source, target=PgRasterTarget(item, vb),
-        rasterize=make_regrid(element.bounds, palettes.get("viridis")),
+        rasterize=make_regrid(element.extent, palettes.get("viridis")),
         parent=vb, on_legend=refresh_legend,
     )
     if not hasattr(vb, "_qtviz_rasters"):
@@ -684,7 +684,7 @@ def render_mesh(element: Mesh, ctx):
     edge-corner meshgrids, explicit levels). Shares the [D105] norm path."""
     values = element.check_shape(element.data.grid().values)
     display, levels, norm_legend = _norm_display(element, values, ctx)
-    xg, yg = np.meshgrid(np.asarray(element.x_edges), np.asarray(element.y_edges))
+    xg, yg = np.meshgrid(np.asarray(element.x), np.asarray(element.y))
     kwargs: dict = {"colorMap": _pg_colormap(element.colormap)}
     if levels is not None:
         kwargs.update(levels=levels, enableAutoLevels=False)
@@ -708,7 +708,7 @@ def render_contour(element: Contour, ctx):
 
     values = np.asarray(element.data.grid().values, dtype="float64")
     lv = contour_levels(values, element.levels)
-    x0, y0, x1, y1 = element.bounds
+    x0, y0, x1, y1 = element.extent
     ny, nx = values.shape
     tr = QTransform()
     tr.translate(x0, y0)

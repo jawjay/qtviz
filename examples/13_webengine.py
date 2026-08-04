@@ -33,7 +33,7 @@ def _on_pick(e) -> None:
 
 
 def _on_select(e) -> None:
-    print(f"selected {len(e.indices)} points  bounds={e.bounds}")
+    print(f"selected {len(e.indices)} points  extent={e.bounds}")
 
 
 def _on_range(e) -> None:

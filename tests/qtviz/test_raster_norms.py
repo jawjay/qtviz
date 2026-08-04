@@ -32,18 +32,18 @@ def _backend(name):
 def test_validation():
     from qtviz.errors import ValidationError
 
-    qv.Image(_Z, bounds=(0, 0, 4, 3), norm="log")
-    qv.Image(_Z, bounds=(0, 0, 4, 3), norm="power", gamma=0.5)
+    qv.Image(_Z, extent=(0, 0, 4, 3), norm="log")
+    qv.Image(_Z, extent=(0, 0, 4, 3), norm="power", gamma=0.5)
     qv.Heatmap({"x": [0.0, 1.0], "y": [0.0, 0.0], "z": [1.0, 2.0]},
                x="x", y="y", z="z", vmin=0.0, vmax=5.0)
     with pytest.raises(ValidationError):
-        qv.Image(_Z, bounds=(0, 0, 4, 3), norm="sqrt")
+        qv.Image(_Z, extent=(0, 0, 4, 3), norm="sqrt")
     with pytest.raises(ValidationError):
-        qv.Image(_Z, bounds=(0, 0, 4, 3), gamma=0.5)          # gamma needs power
+        qv.Image(_Z, extent=(0, 0, 4, 3), gamma=0.5)          # gamma needs power
     with pytest.raises(ValidationError):
-        qv.Image(_Z, bounds=(0, 0, 4, 3), vmin=5.0, vmax=1.0)
+        qv.Image(_Z, extent=(0, 0, 4, 3), vmin=5.0, vmax=1.0)
     with pytest.raises(ValidationError):
-        qv.Image(_Z, bounds=(0, 0, 4, 3), norm="log", vmin=-1.0)
+        qv.Image(_Z, extent=(0, 0, 4, 3), norm="log", vmin=-1.0)
 
 
 @pytest.mark.tier1
@@ -76,11 +76,11 @@ def test_webengine_norms():
 
     light = qv.Theme.light()
     lin = _figure.build_figure(
-        qv.Image(_Z, bounds=(0, 0, 4, 3), vmin=100.0, vmax=500.0), light)["data"][0]
+        qv.Image(_Z, extent=(0, 0, 4, 3), vmin=100.0, vmax=500.0), light)["data"][0]
     assert (lin["zmin"], lin["zmax"]) == (100.0, 500.0)       # raw z, honest bar
     assert "showscale" not in lin
     logt = _figure.build_figure(
-        qv.Image(_Z, bounds=(0, 0, 4, 3), norm="log"), light)["data"][0]
+        qv.Image(_Z, extent=(0, 0, 4, 3), norm="log"), light)["data"][0]
     assert logt["showscale"] is False                         # no lying colorbar
     assert (logt["zmin"], logt["zmax"]) == (0.0, 1.0)
     assert float(np.nanmax(logt["z"])) == 1.0
@@ -90,7 +90,7 @@ def test_webengine_norms():
 @pytest.mark.tier2
 def test_mpl_log_norm_colorbar_denormalized(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Image(_Z, bounds=(0, 0, 4, 3), norm="log")
+    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm="log")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     fig = handle.axes[0].figure
@@ -106,7 +106,7 @@ def test_mpl_log_norm_colorbar_denormalized(qtbot):
 def test_mpl_plain_raster_unchanged(qtbot):
     """No engaged norm → no colorbar, raw values (the pre-[D105] look)."""
     pytest.importorskip("matplotlib")
-    el = qv.Image(_Z, bounds=(0, 0, 4, 3))
+    el = qv.Image(_Z, extent=(0, 0, 4, 3))
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     assert len(handle.axes[0].figure.axes) == 1
@@ -115,7 +115,7 @@ def test_mpl_plain_raster_unchanged(qtbot):
 
 @pytest.mark.tier2
 def test_pg_norm_levels_and_endpoint_legend(qtbot):
-    el = qv.Image(_Z, bounds=(0, 0, 4, 3), norm="log")
+    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm="log")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     item = handle.native(el.id)
@@ -128,7 +128,7 @@ def test_backends_color_identically(qtbot):
     """[D110] payoff: the normalized grids matplotlib and pyqtgraph draw are
     bit-identical (one core normalization)."""
     pytest.importorskip("matplotlib")
-    el = qv.Image(_Z, bounds=(0, 0, 4, 3), norm="power", gamma=0.4)
+    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm="power", gamma=0.4)
     h1 = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(h1.widget)
     h2 = _backend("pyqtgraph").render(el, theme=qv.Theme.light())

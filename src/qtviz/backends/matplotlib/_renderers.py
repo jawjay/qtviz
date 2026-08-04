@@ -379,7 +379,7 @@ def render_histogram(element: Histogram, ctx):
 
 
 def render_image(element: Image, ctx):
-    x0, y0, x1, y1 = element.bounds
+    x0, y0, x1, y1 = element.extent
     agg = getattr(element, "_raster_agg", None)
     if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
         result = _shade_raster(element, agg, ctx.theme)
@@ -498,7 +498,7 @@ def _wire_dynamic_regrid(element, artist, ctx) -> None:
     )
     controller = RasterController(
         source=source, target=MplRasterTarget(artist, ax),
-        rasterize=make_regrid(element.bounds, palettes.get("viridis")),
+        rasterize=make_regrid(element.extent, palettes.get("viridis")),
         parent=ax.figure.canvas, on_legend=refresh_legend,
     )
     if not hasattr(ax, "_qtviz_rasters"):
@@ -693,7 +693,7 @@ def render_mesh(element: Mesh, ctx):
     values = element.check_shape(element.data.grid().values)
     display, norm_kw = _norm_display(element, values, ctx, ctx.parent_axes)
     return ctx.parent_axes.pcolormesh(
-        np.asarray(element.x_edges), np.asarray(element.y_edges), display,
+        np.asarray(element.x), np.asarray(element.y), display,
         cmap=_mpl_cmap(element.colormap), **norm_kw)
 
 
@@ -704,7 +704,7 @@ def render_contour(element: Contour, ctx):
 
     values = np.asarray(element.data.grid().values, dtype="float64")
     lv = contour_levels(values, element.levels)
-    x0, y0, x1, y1 = element.bounds
+    x0, y0, x1, y1 = element.extent
     ax = ctx.parent_axes
     if element.filled:
         cs = ax.contourf(values, levels=lv, extent=(x0, x1, y0, y1),

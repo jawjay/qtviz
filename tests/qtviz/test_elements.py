@@ -71,4 +71,4 @@ def test_elements_are_immutable(make_elements):
 def test_image_requires_gridded_data(table):
     # Image needs an array grid; a tabular dict has no 2-D values → clear error.
     with pytest.raises((ValueError, TypeError)):
-        qv.Image(table, bounds=(0, 0, 1, 1))
+        qv.Image(table, extent=(0, 0, 1, 1))

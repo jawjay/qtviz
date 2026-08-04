@@ -30,7 +30,7 @@ def build():
         qv.Curve(line, x="x", y="y", line_width=2.0),
         qv.Bars({"cat": ["A", "B", "C", "D"], "v": [3.0, 7.0, 2.0, 5.0]}, x="cat", y="v"),
         qv.Histogram({"v": rng.normal(size=2000)}, value="v"),
-        qv.Image(image, bounds=(0, 0, 60, 40)),
+        qv.Image(image, extent=(0, 0, 60, 40)),
         qv.Heatmap(grid, x="gx", y="gy", z="gz"),
         qv.ErrorBars(line, x="x", y="y", err="err"),
         qv.Spread(line, x="x", y_lo="lo", y_hi="hi"),

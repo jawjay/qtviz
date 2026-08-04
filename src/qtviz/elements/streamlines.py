@@ -12,7 +12,7 @@ from ..errors import ValidationError
 
 class Streamlines(Element):
     """Streamlines of a vector field: `u`/`v` are 2-D arrays on the
-    `Image`/`Contour` grid contract, placed in data space by `bounds` —
+    `Image`/`Contour` grid contract, placed in data space by `extent` —
     deliberately grids, not per-point columns, because field topology needs
     the grid. The integrator runs once in core (`_streamlines`): seeds on a
     coarse mask grid (`30×30 · density`), RK4 both directions with bilinear
@@ -28,7 +28,7 @@ class Streamlines(Element):
     # [D124]: holds raw 2-D arrays, no DataRef today; becomes "gridded"
     # when [D129] makes it data-first (wave 3).
     DATA_KIND = "none"
-    REQUIRED_OPTIONS = ("bounds",)
+    REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("density", "color", "line_width", "alpha", "label")
 
     def __init__(
@@ -36,7 +36,7 @@ class Streamlines(Element):
         u,
         v,
         *,
-        bounds: tuple[float, float, float, float],
+        extent: tuple[float, float, float, float],
         density: float = 1.0,
         color: ColorSpec | None = None,
         line_width: float = 1.5,
@@ -60,7 +60,7 @@ class Streamlines(Element):
                 f"Streamlines density must be in (0, 5], got {density!r}")
         self.u = u
         self.v = v
-        self.bounds = tuple(float(b) for b in bounds)
+        self.extent = tuple(float(b) for b in extent)
         self.density = float(density)
         self.color = color
         self.line_width = float(line_width)
@@ -72,7 +72,7 @@ class Streamlines(Element):
         """The shared core integration ([D110]): `(paths, heads)` polylines."""
         from ..core._streamlines import streamline_paths  # noqa: PLC0415
 
-        return streamline_paths(self.u, self.v, self.bounds, self.density)
+        return streamline_paths(self.u, self.v, self.extent, self.density)
 
     def resolved_segments(self):
         """The two NaN-separated polylines every backend draws — all lines

@@ -39,7 +39,7 @@ def build():
 
     view = qv.View(qv.RawFigure(points))  # backend="auto" → webengine
     view.on(qv.TapEvent, lambda e: print(f"tapped at ({e.x:.2f}, {e.y:.2f})"))
-    view.on(qv.SelectEvent, lambda e: print(f"selected region bounds={e.bounds}"))
+    view.on(qv.SelectEvent, lambda e: print(f"selected region extent={e.bounds}"))
     view.on(qv.RangeEvent, lambda e: print(f"viewport x={e.x[0]:.2f}..{e.x[1]:.2f}"))
     return view
 

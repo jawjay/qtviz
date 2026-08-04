@@ -41,12 +41,12 @@ def check_norm(norm: str, vmin, vmax, gamma: float, *, who: str,
 
 
 class Image(Element):
-    """A 2-D array drawn as an image over explicit `bounds` (also hosts RGBA
+    """A 2-D array drawn as an image over explicit `extent` (also hosts RGBA
     rasters). `norm`/`vmin`/`vmax`/`gamma` engage the [D105] color surface —
     normalized once in core, colorbar/limits appear only when used."""
 
     DATA_KIND = "gridded"  # [D124]
-    REQUIRED_OPTIONS = ("bounds",)
+    REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("colormap", "interpolation", "norm", "vmin", "vmax", "gamma",
                            "linthresh", "levels")
 
@@ -54,7 +54,7 @@ class Image(Element):
         self,
         data: DataLike,
         *,
-        bounds: tuple[float, float, float, float],
+        extent: tuple[float, float, float, float],
         colormap: str = "viridis",
         interpolation: Literal["nearest", "bilinear"] = "bilinear",
         norm: Literal["linear", "log", "power", "symlog", "boundary"] = "linear",
@@ -70,7 +70,7 @@ class Image(Element):
         check_norm(norm, vmin, vmax, gamma, who="Image",
                    linthresh=linthresh, levels=levels)
         self.data = as_data_ref(data)
-        self.bounds = tuple(float(b) for b in bounds)
+        self.extent = tuple(float(b) for b in extent)
         self.colormap = colormap
         self.interpolation = interpolation
         self.norm = norm

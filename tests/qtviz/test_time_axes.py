@@ -92,7 +92,7 @@ def test_time_axis_exempt_from_raster_gate():
     from qtviz.core.compose import effective_scales
     from qtviz.data import resolve_node
 
-    img = resolve_node(qv.Image(np.zeros((2, 2)), bounds=(0, 0, 1, 1)))
+    img = resolve_node(qv.Image(np.zeros((2, 2)), extent=(0, 0, 1, 1)))
     surf = qv.OverlayOptions(x=qv.AxisSpec(scale="time"))
     x_scale, _ = effective_scales(img, surf, frozenset({"linear", "time"}), "test")
     assert x_scale == "time"

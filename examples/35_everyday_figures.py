@@ -74,7 +74,7 @@ ecdf_panel = qv.Overlay(
 gy, gx = np.mgrid[-3:3:80j, -3:3:120j]
 field = np.exp(-(gx**2 + gy**2) / 2) + 0.6 * np.exp(-((gx - 1.5) ** 2 + (gy + 1) ** 2))
 contour_panel = qv.Overlay(
-    [qv.Contour(field, bounds=(-3, -3, 3, 3), levels=8, filled=True)],
+    [qv.Contour(field, extent=(-3, -3, 3, 3), levels=8, filled=True)],
     options=qv.OverlayOptions(title="Filled contour"),
 )
 
@@ -112,7 +112,7 @@ freq_edges = np.geomspace(1.0, 64.0, 13)          # log-spaced rows
 time_edges = np.linspace(0.0, 10.0, 21)
 spec = rng.gamma(2.0, 1.0, (12, 20)) * np.linspace(2.0, 0.3, 12)[:, None]
 mesh_panel = qv.Overlay(
-    [qv.Mesh(spec, x_edges=time_edges, y_edges=freq_edges,
+    [qv.Mesh(spec, x=time_edges, y=freq_edges,
              norm="boundary", levels=[0.0, 0.5, 1.0, 2.0, 4.0, 8.0])],
     options=qv.OverlayOptions(title="Mesh, boundary levels"),
 )

@@ -10,7 +10,7 @@ from ..errors import ValidationError
 
 
 class Contour(Element):
-    """Iso-value contours of a 2-D array over explicit `bounds` (the `Image`
+    """Iso-value contours of a 2-D array over explicit `extent` (the `Image`
     data contract). `levels` is a count (uniform interior levels, computed once
     in core so every backend draws the same lines — [D67]) or an explicit
     sequence of values. `filled=True` shades between levels; pyqtgraph draws
@@ -24,7 +24,7 @@ class Contour(Element):
     native `clabel` ([D110] over engine fidelity)."""
 
     DATA_KIND = "gridded"  # [D124]
-    REQUIRED_OPTIONS = ("bounds",)
+    REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("levels", "filled", "colormap", "line_width", "label",
                            "labels")
 
@@ -32,7 +32,7 @@ class Contour(Element):
         self,
         data: DataLike,
         *,
-        bounds: tuple[float, float, float, float],
+        extent: tuple[float, float, float, float],
         levels: int | Sequence[float] = 10,
         filled: bool = False,
         colormap: str = "viridis",
@@ -55,7 +55,7 @@ class Contour(Element):
             if not levels:
                 raise ValidationError("Contour levels sequence must be non-empty")
         self.data = as_data_ref(data)
-        self.bounds = tuple(float(b) for b in bounds)
+        self.extent = tuple(float(b) for b in extent)
         self.levels = levels
         self.filled = bool(filled)
         self.colormap = colormap
@@ -76,4 +76,4 @@ class Contour(Element):
 
         values = np.asarray(self.data.grid().values, dtype="float64")
         lv = contour_levels(values, self.levels)
-        return contour_label_specs(values, lv, self.bounds, spec=self.labels)
+        return contour_label_specs(values, lv, self.extent, spec=self.labels)

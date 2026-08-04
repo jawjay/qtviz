@@ -28,14 +28,14 @@ def _backend(name):
 def test_contour_validation():
     from qtviz.errors import ValidationError
 
-    qv.Contour(_VALUES, bounds=_BOUNDS, levels=5)
-    qv.Contour(_VALUES, bounds=_BOUNDS, levels=[0.2, 0.5, 0.8])
+    qv.Contour(_VALUES, extent=_BOUNDS, levels=5)
+    qv.Contour(_VALUES, extent=_BOUNDS, levels=[0.2, 0.5, 0.8])
     with pytest.raises(ValidationError):
-        qv.Contour(_VALUES, bounds=_BOUNDS, levels=0)
+        qv.Contour(_VALUES, extent=_BOUNDS, levels=0)
     with pytest.raises(ValidationError):
-        qv.Contour(_VALUES, bounds=_BOUNDS, levels=[])
+        qv.Contour(_VALUES, extent=_BOUNDS, levels=[])
     with pytest.raises(TypeError):
-        qv.Contour({"x": [1.0]}, bounds=_BOUNDS)  # tabular data → gridded required
+        qv.Contour({"x": [1.0]}, extent=_BOUNDS)  # tabular data → gridded required
 
 
 @pytest.mark.tier1
@@ -54,7 +54,7 @@ def test_webengine_contour_trace():
     from qtviz.backends.webengine import _figure
     from qtviz.core._stats import contour_levels
 
-    el = qv.Contour(_VALUES, bounds=_BOUNDS, levels=4, colormap="plasma")
+    el = qv.Contour(_VALUES, extent=_BOUNDS, levels=4, colormap="plasma")
     trace = _figure.build_figure(el, qv.Theme.light())["data"][0]
     lv = contour_levels(_VALUES, 4)
     assert trace["type"] == "contour"
@@ -64,7 +64,7 @@ def test_webengine_contour_trace():
     assert trace["colorscale"] == "Plasma"
     assert trace["showscale"] is False
     filled = _figure.build_figure(
-        qv.Contour(_VALUES, bounds=_BOUNDS, filled=True), qv.Theme.light())["data"][0]
+        qv.Contour(_VALUES, extent=_BOUNDS, filled=True), qv.Theme.light())["data"][0]
     assert filled["contours"]["coloring"] == "fill" and filled["showscale"] is True
 
 
@@ -74,12 +74,12 @@ def test_mpl_contour_lines_and_filled(qtbot):
     from qtviz.core._stats import contour_levels
 
     b = _backend("matplotlib")
-    el = qv.Contour(_VALUES, bounds=_BOUNDS, levels=4)
+    el = qv.Contour(_VALUES, extent=_BOUNDS, levels=4)
     handle = b.render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     cs = handle.native(el.id)
     assert np.allclose(cs.levels, contour_levels(_VALUES, 4))
-    el2 = qv.Contour(_VALUES, bounds=_BOUNDS, levels=4, filled=True)
+    el2 = qv.Contour(_VALUES, extent=_BOUNDS, levels=4, filled=True)
     handle2 = b.render(el2, theme=qv.Theme.light())
     qtbot.addWidget(handle2.widget)
     assert handle2.native(el2.id).filled
@@ -89,7 +89,7 @@ def test_mpl_contour_lines_and_filled(qtbot):
 def test_pg_contour_isocurves_mapped_to_bounds(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Contour(_VALUES, bounds=_BOUNDS, levels=4)
+    el = qv.Contour(_VALUES, extent=_BOUNDS, levels=4)
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     items = handle.native(el.id)
@@ -107,7 +107,7 @@ def test_pg_contour_filled_warns(qtbot):
     from qtviz.errors import QtvizWarning
 
     _degrade.reset()
-    el = qv.Contour(_VALUES, bounds=_BOUNDS, filled=True)
+    el = qv.Contour(_VALUES, extent=_BOUNDS, filled=True)
     with pytest.warns(QtvizWarning, match="'filled'"):
         handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

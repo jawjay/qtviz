@@ -111,7 +111,7 @@ def test_xarray_decimated_materialize_keeps_coords_aligned():
 # ── the pipeline budgets lazy grids and stashes the source ───────────────────
 def test_resolve_budgets_lazy_grid_and_stashes_source():
     z, _ = _big_zarr()
-    el = qv.Image(z, bounds=(0.0, 0.0, 1.0, 1.0))
+    el = qv.Image(z, extent=(0.0, 0.0, 1.0, 1.0))
     resolved = resolve_node(el)
     values = resolved.data.grid().values
     assert values.size < 2048 * 2048                    # decimated, not full
@@ -121,6 +121,6 @@ def test_resolve_budgets_lazy_grid_and_stashes_source():
 
 def test_resolve_leaves_small_lazy_grid_full_and_unstashed():
     z, _ = _big_zarr(shape=(32, 32), chunks=(16, 16))
-    resolved = resolve_node(qv.Image(z, bounds=(0.0, 0.0, 1.0, 1.0)))
+    resolved = resolve_node(qv.Image(z, extent=(0.0, 0.0, 1.0, 1.0)))
     assert resolved.data.grid().values.shape == (32, 32)
     assert getattr(resolved, "_grid_source", None) is None  # nothing to sharpen

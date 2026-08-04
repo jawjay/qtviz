@@ -71,12 +71,12 @@ def test_webengine_histogram_is_prebinned():
 def test_webengine_image_colormap_and_interpolation():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Image(np.arange(12.0).reshape(3, 4), bounds=(0, 0, 4, 3),
+    el = qv.Image(np.arange(12.0).reshape(3, 4), extent=(0, 0, 4, 3),
                   colormap="plasma", interpolation="nearest")
     trace = _figure.build_figure(el, qv.Theme.light())["data"][0]
     assert trace["colorscale"] == "Plasma"
     assert trace["zsmooth"] is False
-    el2 = qv.Image(np.arange(12.0).reshape(3, 4), bounds=(0, 0, 4, 3))
+    el2 = qv.Image(np.arange(12.0).reshape(3, 4), extent=(0, 0, 4, 3))
     assert _figure.build_figure(el2, qv.Theme.light())["data"][0]["zsmooth"] == "best"
 
 
@@ -167,7 +167,7 @@ def test_pg_heatmap_colormap_applied(qtbot):
 
 @pytest.mark.tier2
 def test_pg_image_colormap_applied(qtbot):
-    el = qv.Image(np.arange(12.0).reshape(3, 4), bounds=(0, 0, 4, 3),
+    el = qv.Image(np.arange(12.0).reshape(3, 4), extent=(0, 0, 4, 3),
                   colormap="plasma")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

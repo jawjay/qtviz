@@ -97,7 +97,7 @@ def test_dask_image_renders_async(qtbot):
     if "pyqtgraph" not in qv.backends.list_available():
         pytest.skip("pyqtgraph backend not registered")
     arr = da.from_array(np.outer(np.hanning(30), np.hanning(40)), chunks=(15, 40))
-    view = qv.View(qv.Image(arr, bounds=(0, 0, 40, 30)), backend="pyqtgraph")
+    view = qv.View(qv.Image(arr, extent=(0, 0, 40, 30)), backend="pyqtgraph")
     qtbot.addWidget(view)
     _spin(qtbot, view)
     assert view.handle is not None

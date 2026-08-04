@@ -81,7 +81,7 @@ def _rasterize(node):
     width, height = _RASTER_SIZE
     aggregate = aggregate_element(node, width=width, height=height)
     result = shade_aggregate(aggregate)  # default palette; a backend re-shades with its Theme (C2)
-    image = Image(result.rgba, bounds=result.bounds, id=node.id)  # carry source id for events
+    image = Image(result.rgba, extent=result.bounds, id=node.id)  # carry source id for events
     # Stash the (lazy) source element so a backend can re-aggregate to the viewport
     # on pan/zoom (4b, D21); the full (theme-free) Aggregate so a backend can re-shade
     # the initial raster with its Theme + emit a legend (C2/C3); and the pre-shade
