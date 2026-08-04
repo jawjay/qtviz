@@ -130,7 +130,10 @@ class RenderHandle:
                 w.deleteLater()
         self.widget = None
 
-    def export(self, fmt: str, path) -> Path:
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        # [D125]: the widened signature every backend already implements,
+        # formalized on the base instead of drifting per subclass.
         raise NotImplementedError
 
     def capture_state(self) -> ViewState:
@@ -142,11 +145,20 @@ class RenderHandle:
 
 @runtime_checkable
 class Backend(Protocol):
+    """[D125] formalizes the de-facto surface: `honored_options` (the [D51]
+    honor-or-warn source) and `requires_display` (webengine's live-compositor
+    need) were required by core/tests but absent from the protocol. From
+    wave 2, backends additionally carry `mark_drawers` (the [D122] mark
+    adapters); it joins the protocol when it exists."""
+
     name: str
     capabilities: Capabilities
     renderers: RendererRegistry
+    requires_display: bool
 
     def supports(self, element_type: type) -> bool: ...
+
+    def honored_options(self, element_type: type) -> frozenset[str]: ...
 
     def render(self, node, *, theme: Theme, parent: Any = None) -> RenderHandle: ...
 
@@ -222,13 +234,23 @@ class CompositeRenderHandle(RenderHandle):
                 w.deleteLater()
         self.widget = None
 
-    def export(self, fmt: str, path) -> Path:
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
         """One raster of the whole layout ([D72]): the Qt container — every pane
         plus chrome — grabbed via `QWidget.grab()`. png only: a single *vector*
         surface across backends is intrinsic to the no-unified-scene design and
         stays a non-goal ([D58]/R6); per-pane vector export remains available
         through `handle.children[i].export(...)`. Note a webengine pane needs a
         live compositor — offscreen it grabs blank."""
+        if dpi is not None or transparent:  # honor-or-warn ([D51]/[D72])
+            import warnings  # noqa: PLC0415
+
+            from ..errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn("composite export: 'dpi'/'transparent' are not honored "
+                          "(one QWidget.grab() raster at widget pixel size) and were "
+                          "ignored; export panes individually for control.",
+                          QtvizWarning, stacklevel=2)
         if fmt != "png":
             raise NotImplementedError(
                 "a composite (mixed-backend) view exports png only (one raster of "

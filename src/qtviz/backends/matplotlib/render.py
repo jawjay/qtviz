@@ -146,6 +146,7 @@ class MplRenderHandle(RenderHandle):
 
 class MatplotlibBackend:
     name = "matplotlib"
+    requires_display = False  # [D125]: renders fine offscreen
 
     def __init__(self) -> None:
         self.capabilities = _CAPS

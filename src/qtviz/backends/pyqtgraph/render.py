@@ -195,6 +195,7 @@ class PgRenderHandle(RenderHandle):
 
 class PyQtGraphBackend:
     name = "pyqtgraph"
+    requires_display = False  # [D125]: renders fine offscreen
 
     def __init__(self) -> None:
         self.capabilities = _CAPS
