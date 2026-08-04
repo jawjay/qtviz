@@ -22,31 +22,19 @@ from ...core.color import Color
 from ...core.encoding import channel_title
 from ...elements import (
     Area,
-    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
-    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
-    HLine,
     Image,
     Mesh,
-    Polygon,
-    Quiver,
-    Rect,
-    RefLine,
     Scatter,
-    Span,
     Spread,
-    Stem,
-    Streamlines,
-    Text,
     Violin,
-    VLine,
 )
 
 # qtviz marker vocabulary → pyqtgraph symbol codes / Qt pen styles ([D51]/[D99]).
@@ -626,58 +614,7 @@ def _pg_colormap(name: str):
     return pg.colormap.get("viridis")
 
 
-def render_quiver(element: Quiver, ctx):
-    """Shared core geometry ([D107]) — two NaN-separated curves (positions
-    logify like any polyline; a log-warped field warps consistently)."""
-    (sx, sy), (hx, hy) = element.resolved_segments()
-    x_log, y_log = _xy_log(ctx)
-    color = _color(element.color, ctx.theme, ctx.series_index).qt()
-    color.setAlphaF(element.alpha)
-    pen = pg.mkPen(color, width=element.line_width)
-    items = []
-    for xs, ys in ((sx, sy), (hx, hy)):
-        item = pg.PlotCurveItem(x=logify(xs, x_log), y=logify(ys, y_log),
-                                pen=pen, connect="finite")
-        ctx.parent_axes.addItem(item)
-        items.append(item)
-    return items
 
-
-def render_streamlines(element: Streamlines, ctx):
-    """Field lines ([D118]) from the shared core integrator — lines + heads
-    as two NaN-separated curves, exactly the Quiver primitive pair."""
-    (lx, ly), (hx, hy) = element.resolved_segments()
-    x_log, y_log = _xy_log(ctx)
-    color = _color(element.color, ctx.theme, ctx.series_index).qt()
-    color.setAlphaF(element.alpha)
-    pen = pg.mkPen(color, width=element.line_width)
-    items = []
-    for xs, ys in ((lx, ly), (hx, hy)):
-        item = pg.PlotCurveItem(x=logify(xs, x_log), y=logify(ys, y_log),
-                                pen=pen, connect="finite")
-        ctx.parent_axes.addItem(item)
-        items.append(item)
-    return items
-
-
-def render_stem(element: Stem, ctx):
-    """Stem series ([D115]): ONE pair-connected curve carries every stem
-    (never an item per stem) + a scatter head layer that picks like Scatter."""
-    sx, sy = element.resolved_segments()
-    x_log, y_log = _xy_log(ctx)
-    color = _color(element.color, ctx.theme, ctx.series_index).qt()
-    color.setAlphaF(element.alpha)
-    stems = pg.PlotCurveItem(x=logify(sx, x_log), y=logify(sy, y_log),
-                             pen=pg.mkPen(color, width=element.line_width),
-                             connect="pairs")
-    ctx.parent_axes.addItem(stems)
-    d = element.data
-    heads = pg.ScatterPlotItem(
-        x=logify(_col(d, "x"), x_log), y=logify(_col(d, "y"), y_log),
-        symbol=_MARKER[element.marker], size=7, brush=pg.mkBrush(color),
-        pen=None, useCache=True, hoverable=True)
-    ctx.parent_axes.addItem(heads)
-    return [stems, heads]
 
 
 def render_mesh(element: Mesh, ctx):
@@ -872,169 +809,14 @@ def _ref_scalar(value: float, is_log: bool) -> float | None:
     return float(v) if np.isfinite(v) else None
 
 
-def render_hline(element: HLine, ctx):
-    _x_log, y_log = _xy_log(ctx)
-    pos = _ref_scalar(element.y, y_log)
-    if pos is None:
-        return None
-    color = _ref_color(element.color, ctx.theme).qt()
-    color.setAlphaF(element.alpha)
-    pen = _mk_pen(color, element.line_width, element.line_style)
-    item = pg.InfiniteLine(pos=pos, angle=0, pen=pen, movable=False)
-    ctx.parent_axes.addItem(item)
-    return item
 
-
-def render_vline(element: VLine, ctx):
-    x_log, _y_log = _xy_log(ctx)
-    pos = _ref_scalar(element.x, x_log)
-    if pos is None:
-        return None
-    color = _ref_color(element.color, ctx.theme).qt()
-    color.setAlphaF(element.alpha)
-    pen = _mk_pen(color, element.line_width, element.line_style)
-    item = pg.InfiniteLine(pos=pos, angle=90, pen=pen, movable=False)
-    ctx.parent_axes.addItem(item)
-    return item
-
-
-def render_span(element: Span, ctx):
-    x_log, y_log = _xy_log(ctx)
-    is_h = element.orient == "h"          # a y-range band across the full width
-    lo = _ref_scalar(element.lo, y_log if is_h else x_log)
-    hi = _ref_scalar(element.hi, y_log if is_h else x_log)
-    if lo is None or hi is None:
-        return None
-    color = _ref_color(element.color, ctx.theme).qt()
-    color.setAlphaF(element.alpha)
-    item = pg.LinearRegionItem(
-        values=(lo, hi), orientation="horizontal" if is_h else "vertical",
-        movable=False, brush=pg.mkBrush(color), pen=pg.mkPen(None),
-    )
-    ctx.parent_axes.addItem(item)
-    return item
 
 
 _ANCHOR_H = {"center": 0.5, "left": 0.0, "right": 1.0}
 _ANCHOR_V = {"center": 0.5, "top": 0.0, "bottom": 1.0}
 
 
-def render_text(element: Text, ctx):
-    x_log, y_log = _xy_log(ctx)
-    px, py = _ref_scalar(element.x, x_log), _ref_scalar(element.y, y_log)
-    if px is None or py is None:
-        return None
-    fg = _ref_color(element.color, ctx.theme).qt()
-    kwargs: dict = {
-        "color": fg,
-        "anchor": (_ANCHOR_H[element.anchor], _ANCHOR_V[element.anchor_v]),
-        "angle": element.rotation,  # CCW degrees — matches mpl ([D96])
-    }
-    if element.frame:
-        kwargs["border"] = pg.mkPen(fg)
-        kwargs["fill"] = pg.mkBrush(ctx.theme.background.qt())
-    item = pg.TextItem(element.text, **kwargs)
-    if element.size is not None:
-        font = item.textItem.font()
-        font.setPointSizeF(float(element.size))
-        item.setFont(font)
-    ctx.parent_axes.addItem(item)
-    item.setPos(px, py)
-    return item
 
-
-def render_arrow(element: Arrow, ctx):
-    """Shaft as a curve, pixel-mode heads via `ArrowItem` ([D96]). The head
-    angle comes from the plotted (logified) direction — under wild aspect
-    ratios it can skew slightly; mpl/plotly compute theirs screen-space."""
-    import math  # noqa: PLC0415
-
-    x_log, y_log = _xy_log(ctx)
-    x0, y0 = _ref_scalar(element.x0, x_log), _ref_scalar(element.y0, y_log)
-    x1, y1 = _ref_scalar(element.x1, x_log), _ref_scalar(element.y1, y_log)
-    if x0 is None or y0 is None or x1 is None or y1 is None:
-        return None
-    color = _ref_color(element.color, ctx.theme).qt()
-    color.setAlphaF(element.alpha)
-    pen = pg.mkPen(color, width=element.line_width)
-    shaft = pg.PlotCurveItem(x=np.array([x0, x1]), y=np.array([y0, y1]), pen=pen)
-    ctx.parent_axes.addItem(shaft)
-    items = [shaft]
-    theta = math.degrees(math.atan2(y1 - y0, x1 - x0))
-    head_len = 6.0 + 3.0 * element.line_width
-    heads = {"end": ((x1, y1, 180.0 - theta),),
-             "both": ((x1, y1, 180.0 - theta), (x0, y0, -theta)),
-             "none": ()}[element.head]
-    for hx, hy, angle in heads:
-        head = pg.ArrowItem(pos=(hx, hy), angle=angle, headLen=head_len,
-                            brush=pg.mkBrush(color), pen=None, pxMode=True)
-        ctx.parent_axes.addItem(head)
-        items.append(head)
-    return items
-
-
-def render_refline(element, ctx):
-    """`y = slope·x + intercept` as an InfiniteLine ([D99]); pg's angle is in
-    data coordinates. No log-scale form — warn-and-drop (mpl rule shared)."""
-    import math  # noqa: PLC0415
-
-    if ctx.x_scale == "log" or ctx.y_scale == "log":
-        import warnings  # noqa: PLC0415
-
-        from ...errors import QtvizWarning  # noqa: PLC0415
-
-        warnings.warn("pyqtgraph: RefLine is a straight data-space line and has "
-                      "no log-scale form; it was dropped.", QtvizWarning, stacklevel=2)
-        return None
-    color = _ref_color(element.color, ctx.theme).qt()
-    color.setAlphaF(element.alpha)
-    item = pg.InfiniteLine(pos=(0.0, element.intercept),
-                           angle=math.degrees(math.atan(element.slope)),
-                           pen=_mk_pen(color, element.line_width, element.line_style),
-                           movable=False)
-    ctx.parent_axes.addItem(item)
-    return item
-
-
-def _render_shape_points(pts, element, ctx):
-    """One closed data-space outline as a path item ([D97]): points logify
-    like every annotation; a non-positive point under log drops the shape
-    (logify already warned)."""
-    from PySide6.QtWidgets import QGraphicsPathItem  # noqa: PLC0415
-
-    x_log, y_log = _xy_log(ctx)
-    xs = logify(np.asarray(pts[:, 0], dtype="float64"), x_log)
-    ys = logify(np.asarray(pts[:, 1], dtype="float64"), y_log)
-    if not (np.isfinite(xs).all() and np.isfinite(ys).all()):
-        return None
-    color = _ref_color(element.color, ctx.theme).qt()
-    color.setAlphaF(element.alpha)
-    item = QGraphicsPathItem(pg.arrayToQPath(xs, ys))
-    item.setPen(pg.mkPen(color, width=element.line_width))
-    item.setBrush(pg.mkBrush(color) if element.fill else pg.mkBrush(None))
-    ctx.parent_axes.addItem(item)
-    return item
-
-
-def render_rect(element: Rect, ctx):
-    from ...core._geometry import rect_points  # noqa: PLC0415
-
-    return _render_shape_points(
-        rect_points(element.x0, element.y0, element.x1, element.y1), element, ctx)
-
-
-def render_ellipse(element: Ellipse, ctx):
-    from ...core._geometry import ellipse_points  # noqa: PLC0415
-
-    return _render_shape_points(
-        ellipse_points(element.cx, element.cy, element.rx, element.ry,
-                       element.angle), element, ctx)
-
-
-def render_polygon(element: Polygon, ctx):
-    from ...core._geometry import close_points  # noqa: PLC0415
-
-    return _render_shape_points(close_points(element.points), element, ctx)
 
 
 
@@ -1149,24 +931,12 @@ RENDERERS: dict[type, Any] = {
     Heatmap: render_heatmap,
     ErrorBars: render_errorbars,
     Spread: render_spread,
-    HLine: render_hline,
-    VLine: render_vline,
-    Span: render_span,
-    Text: render_text,
     BoxPlot: render_boxplot,
     Violin: render_violin,
     Area: render_area,
     Ecdf: render_ecdf,
     Contour: render_contour,
     Mesh: render_mesh,
-    Quiver: render_quiver,
-    Stem: render_stem,
-    Streamlines: render_streamlines,
-    Arrow: render_arrow,
-    Rect: render_rect,
-    Ellipse: render_ellipse,
-    Polygon: render_polygon,
-    RefLine: render_refline,
     # no Pie ([D90]): pg has no pie primitive; negotiation routes around it
 }
 
@@ -1187,23 +957,10 @@ HONORED: dict[type, frozenset[str]] = {
                        "levels", "annotate"}),
     ErrorBars: frozenset({"color", "direction", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
-    HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Span: frozenset({"color", "alpha", "label"}),
-    Text: frozenset({"color", "size", "anchor", "anchor_v", "rotation", "frame"}),
-    Arrow: frozenset({"head", "color", "line_width", "alpha", "label"}),
-    Rect: frozenset({"color", "line_width", "alpha", "fill", "label"}),
-    Ellipse: frozenset({"color", "line_width", "alpha", "fill", "label"}),
-    Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label", "annotate"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
-    Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
-                       "alpha", "label", "key", "key_label"}),
-    Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
-    Streamlines: frozenset({"density", "color", "line_width", "alpha", "label"}),
-    RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

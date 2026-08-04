@@ -8,8 +8,9 @@ is the single dispatch the renderer calls per element.
 
 from __future__ import annotations
 
+from ...core.element import Element
 from ...core.event import HoverEvent, PickEvent
-from ...elements import Curve, Image, Scatter, Stem
+from ...elements import Image, Scatter
 
 
 def raster_source_xy(element):
@@ -63,16 +64,17 @@ def attach(element, item, ctx) -> None:
     (in data space — select masks run there, R1) and (for scatters) connect
     pick/hover."""
     vb = ctx.parent_axes.getViewBox()
-    if isinstance(element, (Scatter, Curve, Stem)) and hasattr(vb, "add_selectable"):
+    xy = element.select_xy()  # declared, not isinstance'd ([D124])
+    if xy is not None and hasattr(vb, "add_selectable"):
         from ...core._time import as_float_seconds  # noqa: PLC0415
 
-        x = as_float_seconds(element.data.series("x"))  # resolved role; epoch s ([D94])
-        y = as_float_seconds(element.data.series("y"))
-        vb.add_selectable(element.id, x, y)
+        # resolved roles; epoch s ([D94]). Lowered elements register through
+        # Lowered.select_xy in render_lowered instead — skip the double add.
+        if type(element).lower is Element.lower:
+            vb.add_selectable(element.id, as_float_seconds(xy[0]), as_float_seconds(xy[1]))
     raster = raster_source_xy(element)
     if raster is not None and hasattr(vb, "add_selectable"):
         vb.add_selectable(*raster)  # brush a datashaded view → source rows ([D78])
     if isinstance(element, Scatter) and item is not None and hasattr(item, "sigClicked"):
         wire_scatter(item, element.id, ctx.event_bus, vb)
-    if isinstance(element, Stem) and isinstance(item, list) and len(item) == 2:
-        wire_scatter(item[1], element.id, ctx.event_bus, vb)  # heads pick ([D115])
+    # (lowered pickable marks — Stem heads [D115] — wire inside render_lowered)
