@@ -243,10 +243,14 @@ _GUARD_CASES = [
 def test_honored_by_lowering_is_honest(name, option):
     """[D123]: an option declared honored-by-lowering must visibly change the
     Lowered when perturbed — silent drops are structurally impossible."""
+    from qtviz.data import resolve_node
+
     ctor = _LOWERED_CTORS[name]
     prereq = _PREREQ.get(option, {}) if name == "Quiver" else {}
-    base = ctor(**prereq).lower(CTX)
-    perturbed = ctor(**{**prereq, option: _GUARD_NON_DEFAULT[option]}).lower(CTX)
+    # lower() runs on *resolved* elements ([D122]) — roles, not column names
+    base = resolve_node(ctor(**prereq)).lower(CTX)
+    perturbed = resolve_node(
+        ctor(**{**prereq, option: _GUARD_NON_DEFAULT[option]})).lower(CTX)
     assert not structurally_equal(base, perturbed), (
         f"{name} declares {option!r} honored by lowering, but perturbing it "
         f"left the Lowered unchanged — the declaration is dishonest")
