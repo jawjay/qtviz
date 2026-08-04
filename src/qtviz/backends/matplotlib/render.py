@@ -155,11 +155,21 @@ class MatplotlibBackend:
             self.renderers.register(element_type, fn)
 
     def supports(self, element_type: type) -> bool:
-        return self.renderers.get(element_type) is not None
+        # native registration, or a [D122] lowering the mark adapter can draw
+        if self.renderers.get(element_type) is not None:
+            return True
+        return (issubclass(element_type, Element)
+                and element_type.lower is not Element.lower)
 
     def honored_options(self, element_type: type) -> frozenset[str]:
-        """Recommended options this backend honors for `element_type` (spec §3.4)."""
-        return HONORED.get(element_type, frozenset())
+        """Recommended options this backend honors (spec §3.4): the native
+        table row, else the element's own [D123] lowering declaration."""
+        native = HONORED.get(element_type)
+        if native is not None:
+            return native
+        if issubclass(element_type, Element):
+            return element_type.HONORED_BY_LOWERING
+        return frozenset()
 
     def can_host(self, kind: str) -> bool:
         return kind in ("overlay", "grid")
@@ -267,7 +277,11 @@ class MatplotlibBackend:
                 append_legend_entries(ax, entries, theme, surf.legend_position)
 
     def _render_element(self, element: Element, ctx, selectables, natives) -> None:
-        fn = self.renderers.get(type(element))
+        fn = self.renderers.get(type(element))  # native fast path wins ([D122])
+        if fn is None and type(element).lower is not Element.lower:
+            from ._marks import render_lowered  # noqa: PLC0415
+
+            fn = render_lowered
         if fn is None:
             raise RendererMissingError(
                 f"matplotlib has no renderer for {type(element).__name__}"

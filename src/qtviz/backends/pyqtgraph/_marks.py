@@ -229,11 +229,6 @@ def render_lowered(element, ctx):
         if isinstance(mark, Markers) and mark.pickable and hasattr(item, "sigClicked"):
             wire_scatter(item, element.id, ctx.event_bus, vb)
         items.extend(item) if isinstance(item, list) else items.append(item)
-    if lowered.select_xy is not None and hasattr(vb, "add_selectable"):
-        from ...core._time import as_float_seconds  # noqa: PLC0415
-
-        x, y = lowered.select_xy
-        vb.add_selectable(element.id, as_float_seconds(x), as_float_seconds(y))
     if len(items) == 1:
         return items[0]
     return items or None

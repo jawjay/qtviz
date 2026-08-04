@@ -16,32 +16,20 @@ from ...core.color import Color
 from ...core.encoding import channel_title
 from ...elements import (
     Area,
-    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
-    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
-    HLine,
     Image,
     Mesh,
     Pie,
-    Polygon,
-    Quiver,
-    Rect,
-    RefLine,
     Scatter,
-    Span,
     Spread,
-    Stem,
-    Streamlines,
-    Text,
     Violin,
-    VLine,
 )
 
 _LINE_STYLE = {"solid": "-", "dashed": "--", "dotted": ":", "dashdot": "-."}
@@ -644,46 +632,7 @@ def render_pie(element: Pie, ctx):
     return wedges
 
 
-def render_quiver(element: Quiver, ctx):
-    """Vector field ([D107]) from the shared core geometry — two polylines,
-    identical on every backend (no native `quiver`: one geometry, one meaning)."""
-    (sx, sy), (hx, hy) = element.resolved_segments()
-    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
-    (shafts,) = ctx.parent_axes.plot(sx, sy, color=color, lw=element.line_width,
-                                     alpha=element.alpha)
-    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=element.line_width,
-                                    alpha=element.alpha)
-    return [shafts, heads]
 
-
-def render_streamlines(element: Streamlines, ctx):
-    """Field lines ([D118]) from the shared core integrator — two NaN-gapped
-    polylines (lines, heads), the Quiver primitive pair."""
-    (lx, ly), (hx, hy) = element.resolved_segments()
-    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
-    (lines,) = ctx.parent_axes.plot(lx, ly, color=color, lw=element.line_width,
-                                    alpha=element.alpha)
-    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=element.line_width,
-                                    alpha=element.alpha)
-    return [lines, heads]
-
-
-def render_stem(element: Stem, ctx):
-    """Stem series ([D115]): a LineCollection carries every stem in one artist
-    (not ax.stem — its container fights the handle contract) + scatter heads."""
-    from matplotlib.collections import LineCollection  # noqa: PLC0415
-
-    sx, sy = element.resolved_segments()
-    segs = list(np.stack([sx, sy], axis=1).reshape(-1, 2, 2))  # n × (2 pts, xy)
-    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
-    stems = LineCollection(segs, colors=[color], linewidths=element.line_width,
-                           alpha=element.alpha)
-    ctx.parent_axes.add_collection(stems)
-    d = element.data
-    heads = ctx.parent_axes.scatter(
-        _col(d, "x"), _col(d, "y"), color=color, s=7.0 ** 2,
-        alpha=element.alpha, marker=_MARKER[element.marker])
-    return [stems, heads]
 
 
 def render_mesh(element: Mesh, ctx):
@@ -776,112 +725,15 @@ def _ref_color(spec, theme) -> Color:
     return Color(spec) if spec is not None else theme.foreground
 
 
-def render_hline(element: HLine, ctx):
-    return ctx.parent_axes.axhline(
-        element.y, color=_ref_color(element.color, ctx.theme).mpl(),
-        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
-    )
 
-
-def render_vline(element: VLine, ctx):
-    return ctx.parent_axes.axvline(
-        element.x, color=_ref_color(element.color, ctx.theme).mpl(),
-        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
-    )
-
-
-def render_span(element: Span, ctx):
-    fn = ctx.parent_axes.axhspan if element.orient == "h" else ctx.parent_axes.axvspan
-    return fn(element.lo, element.hi,
-              color=_ref_color(element.color, ctx.theme).mpl(), alpha=element.alpha)
 
 
 _VA = {"center": "center", "top": "top", "bottom": "bottom"}
 
 
-def render_text(element: Text, ctx):
-    fg = _ref_color(element.color, ctx.theme).mpl()
-    kwargs = {"color": fg, "ha": element.anchor, "va": _VA[element.anchor_v],
-              "rotation": element.rotation, "rotation_mode": "anchor"}
-    if element.size is not None:
-        kwargs["fontsize"] = element.size
-    if element.frame:
-        kwargs["bbox"] = {"boxstyle": "round,pad=0.35",
-                          "facecolor": ctx.theme.background.mpl(), "edgecolor": fg}
-    return ctx.parent_axes.text(element.x, element.y, element.text, **kwargs)
-
 
 # Arrow head vocabulary → mpl arrowstyle ([D96]).
 _ARROWSTYLE = {"end": "-|>", "both": "<|-|>", "none": "-"}
-
-
-def _refline_scales_ok(ctx, backend: str) -> bool:
-    if ctx.x_scale in ("log", "symlog") or ctx.y_scale in ("log", "symlog"):
-        import warnings  # noqa: PLC0415
-
-        from ...errors import QtvizWarning  # noqa: PLC0415
-
-        warnings.warn(f"{backend}: RefLine is a straight data-space line and has "
-                      "no log-scale form; it was dropped.", QtvizWarning, stacklevel=2)
-        return False
-    return True
-
-
-def render_refline(element, ctx):
-    if not _refline_scales_ok(ctx, "matplotlib"):
-        return None
-    return ctx.parent_axes.axline(
-        (0.0, element.intercept), slope=element.slope,
-        color=_ref_color(element.color, ctx.theme).mpl(),
-        lw=element.line_width, ls=_ls(element.line_style), alpha=element.alpha,
-    )
-
-
-def render_arrow(element: Arrow, ctx):
-    color = _ref_color(element.color, ctx.theme).mpl()
-    return ctx.parent_axes.annotate(
-        "", xy=(element.x1, element.y1), xytext=(element.x0, element.y0),
-        arrowprops={"arrowstyle": _ARROWSTYLE[element.head], "color": color,
-                    "lw": element.line_width, "alpha": element.alpha,
-                    "shrinkA": 0, "shrinkB": 0},
-        annotation_clip=False,
-    )
-
-
-def _shape_style(element, ctx) -> dict:
-    color = _ref_color(element.color, ctx.theme).mpl()
-    return {"edgecolor": color, "linewidth": element.line_width,
-            "alpha": element.alpha,
-            "facecolor": color if element.fill else "none"}
-
-
-def render_rect(element: Rect, ctx):
-    from matplotlib import patches  # noqa: PLC0415
-
-    patch = patches.Rectangle((element.x0, element.y0),
-                              element.x1 - element.x0, element.y1 - element.y0,
-                              **_shape_style(element, ctx))
-    ctx.parent_axes.add_patch(patch)
-    return patch
-
-
-def render_ellipse(element: Ellipse, ctx):
-    from matplotlib import patches  # noqa: PLC0415
-
-    patch = patches.Ellipse((element.cx, element.cy), 2 * element.rx, 2 * element.ry,
-                            angle=element.angle, **_shape_style(element, ctx))
-    ctx.parent_axes.add_patch(patch)
-    return patch
-
-
-def render_polygon(element: Polygon, ctx):
-    from matplotlib import patches  # noqa: PLC0415
-
-    patch = patches.Polygon(np.asarray(element.points), closed=True,
-                            **_shape_style(element, ctx))
-    ctx.parent_axes.add_patch(patch)
-    return patch
-
 
 
 
@@ -956,10 +808,6 @@ RENDERERS: dict[type, Any] = {
     Heatmap: render_heatmap,
     ErrorBars: render_errorbars,
     Spread: render_spread,
-    HLine: render_hline,
-    VLine: render_vline,
-    Span: render_span,
-    Text: render_text,
     BoxPlot: render_boxplot,
     Violin: render_violin,
     Area: render_area,
@@ -967,14 +815,6 @@ RENDERERS: dict[type, Any] = {
     Pie: render_pie,
     Contour: render_contour,
     Mesh: render_mesh,
-    Quiver: render_quiver,
-    Stem: render_stem,
-    Streamlines: render_streamlines,
-    Arrow: render_arrow,
-    Rect: render_rect,
-    Ellipse: render_ellipse,
-    Polygon: render_polygon,
-    RefLine: render_refline,
 }
 
 # Recommended options each renderer above actually consumes (spec §3.4 / [D51]).
@@ -996,14 +836,6 @@ HONORED: dict[type, frozenset[str]] = {
                        "levels", "annotate"}),
     ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
-    HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Span: frozenset({"color", "alpha", "label"}),
-    Text: frozenset({"color", "size", "anchor", "anchor_v", "rotation", "frame"}),
-    Arrow: frozenset({"head", "color", "line_width", "alpha", "label"}),
-    Rect: frozenset({"color", "line_width", "alpha", "fill", "label"}),
-    Ellipse: frozenset({"color", "line_width", "alpha", "fill", "label"}),
-    Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
@@ -1011,9 +843,4 @@ HONORED: dict[type, frozenset[str]] = {
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
-    Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
-                       "alpha", "label", "key", "key_label"}),
-    Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
-    Streamlines: frozenset({"density", "color", "line_width", "alpha", "label"}),
-    RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }

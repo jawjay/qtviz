@@ -8,7 +8,6 @@ is the single dispatch the renderer calls per element.
 
 from __future__ import annotations
 
-from ...core.element import Element
 from ...core.event import HoverEvent, PickEvent
 from ...elements import Image, Scatter
 
@@ -68,10 +67,8 @@ def attach(element, item, ctx) -> None:
     if xy is not None and hasattr(vb, "add_selectable"):
         from ...core._time import as_float_seconds  # noqa: PLC0415
 
-        # resolved roles; epoch s ([D94]). Lowered elements register through
-        # Lowered.select_xy in render_lowered instead — skip the double add.
-        if type(element).lower is Element.lower:
-            vb.add_selectable(element.id, as_float_seconds(xy[0]), as_float_seconds(xy[1]))
+        vb.add_selectable(element.id,  # resolved roles; epoch s ([D94])
+                          as_float_seconds(xy[0]), as_float_seconds(xy[1]))
     raster = raster_source_xy(element)
     if raster is not None and hasattr(vb, "add_selectable"):
         vb.add_selectable(*raster)  # brush a datashaded view → source rows ([D78])

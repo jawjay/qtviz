@@ -143,10 +143,14 @@ def test_mpl_annotation_wave(qtbot):
     node = qv.Curve(_T, x="x", y="y") * arrow * rect * ell * poly * text
     handle = _backend("matplotlib").render(node, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
-    assert isinstance(handle.native(rect.id), patches.Rectangle)
+    # [D122]: every shape rides ONE patch type built from the shared core
+    # geometry (rect_points/ellipse_points/close_points) — the native's exact
+    # subtype is non-contractual (docs/stability.md), the geometry is.
+    assert isinstance(handle.native(rect.id), patches.Polygon)
     assert handle.native(rect.id).get_alpha() == 0.3
-    assert isinstance(handle.native(ell.id), patches.Ellipse)
-    assert handle.native(ell.id).angle == 20.0
+    ell_xy = handle.native(ell.id).get_xy()
+    assert isinstance(handle.native(ell.id), patches.Polygon)
+    assert np.allclose(ell_xy.mean(axis=0), (2.0, 0.5), atol=0.01)  # centered, rotated
     assert isinstance(handle.native(poly.id), patches.Polygon)
     t = handle.native(text.id)
     assert t.get_rotation() == 45.0
