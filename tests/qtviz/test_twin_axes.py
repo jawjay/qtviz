@@ -43,7 +43,7 @@ def test_axis_field_validates():
     with pytest.raises(ValidationError):
         qv.Curve(_T, x="x", y="temp", axis="right")
     with pytest.raises(ValidationError):
-        qv.Scatter(_T, x="x", y="temp", axis="y2", scale="datashader")
+        qv.Scatter(_T, x="x", y="temp", axis="y2", raster="datashader")
 
 
 @pytest.mark.tier1

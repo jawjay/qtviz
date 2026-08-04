@@ -290,17 +290,17 @@ consistently however it is drawn, on any backend.
 ### Big data — Datashader
 
 Past a few hundred thousand points a scatter overplots into a featureless blob.
-Set `scale="datashader"` and qtviz aggregates the points into a
+Set `raster="datashader"` and qtviz aggregates the points into a
 screen-resolution density raster off the GUI thread — and **re-aggregates to the
 visible viewport at your widget's pixel size as you pan and zoom**, so the image
 sharpens rather than pixelating:
 
 ```python
-qv.Scatter(big, x="x", y="y", scale="datashader")                  # point density
-qv.Curve(series, x="t", y="v", scale="datashader")                 # line density (huge series)
-qv.Scatter(big, x="x", y="y", color_by="z",   scale="datashader")  # mean of z per pixel
-qv.Scatter(big, x="x", y="y", color_by="cat", scale="datashader")  # per-category blend
-qv.Scatter(big, x="x", y="y", scale="auto")                        # rasterize past a threshold
+qv.Scatter(big, x="x", y="y", raster="datashader")                  # point density
+qv.Curve(series, x="t", y="v", raster="datashader")                 # line density (huge series)
+qv.Scatter(big, x="x", y="y", color_by="z",   raster="datashader")  # mean of z per pixel
+qv.Scatter(big, x="x", y="y", color_by="cat", raster="datashader")  # per-category blend
+qv.Scatter(big, x="x", y="y", raster="auto")                        # rasterize past a threshold
 qv.set_raster_threshold(2_000_000)                                 # tune the "auto" cutoff
 ```
 
@@ -415,7 +415,7 @@ See [`examples/README.md`](examples/README.md) for the full index.
 | **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
 | **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** |
 | **Data inputs** | dict · NumPy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
-| **Big data** | **Datashader** — `Scatter` / `Curve` with `scale="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom; **hover a raster for the aggregated value** (`HoverEvent.value`) |
+| **Big data** | **Datashader** — `Scatter` / `Curve` with `raster="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom; **hover a raster for the aggregated value** (`HoverEvent.value`) |
 | **Axes & legends** | `AxisSpec`: log/symlog + **calendar-time** scales (data-space events everywhere, R1; datetime64 auto-detected, epoch-seconds canonical) · tick formatting (format specs, SI, strftime, one-field templates) · explicit `ticks`/`tick_labels` · minor ticks · label rotation · **twin y axes** (`axis="y2"`) · limits · invert · aspect · grid toggle · multi-series legends (`label` + aggregation, quiver reference key) · gradient colorbars · `color_norm="log"` with honest endpoint keys |
 | **Raster norms** | `norm="linear" \| "log" \| "power" \| "symlog" \| "boundary"` + `vmin`/`vmax`/`gamma`/`linthresh`/`levels` on Image/Heatmap/Mesh — normalized once in core (bit-identical grids per backend) with [D48]-honest colorbars (mpl denormalized/discrete ticks · pg endpoints key · Plotly hidden non-linear scale) |
 | **Interaction** | pan / zoom · brush-select — **including through datashaded views** (row indices when eager, bounds-predicate when lazy) · pick · hover · tap · linked axes · typed events via `View.on` · `View(toolbar=True)` native toolbar + rubber-band brush on matplotlib |

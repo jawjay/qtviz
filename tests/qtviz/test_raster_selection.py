@@ -29,7 +29,7 @@ def _cluster_data(n=4000):
 
 def _shaded_view(qtbot, backend="pyqtgraph", data=None):
     data = data if data is not None else _cluster_data()
-    el = qv.Scatter(data, x="x", y="y", scale="datashader")
+    el = qv.Scatter(data, x="x", y="y", raster="datashader")
     view = qv.View(el, backend=backend)
     qtbot.addWidget(view)
     qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)  # async resolve
@@ -72,7 +72,7 @@ def test_lazy_raster_brush_emits_bounds_only(qtbot):
 
     pdf = pd.DataFrame(_cluster_data())
     ddf = dd.from_pandas(pdf, npartitions=4)
-    el = qv.Scatter(ddf, x="x", y="y", scale="datashader")
+    el = qv.Scatter(ddf, x="x", y="y", raster="datashader")
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
@@ -90,7 +90,7 @@ def test_crossfilter_through_a_raster(qtbot):
     """The 0.6 story: brush the datashaded panel → a signal-driven linked panel
     re-renders with just the brushed rows."""
     data = _cluster_data()
-    shaded = qv.Scatter(data, x="x", y="y", scale="datashader")
+    shaded = qv.Scatter(data, x="x", y="y", raster="datashader")
     selection = qv.signal(np.arange(len(data["x"])))
     detail = qv.derived(lambda: qv.Scatter(
         {"x": data["x"][selection.get()], "y": data["y"][selection.get()]},

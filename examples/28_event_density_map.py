@@ -51,7 +51,7 @@ def _city_events() -> pd.DataFrame:
 
 def build(theme: qv.Theme | None = None):
     df = _city_events()
-    scatter = qv.Scatter(df, x="lon", y="lat", color_by="kind", scale="datashader")
+    scatter = qv.Scatter(df, x="lon", y="lat", color_by="kind", raster="datashader")
     view = qv.View(scatter, backend="pyqtgraph", theme=theme or qv.Theme.dark())
 
     def on_hover(e: qv.HoverEvent) -> None:

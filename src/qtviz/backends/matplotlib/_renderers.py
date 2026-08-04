@@ -107,7 +107,7 @@ def _color_mapping(element, d, theme):
 
     return map_colors(
         np.asarray(d.series("color")), palette=theme.palette,
-        continuous_palette=palettes.get("viridis"), title=element.color_by,
+        continuous_palette=palettes.get("viridis"), title=channel_title(element.color_by),
         norm=getattr(element, "color_norm", "linear"),
     )
 
@@ -120,7 +120,6 @@ def render_scatter(element: Scatter, ctx):
         rgba, legend = _color_mapping(element, d, ctx.theme)
         artist = ctx.parent_axes.scatter(
             _col(d, "x"), _col(d, "y"), c=rgba, s=s, alpha=element.alpha, marker=marker,
-            rasterized=element.matplotlib_rasterized,
         )
         if ctx.show_legend:
             _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
@@ -129,7 +128,6 @@ def render_scatter(element: Scatter, ctx):
         _col(d, "x"), _col(d, "y"),
         color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
         s=s, alpha=element.alpha, marker=marker,
-        rasterized=element.matplotlib_rasterized,
     )
 
 
@@ -251,7 +249,7 @@ def _curve_color_by(element: Curve, ctx):
                               ls=_ls(element.line_style), alpha=element.alpha)
             lines.append(line)
         if ctx.show_legend:
-            legend = Legend(kind="categorical", title=element.color_by,
+            legend = Legend(kind="categorical", title=channel_title(element.color_by),
                             entries=tuple((str(c), sw)
                                           for c, sw in zip(cats, swatches, strict=True)))
             _add_legend(ax, legend, ctx.theme, ctx.legend_position)

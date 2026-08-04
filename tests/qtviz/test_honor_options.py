@@ -81,25 +81,6 @@ def test_webengine_scatter_marker_symbol():
     assert fig["data"][0]["marker"]["symbol"] == "diamond"
 
 
-def test_matplotlib_scatter_honors_rasterized(qtbot):
-    """The backend-prefixed flag reaches the artist (it was a silent no-op)."""
-    pytest.importorskip("matplotlib")
-    handle = _backend("matplotlib").render(
-        qv.Scatter(_TABLE, x="x", y="y", matplotlib_rasterized=True), theme=qv.Theme.light()
-    )
-    qtbot.addWidget(handle.widget)
-    colls = handle.axes[0].collections
-    assert colls and colls[0].get_rasterized() is True
-
-
-def test_matplotlib_scatter_rasterized_defaults_off(qtbot):
-    pytest.importorskip("matplotlib")
-    handle = _backend("matplotlib").render(
-        qv.Scatter(_TABLE, x="x", y="y"), theme=qv.Theme.light()
-    )
-    qtbot.addWidget(handle.widget)
-    colls = handle.axes[0].collections
-    assert colls and not colls[0].get_rasterized()
 
 
 _ERR_TABLE = {**_TABLE, "err": [0.1, 0.1, 0.1, 0.1]}

@@ -22,7 +22,7 @@ def build(theme: qv.Theme | None = None):
     n = 1_000_000
     data = {"x": rng.normal(size=n), "y": rng.normal(size=n)}
     view = qv.View(
-        qv.Scatter(data, x="x", y="y", scale="datashader"),
+        qv.Scatter(data, x="x", y="y", raster="datashader"),
         backend="pyqtgraph", theme=theme or qv.Theme.dark(),
     )
 

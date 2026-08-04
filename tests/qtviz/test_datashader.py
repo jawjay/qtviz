@@ -73,36 +73,37 @@ def test_channel_frame_resolves_accessors(data):
 
 # ── pipeline routing ─────────────────────────────────────────────────────────
 def test_scale_native_is_not_rasterized(data):
-    assert not pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", scale="native"))
+    assert not pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", raster="native"))
 
 
 def test_scale_datashader_always_rasterizes(data):
-    assert pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", scale="datashader"))
+    assert pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", raster="datashader"))
 
 
 def test_scale_auto_routes_above_threshold(data, reset_threshold):
     pipeline.set_raster_threshold(10_000)  # data is 50k
-    assert pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", scale="auto"))
+    assert pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", raster="auto"))
     pipeline.set_raster_threshold(10_000_000)
-    assert not pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", scale="auto"))
+    assert not pipeline._needs_rasterize(qv.Scatter(data, x="x", y="y", raster="auto"))
 
 
 def test_scale_auto_routes_unknown_size_lazy(data):
     dd = pytest.importorskip("dask.dataframe")
     pd = pytest.importorskip("pandas")
     ddf = dd.from_pandas(pd.DataFrame(data), npartitions=2)  # size() is None
-    assert pipeline._needs_rasterize(qv.Scatter(ddf, x="x", y="y", scale="auto"))
+    assert pipeline._needs_rasterize(qv.Scatter(ddf, x="x", y="y", raster="auto"))
 
 
 def test_resolve_transforms_scatter_to_image(data):
-    scatter = qv.Scatter(data, x="x", y="y", scale="datashader")
+    scatter = qv.Scatter(data, x="x", y="y", raster="datashader")
     image = pipeline.resolve_node(scatter)
     assert isinstance(image, qv.Image)
     assert image.id == scatter.id  # source id carried (for events)
 
 
 def test_rasterized_node_is_lazy(data):
-    assert pipeline.node_is_lazy(qv.Scatter(data, x="x", y="y", scale="datashader"))  # → off-thread
+    el = qv.Scatter(data, x="x", y="y", raster="datashader")
+    assert pipeline.node_is_lazy(el)  # → off-thread
 
 
 def _pandas(d):
@@ -127,7 +128,7 @@ def typed_data():
 def test_curve_rasterizes_to_line_density():
     n = 5000
     t = np.linspace(0, 10, n)
-    curve = qv.Curve({"x": t, "y": np.sin(t)}, x="x", y="y", scale="datashader")
+    curve = qv.Curve({"x": t, "y": np.sin(t)}, x="x", y="y", raster="datashader")
     r = rasterize_curve(curve, width=120, height=80)
     rgba, bounds = r.rgba, r.bounds
     assert rgba.shape == (80, 120, 4) and rgba.dtype == np.uint8
@@ -142,7 +143,7 @@ def _distinct_painted_colors(rgba) -> int:
 
 
 def test_categorical_color_by_blends_distinct_colors(typed_data):
-    sc = qv.Scatter(typed_data, x="x", y="y", color_by="cat", scale="datashader")
+    sc = qv.Scatter(typed_data, x="x", y="y", color_by="cat", raster="datashader")
     rgba = rasterize_scatter(sc, width=100, height=80).rgba
     # a per-category blend → more than one hue among the painted pixels
     assert _distinct_painted_colors(rgba) > 1
@@ -151,8 +152,8 @@ def test_categorical_color_by_blends_distinct_colors(typed_data):
 def test_numeric_color_by_changes_aggregation(typed_data):
     # color_by a numeric column aggregates as mean → a different raster than the
     # plain count-density one over the same points.
-    base = qv.Scatter(typed_data, x="x", y="y", scale="datashader")
-    valued = qv.Scatter(typed_data, x="x", y="y", color_by="z", scale="datashader")
+    base = qv.Scatter(typed_data, x="x", y="y", raster="datashader")
+    valued = qv.Scatter(typed_data, x="x", y="y", color_by="z", raster="datashader")
     rgba_count = rasterize_scatter(base, width=100, height=80).rgba
     rgba_mean = rasterize_scatter(valued, width=100, height=80).rgba
     assert rgba_mean.shape == rgba_count.shape
@@ -172,13 +173,13 @@ def test_categorical_via_points_color_key(typed_data):
 def test_curve_scale_routing():
     t = np.linspace(0, 1, 2000)
     data = {"x": t, "y": t**2}
-    assert not pipeline._needs_rasterize(qv.Curve(data, x="x", y="y", scale="native"))
-    assert pipeline._needs_rasterize(qv.Curve(data, x="x", y="y", scale="datashader"))
+    assert not pipeline._needs_rasterize(qv.Curve(data, x="x", y="y", raster="native"))
+    assert pipeline._needs_rasterize(qv.Curve(data, x="x", y="y", raster="datashader"))
 
 
 def test_resolve_transforms_curve_to_image():
     t = np.linspace(0, 1, 2000)
-    curve = qv.Curve({"x": t, "y": t**2}, x="x", y="y", scale="datashader")
+    curve = qv.Curve({"x": t, "y": t**2}, x="x", y="y", raster="datashader")
     image = pipeline.resolve_node(curve)
     assert isinstance(image, qv.Image)
     assert image.id == curve.id
@@ -187,8 +188,8 @@ def test_resolve_transforms_curve_to_image():
 
 def test_rasterize_element_dispatches_by_glyph(typed_data):
     t = np.linspace(0, 5, 2000)
-    curve = qv.Curve({"x": t, "y": np.cos(t)}, x="x", y="y", scale="datashader")
-    scatter = qv.Scatter(typed_data, x="x", y="y", scale="datashader")
+    curve = qv.Curve({"x": t, "y": np.cos(t)}, x="x", y="y", raster="datashader")
+    scatter = qv.Scatter(typed_data, x="x", y="y", raster="datashader")
     # dispatch must match the per-element rasterizers exactly
     np.testing.assert_array_equal(
         rasterize_element(curve, width=60, height=40).rgba,
@@ -213,7 +214,7 @@ def test_numeric_color_by_keeps_dask_lazy(typed_data):
 def test_datashaded_scatter_renders_async(data, qtbot):
     if "pyqtgraph" not in qv.backends.list_available():
         pytest.skip("pyqtgraph backend not registered")
-    view = qv.View(qv.Scatter(data, x="x", y="y", scale="datashader"), backend="pyqtgraph")
+    view = qv.View(qv.Scatter(data, x="x", y="y", raster="datashader"), backend="pyqtgraph")
     qtbot.addWidget(view)
     assert view.handle is None and view.loading  # aggregated off-thread
     qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
@@ -226,7 +227,7 @@ def test_datashaded_curve_renders_async(qtbot):
         pytest.skip("pyqtgraph backend not registered")
     t = np.linspace(0, 50, 200_000)
     data = {"x": t, "y": np.sin(t)}
-    view = qv.View(qv.Curve(data, x="x", y="y", scale="datashader"), backend="pyqtgraph")
+    view = qv.View(qv.Curve(data, x="x", y="y", raster="datashader"), backend="pyqtgraph")
     qtbot.addWidget(view)
     view.resize(500, 400)
     view.show()

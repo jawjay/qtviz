@@ -1,13 +1,13 @@
 """Datashader — millions of points as a live density image.
 
 A scatter with millions of points overplots into a blob (and strains the native
-backends). Pass `scale="datashader"` and qtviz aggregates the points into a
+backends). Pass `raster="datashader"` and qtviz aggregates the points into a
 screen-resolution density raster instead — and **re-aggregates to the visible
 viewport at your widget's pixel size as you pan/zoom**, so the image sharpens
 (Phase 4):
 
-    qv.Scatter(data, x="x", y="y", scale="datashader")   # always rasterize
-    qv.Scatter(data, x="x", y="y", scale="auto")          # rasterize past a threshold
+    qv.Scatter(data, x="x", y="y", raster="datashader")   # always rasterize
+    qv.Scatter(data, x="x", y="y", raster="auto")          # rasterize past a threshold
 
 The data here is a broad cloud sprinkled with a few tight sub-clusters: zoomed
 out they're a smudge; zoom in and they resolve into structure, because each zoom
@@ -52,9 +52,9 @@ def _make_points() -> dict[str, np.ndarray]:
 
 def build():
     data = _make_points()
-    # scale="datashader" → the Scatter is aggregated to a raster off the GUI
+    # raster="datashader" → the Scatter is aggregated to a raster off the GUI
     # thread, then re-aggregated to the viewport on every zoom/pan (4a + 4b).
-    view = qv.View(qv.Scatter(data, x="x", y="y", scale="datashader"))
+    view = qv.View(qv.Scatter(data, x="x", y="y", raster="datashader"))
     view.on(
         qv.RangeEvent,
         lambda e: print(f"viewport x={e.x[0]:+.2f}..{e.x[1]:+.2f}  y={e.y[0]:+.2f}..{e.y[1]:+.2f}"),

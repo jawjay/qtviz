@@ -1,7 +1,7 @@
 """The resolve pipeline (D14, milestone-data-core §4; datashader, Phase 4).
 
 `resolve_node` walks a Node tree and, for each Element, either:
-- **rasterizes** it (a scale="datashader" / auto-routed huge Scatter becomes an
+- **rasterizes** it (a raster="datashader" / auto-routed huge Scatter becomes an
   `Image` via datashader — backend-agnostic, out-of-core), or
 - resolves its channel accessors into a role-keyed eager ref, or
 - materializes a lazy gridded ref.
@@ -22,14 +22,14 @@ from .ref import EagerTabularRef
 
 # Auto-route to datashader above this many points; configurable via
 # set_raster_threshold. Lazy sources of unknown size are routed too (they may be
-# huge) — pass scale="native" to force raw rendering.
+# huge) — pass raster="native" to force raw rendering.
 _RASTER_THRESHOLD = 1_000_000
 # default raster resolution (px); the dynamic loop (D21) will use the widget size
 _RASTER_SIZE = (800, 600)
 
 
 def set_raster_threshold(n: int) -> None:
-    """scale='auto' rasterizes a Scatter once its point count exceeds `n`."""
+    """raster='auto' rasterizes a Scatter once its point count exceeds `n`."""
     n = int(n)
     if n < 1:
         raise ValidationError(f"raster threshold must be a positive count, got {n}")
@@ -58,12 +58,12 @@ def _safe_size(ref):
 
 
 def _needs_rasterize(node) -> bool:
-    scale = getattr(node, "scale", None)  # only point elements (Scatter) carry scale
-    if scale in (None, "native"):
+    raster = getattr(node, "raster", None)  # only point elements carry a raster strategy
+    if raster in (None, "native"):
         return False
-    if scale == "datashader":
+    if raster == "datashader":
         return True  # explicit; _rasterize raises a clear error if datashader is absent
-    # scale == "auto"
+    # raster == "auto"
     if not _datashader_available():
         return False  # fall back to native rendering
     size = _safe_size(getattr(node, "data", None))
@@ -73,7 +73,7 @@ def _needs_rasterize(node) -> bool:
 def _rasterize(node):
     if not _datashader_available():
         raise RuntimeError(
-            "scale='datashader' requires datashader — install: uv sync --extra datashader"
+            "raster='datashader' requires datashader — install: uv sync --extra datashader"
         )
     from ..elements import Image  # noqa: PLC0415
     from ..ext.datashader import aggregate_element, shade_aggregate  # noqa: PLC0415
@@ -108,7 +108,7 @@ def resolve_node(node):
             # passing through untouched.
             if getattr(getattr(node, "data", None), "is_lazy", False):
                 ref = node.data
-                # [D74]: budget a lazy grid at screen scale instead of computing
+                # [D74]: budget a lazy grid at screen raster instead of computing
                 # it whole (4× raster size = headroom above widget resolution).
                 budget = 4 * _RASTER_SIZE[0] * _RASTER_SIZE[1]
                 resolved = node._replace_data(ref.materialize(max_cells=budget))

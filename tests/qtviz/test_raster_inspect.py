@@ -159,7 +159,7 @@ def test_pyqtgraph_hover_emits_value(qtbot):
         pytest.skip("pyqtgraph backend not registered")
     from PySide6.QtCore import QPointF
 
-    view = qv.View(qv.Scatter(_cluster(), x="x", y="y", scale="datashader"), backend="pyqtgraph")
+    view = qv.View(qv.Scatter(_cluster(), x="x", y="y", raster="datashader"), backend="pyqtgraph")
     qtbot.addWidget(view)
     view.resize(500, 400)
     view.show()
@@ -189,7 +189,7 @@ def test_matplotlib_hover_emits_value(qtbot):
         pytest.skip("matplotlib backend not registered")
     from matplotlib.backend_bases import MouseEvent
 
-    view = qv.View(qv.Scatter(_cluster(), x="x", y="y", scale="datashader"), backend="matplotlib")
+    view = qv.View(qv.Scatter(_cluster(), x="x", y="y", raster="datashader"), backend="matplotlib")
     qtbot.addWidget(view)
     view.resize(500, 400)
     view.show()

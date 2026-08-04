@@ -1,7 +1,7 @@
 """Datashader on matplotlib — the same big-data path, a different backend.
 
 Datashading is backend-agnostic: the aggregation is a pipeline step, so the same
-`scale="datashader"` Scatter that pyqtgraph draws (example 09) renders through
+`raster="datashader"` Scatter that pyqtgraph draws (example 09) renders through
 matplotlib too — publication-quality, with vector export of the density raster.
 And matplotlib re-aggregates to the viewport on zoom just like pyqtgraph: the
 matplotlib navigation toolbar below gives mouse pan/zoom, and each zoom
@@ -48,7 +48,7 @@ class DatashaderMpl(QWidget):
         super().__init__()
         data = _make_points()
         self.view = qv.View(
-            qv.Scatter(data, x="x", y="y", scale="datashader"),
+            qv.Scatter(data, x="x", y="y", raster="datashader"),
             backend="matplotlib",
             theme=qv.Theme.dark(),
         )

@@ -39,13 +39,13 @@ def check_line_style(style, *, who: str) -> None:
             f"{who} dash tuple needs an even number of positive lengths, got {style!r}")
 
 
-def check_axis(axis: str, scale: str, *, who: str) -> None:
+def check_axis(axis: str, raster: str, *, who: str) -> None:
     """Twin-axis field guard ([D88]): `axis` names a known y axis, and a
     datashaded element can't ride y2 (the raster pipeline is primary-axes)."""
     if axis not in ("y", "y2"):
         raise ValidationError(f"{who} axis must be 'y' or 'y2', got {axis!r}")
-    if axis == "y2" and scale == "datashader":
-        raise ValidationError(f"{who}: axis='y2' is not supported with scale='datashader'")
+    if axis == "y2" and raster == "datashader":
+        raise ValidationError(f"{who}: axis='y2' is not supported with raster='datashader'")
 
 
 class Curve(Element):
@@ -65,7 +65,7 @@ class Curve(Element):
         x: Accessor,
         y: Accessor,
         color: ColorSpec | None = None,
-        color_by: str | None = None,
+        color_by: Accessor | None = None,
         line_width: float = 1.5,
         line_style: str | tuple[float, ...] = "solid",
         marker: str | None = None,
@@ -74,7 +74,7 @@ class Curve(Element):
         alpha: float = 1.0,
         label: str | None = None,
         axis: Literal["y", "y2"] = "y",
-        scale: Literal["native", "auto", "datashader"] = "native",
+        raster: Literal["native", "auto", "datashader"] = "native",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -85,7 +85,7 @@ class Curve(Element):
 
         check_exclusive(color, color_by, names=("color", "color_by"), who="Curve")
         if color_by is not None and (marker is not None or step is not None
-                                     or scale == "datashader"):
+                                     or raster == "datashader"):
             raise ValidationError(
                 "Curve color_by is a plain-line encoding (no marker/step/datashader) "
                 "in this release ([D100])"
@@ -99,7 +99,7 @@ class Curve(Element):
         if not isinstance(marker_every, int) or isinstance(marker_every, bool) \
                 or marker_every < 1:
             raise ValidationError(f"marker_every must be a positive int, got {marker_every!r}")
-        check_axis(axis, scale, who="Curve")
+        check_axis(axis, raster, who="Curve")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color = color
@@ -113,7 +113,7 @@ class Curve(Element):
         self.alpha = alpha
         self.label = label
         self.axis = axis
-        self.scale = scale
+        self.raster = raster
         self._validate_tabular()
         self._freeze()
 

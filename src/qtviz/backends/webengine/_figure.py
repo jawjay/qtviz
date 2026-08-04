@@ -24,6 +24,7 @@ import numpy as np
 from ...core._degrade import FULL_SURFACE, check_recommended, check_surface
 from ...core._scales import log_lim, logify
 from ...core.compose import Overlay, effective_scales, surface_of
+from ...core.encoding import channel_title
 from ...data import resolve_node
 from ...elements import (
     Area,
@@ -117,7 +118,7 @@ def _color_by_list(element, d, theme) -> list[str]:
         np.asarray(d.series("color")),
         palette=theme.palette,
         continuous_palette=palettes.get("viridis"),
-        title=element.color_by,
+        title=channel_title(element.color_by),
         norm=getattr(element, "color_norm", "linear"),
     )
     return [
@@ -139,7 +140,7 @@ def _continuous_marker_color(element, values, marker: dict) -> None:
     marker["colorscale"] = [[t, _css(ramp.at(t))] for t in (0.0, 0.25, 0.5, 0.75, 1.0)]
     marker["cmin"] = float(np.nanmin(a))
     marker["cmax"] = float(np.nanmax(a))
-    marker["colorbar"] = {"title": {"text": element.color_by}}
+    marker["colorbar"] = {"title": {"text": channel_title(element.color_by) or ""}}
 
 
 # ── per-element trace builders (each returns a list of Plotly traces) ─────────
@@ -167,7 +168,7 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
     return [{
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
-        "marker": marker, "name": element.label or element.color_by or element.id,
+        "marker": marker, "name": element.label or channel_title(element.color_by) or element.id,
         "showlegend": element.label is not None,
     }]
 

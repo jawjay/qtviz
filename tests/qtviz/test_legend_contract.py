@@ -321,7 +321,7 @@ def test_pyqtgraph_eq_hist_density_keeps_endpoints_key(qtbot):
     pytest.importorskip("datashader")
     rng = np.random.default_rng(3)
     data = {"x": rng.normal(size=5000), "y": rng.normal(size=5000)}
-    view = qv.View(qv.Scatter(data, x="x", y="y", scale="datashader"),
+    view = qv.View(qv.Scatter(data, x="x", y="y", raster="datashader"),
                    backend="pyqtgraph")
     qtbot.addWidget(view)
     qtbot.waitUntil(lambda: view.handle is not None, timeout=5000)

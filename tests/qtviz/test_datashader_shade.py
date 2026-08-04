@@ -182,7 +182,7 @@ def test_rendered_raster_uses_theme_palette(qtbot):
     n = 30_000
     data = {"x": rng.normal(size=n), "y": rng.normal(size=n),
             "cat": np.array(["a", "b", "c"])[rng.integers(0, 3, n)]}
-    node = qv.Scatter(data, x="x", y="y", color_by="cat", scale="datashader")
+    node = qv.Scatter(data, x="x", y="y", color_by="cat", raster="datashader")
 
     custom = Theme(palette=Palette.from_hex(["#ff0000", "#00ff00", "#0000ff"]))
     themed = qv.View(node, backend="pyqtgraph", theme=custom)
@@ -241,7 +241,7 @@ def test_rendered_categorical_raster_draws_legend(qtbot):
     n = 20_000
     data = {"x": rng.normal(size=n), "y": rng.normal(size=n),
             "cat": np.array(["a", "b", "c"])[rng.integers(0, 3, n)]}
-    view = qv.View(qv.Scatter(data, x="x", y="y", color_by="cat", scale="datashader"),
+    view = qv.View(qv.Scatter(data, x="x", y="y", color_by="cat", raster="datashader"),
                    backend="pyqtgraph")
     qtbot.addWidget(view)
     qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
@@ -275,7 +275,7 @@ def _single_pixel_agg(agg):
     # all points fall in one 1×1 pixel, so the reduction is the value at [0, 0]
     data = {"x": [0.5, 0.5, 0.5], "y": [0.5, 0.5, 0.5], "z": [10.0, 50.0, 30.0]}
     return aggregate_element(
-        qv.Scatter(data, x="x", y="y", color_by="z", agg=agg, scale="datashader"),
+        qv.Scatter(data, x="x", y="y", color_by="z", agg=agg, raster="datashader"),
         width=1, height=1, x_range=(0, 1), y_range=(0, 1),
     )
 
@@ -294,7 +294,7 @@ def test_agg_sum_and_min_and_mean():
 
 def test_agg_auto_is_count_without_color_by():
     data = {"x": [0.5, 0.5, 0.5], "y": [0.5, 0.5, 0.5]}
-    agg = aggregate_element(qv.Scatter(data, x="x", y="y", scale="datashader"),
+    agg = aggregate_element(qv.Scatter(data, x="x", y="y", raster="datashader"),
                             width=1, height=1, x_range=(0, 1), y_range=(0, 1))
     assert agg.kind == "count"
     assert float(agg.aggregate.values[0, 0]) == 3.0
@@ -304,13 +304,13 @@ def test_value_agg_requires_color_by():
     from qtviz.errors import ValidationError
 
     with pytest.raises(ValidationError):
-        qv.Scatter({"x": [1.0], "y": [2.0]}, x="x", y="y", agg="mean", scale="datashader")
+        qv.Scatter({"x": [1.0], "y": [2.0]}, x="x", y="y", agg="mean", raster="datashader")
 
 
 def test_agg_requires_datashader_scale():
     from qtviz.errors import ValidationError
 
-    with pytest.raises(ValidationError):  # agg under the default scale="native"
+    with pytest.raises(ValidationError):  # agg under the default raster="native"
         qv.Scatter({"x": [1.0], "y": [2.0]}, x="x", y="y", color_by="x", agg="max")
 
 
@@ -331,7 +331,7 @@ def test_webengine_raster_uses_theme_palette():
     n = 12_000
     data = {"x": rng.normal(size=n), "y": rng.normal(size=n),
             "cat": np.array(["a", "b", "c"])[rng.integers(0, 3, n)]}
-    scatter = qv.Scatter(data, x="x", y="y", color_by="cat", scale="datashader")
+    scatter = qv.Scatter(data, x="x", y="y", color_by="cat", raster="datashader")
     image = pipeline.resolve_node(scatter)
 
     z1 = _image_trace(image, Theme(palette=Palette.from_hex(["#ff0000", "#00ff00", "#0000ff"])), 0)

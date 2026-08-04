@@ -5,8 +5,8 @@ A datashaded `Scatter` used to render as a bare image: fixed default colors, no 
 Now the raster shades with the View's `Theme` and carries a legend, so a big-data plot
 is publishable — and `agg=` picks what each pixel means:
 
-    qv.Scatter(df, x, y, color_by="kind",      scale="datashader")             # blend → key
-    qv.Scatter(df, x, y, color_by="elevation", scale="datashader", agg="max")  # max → bar
+    qv.Scatter(df, x, y, color_by="kind",      raster="datashader")             # blend → key
+    qv.Scatter(df, x, y, color_by="elevation", raster="datashader", agg="max")  # max → bar
 
 This lays the two side by side under `Theme.dark()`:
   - **left** — a per-category blend; the legend names each category in theme colors
@@ -57,9 +57,9 @@ def _terrain_events() -> pd.DataFrame:
 
 def build(theme: qv.Theme | None = None) -> qv.View:
     df = _terrain_events()
-    by_category = qv.Scatter(df, x="lon", y="lat", color_by="kind", scale="datashader")
+    by_category = qv.Scatter(df, x="lon", y="lat", color_by="kind", raster="datashader")
     max_elevation = qv.Scatter(df, x="lon", y="lat", color_by="elevation",
-                               scale="datashader", agg="max")
+                               raster="datashader", agg="max")
     # `+` lays the two panels side by side; each is datashaded, themed, and legended.
     return qv.View(by_category + max_elevation, backend="pyqtgraph",
                    theme=theme or qv.Theme.dark())

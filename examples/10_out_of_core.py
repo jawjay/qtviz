@@ -1,7 +1,7 @@
 """Out-of-core — a Dask DataFrame straight into a datashaded scatter.
 
 qtviz's data layer is lazy-first: hand a `Scatter` a Dask DataFrame and it stays
-lazy. With `scale="auto"` (or `"datashader"`) the points are aggregated
+lazy. With `raster="auto"` (or `"datashader"`) the points are aggregated
 **partition-by-partition** — only the small raster is ever materialized, the full
 table never lands in memory. The aggregation runs off the GUI thread, and each
 pan/zoom re-aggregates just the visible window.
@@ -11,7 +11,7 @@ in
 
     import dask.dataframe as dd
     ddf = dd.read_parquet("s3://bucket/huge/*.parquet")   # larger than RAM
-    qv.Scatter(ddf, x="lon", y="lat", scale="auto")
+    qv.Scatter(ddf, x="lon", y="lat", raster="auto")
 
 and nothing else changes — same Element, same View.
 
@@ -45,9 +45,9 @@ def build():
     })
     ddf = dd.from_pandas(frame, npartitions=PARTITIONS)  # lazy: never fully resolved
 
-    # scale="auto" rasterizes here because the source is lazy (unknown size →
+    # raster="auto" rasterizes here because the source is lazy (unknown size →
     # treated as potentially huge); the dask frame is aggregated out-of-core.
-    return qv.View(qv.Scatter(ddf, x="x", y="y", scale="auto"), theme=qv.Theme.dark())
+    return qv.View(qv.Scatter(ddf, x="x", y="y", raster="auto"), theme=qv.Theme.dark())
 
 
 def main() -> int:

@@ -331,7 +331,7 @@ def test_datashader_under_log_warns_and_renders_linear(qtbot):
     pytest.importorskip("datashader")
     rng = np.random.default_rng(7)
     data = {"x": rng.uniform(1.0, 100.0, 5000), "y": rng.normal(size=5000)}
-    node = _surface(qv.Scatter(data, x="x", y="y", scale="datashader"),
+    node = _surface(qv.Scatter(data, x="x", y="y", raster="datashader"),
                     x=qv.AxisSpec(scale="log"))
     with pytest.warns(QtvizWarning, match="raster"):
         view = qv.View(node, backend="pyqtgraph")

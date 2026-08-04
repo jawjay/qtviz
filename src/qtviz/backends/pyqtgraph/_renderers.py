@@ -107,7 +107,7 @@ def _color_mapping(element, d, theme):
 
     return map_colors(
         np.asarray(d.series("color")), palette=theme.palette,
-        continuous_palette=palettes.get("viridis"), title=element.color_by,
+        continuous_palette=palettes.get("viridis"), title=channel_title(element.color_by),
         norm=getattr(element, "color_norm", "linear"),
     )
 
@@ -193,7 +193,7 @@ def _curve_color_by(element: Curve, ctx):
     if ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
 
-        legend = Legend(kind="categorical", title=element.color_by,
+        legend = Legend(kind="categorical", title=channel_title(element.color_by),
                         entries=tuple((str(c), sw)
                                       for c, sw in zip(cats, swatches, strict=True)))
         add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)

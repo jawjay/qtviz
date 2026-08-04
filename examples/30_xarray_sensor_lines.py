@@ -16,7 +16,7 @@ no manual reshaping to columns.
 Scale: the cube is `10_000 × 4 × 250` (~10M samples); one sensor is **250 instances ×
 10k timesteps ≈ 2.5M line points** overlaid as native pyqtgraph curves, drawn faint so
 the overplotting reads as a density band with the mean envelope on top. (For an order of
-magnitude more lines, route a single long-form line through `scale="datashader"` for a
+magnitude more lines, route a single long-form line through `raster="datashader"` for a
 line-density raster — see `examples/28_event_density_map.py` for the raster path.)
 
 Run (needs the xarray extra):

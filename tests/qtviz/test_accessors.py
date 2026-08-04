@@ -128,3 +128,16 @@ def test_distribution_by_keyword_accepts_expressions(t):
 
     b = resolve_node(qv.BoxPlot(t, value="y", by=qv.col("a") >= 2))
     np.testing.assert_array_equal(b.data.series("by"), t["a"] >= 2)
+
+
+def test_color_by_accepts_expressions_and_titles_degrade_sanely(t):
+    from qtviz.core.encoding import channel_title
+    from qtviz.data import resolve_node
+
+    r = resolve_node(qv.Scatter(t, x="a", y="y", color_by=qv.col("b") > 5))
+    np.testing.assert_array_equal(r.data.series("color"), t["b"] > 5)
+    # legend titles: a column name (plain or bare col()) prints; derived/opaque don't
+    assert channel_title("b") == "b"
+    assert channel_title(qv.col("b")) == "b"
+    assert channel_title(qv.col("b") > 5) is None
+    assert channel_title(lambda d: d["b"]) is None

@@ -114,8 +114,8 @@ qv.Scatter({}, x=np.linspace(0, 1, n), y=values)            # literal arrays
 ## Big data — Datashader
 
 ```python
-qv.Scatter(big, x="x", y="y", scale="datashader")   # density raster, re-aggregates on zoom
-qv.Scatter(big, x="x", y="y", scale="auto")         # rasterize past a threshold
+qv.Scatter(big, x="x", y="y", raster="datashader")   # density raster, re-aggregates on zoom
+qv.Scatter(big, x="x", y="y", raster="auto")         # rasterize past a threshold
 view.on(qv.HoverEvent, lambda e: print(e.value))    # count/mean under the cursor
 ```
 

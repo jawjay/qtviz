@@ -58,8 +58,8 @@ def test_unknown_field_name_rejected_at_construction(table):
         qv.Scatter(table, x="tmie", y="y")  # typo'd column
 
 
-def test_scale_defaults_to_native(table):
-    assert qv.Scatter(table, x="x", y="y").scale == "native"
+def test_raster_defaults_to_native(table):
+    assert qv.Scatter(table, x="x", y="y").raster == "native"
 
 
 def test_elements_are_immutable(make_elements):

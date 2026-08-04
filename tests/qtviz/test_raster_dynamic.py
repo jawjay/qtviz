@@ -129,7 +129,7 @@ def test_pyqtgraph_reaggregates_to_zoom_window(qtbot):
     rng = np.random.default_rng(1)
     n = 50_000
     data = {"x": rng.normal(size=n), "y": rng.normal(size=n)}
-    view = qv.View(qv.Scatter(data, x="x", y="y", scale="datashader"), backend="pyqtgraph")
+    view = qv.View(qv.Scatter(data, x="x", y="y", raster="datashader"), backend="pyqtgraph")
     qtbot.addWidget(view)
     view.resize(600, 400)
     view.show()
@@ -230,7 +230,7 @@ def test_pg_streaming_datashaded_view_holds_viewport(qtbot):
     rng = np.random.default_rng(3)
     feed = qv.stream({"t": float, "v": float})
     feed.append(t=rng.normal(0, 1, 5000), v=rng.normal(0, 1, 5000))
-    el = qv.Scatter(feed, x="t", y="v", scale="datashader")
+    el = qv.Scatter(feed, x="t", y="v", raster="datashader")
     handle = qv.backends.get("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     handle.widget.resize(600, 400)
@@ -264,7 +264,7 @@ def test_matplotlib_reaggregates_to_zoom_window(qtbot):
     rng = np.random.default_rng(2)
     n = 50_000
     data = {"x": rng.normal(size=n), "y": rng.normal(size=n)}
-    view = qv.View(qv.Scatter(data, x="x", y="y", scale="datashader"), backend="matplotlib")
+    view = qv.View(qv.Scatter(data, x="x", y="y", raster="datashader"), backend="matplotlib")
     qtbot.addWidget(view)
     view.resize(600, 400)
     view.show()

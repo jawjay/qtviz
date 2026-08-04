@@ -1,7 +1,7 @@
 """Roadmap wave 2, increment 4 — streaming × datashader (the capability-track
 interleave; retrospective §4.2).
 
-A `scale="datashader"` element over a `qv.stream` used to fall off the [D77]
+A `raster="datashader"` element over a `qv.stream` used to fall off the [D77]
 ladder to a full rebuild every tick. Now the element's `RasterController`
 (which reads the *live* source at every aggregation) exposes `refresh()`, and
 `set_element_data` routes datashaded elements to it: the current viewport
@@ -39,7 +39,7 @@ def _controller_for(handle, element_id, plots=True):
 def test_pg_streamed_raster_refreshes_in_place(qtbot):
     feed = qv.stream({"t": float, "v": float})
     feed.append(t=np.linspace(0, 10, 5000), v=np.random.default_rng(0).normal(0, 1, 5000))
-    el = qv.Scatter(feed, x="t", y="v", scale="datashader")
+    el = qv.Scatter(feed, x="t", y="v", raster="datashader")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     controller = _controller_for(handle, el.id)
@@ -58,7 +58,7 @@ def test_mpl_streamed_raster_refreshes_in_place(qtbot):
     pytest.importorskip("matplotlib")
     feed = qv.stream({"t": float, "v": float})
     feed.append(t=np.linspace(0, 10, 5000), v=np.random.default_rng(1).normal(0, 1, 5000))
-    el = qv.Scatter(feed, x="t", y="v", scale="datashader")
+    el = qv.Scatter(feed, x="t", y="v", raster="datashader")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     controller = _controller_for(handle, el.id, plots=False)
@@ -77,7 +77,7 @@ def test_view_binding_routes_stream_appends_to_the_controller(qtbot):
     native item."""
     feed = qv.stream({"t": float, "v": float})
     feed.append(t=np.zeros(2000), v=np.zeros(2000))     # a tight blob at (0, 0)
-    el = qv.Scatter(feed, x="t", y="v", scale="datashader")
+    el = qv.Scatter(feed, x="t", y="v", raster="datashader")
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     qtbot.waitUntil(lambda: view.handle is not None, timeout=8000)
