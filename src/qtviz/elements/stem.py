@@ -69,6 +69,7 @@ class Stem(Element):
     def lower(self, ctx):
         """[D122]: ONE pair-connected polyline for every stalk ([D115] — never
         an item per stem) + a pickable marker layer for the heads."""
+        from ..core._time import as_float_seconds  # noqa: PLC0415
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
         from ..core.marks import Markers, Polyline, Stroke  # noqa: PLC0415
 
@@ -78,7 +79,8 @@ class Stem(Element):
         marks = (
             Polyline(sx, sy, Stroke(color, width=self.line_width, alpha=self.alpha),
                      connect="pairs"),
-            Markers(d.series("x"), d.series("y"), marker=self.marker, size=7.0,
+            Markers(as_float_seconds(d.series("x")), as_float_seconds(d.series("y")),
+                    marker=self.marker, size=7.0,
                     fill=color, alpha=self.alpha, pickable=True),
         )
         return Lowered(marks=marks,

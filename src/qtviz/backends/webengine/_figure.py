@@ -24,37 +24,26 @@ import numpy as np
 from ...core._degrade import FULL_SURFACE, check_recommended, check_surface
 from ...core._scales import log_lim, logify
 from ...core.compose import Overlay, effective_scales, surface_of
+from ...core.element import Element
 from ...core.encoding import channel_title
 from ...data import resolve_node
 from ...elements import (
     Area,
-    Arrow,
     Bars,
     BoxPlot,
     Contour,
     Curve,
     Ecdf,
-    Ellipse,
     ErrorBars,
     Heatmap,
     Histogram,
-    HLine,
     Image,
     Mesh,
     Pie,
-    Polygon,
-    Quiver,
     RawFigure,
-    Rect,
-    RefLine,
     Scatter,
-    Span,
     Spread,
-    Stem,
-    Streamlines,
-    Text,
     Violin,
-    VLine,
 )
 from ...errors import IncompatibleOverlayError, RendererMissingError
 
@@ -614,64 +603,7 @@ def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
     return [trace]
 
 
-def _quiver_traces(element: Quiver, theme, idx: int) -> list[dict]:
-    """Shared core geometry ([D107]) — two NaN-gapped line traces. `key=`
-    ([D112]) adds a one-point legend-only trace: Plotly draws its own line
-    sample (no custom-glyph seam), so the magnitude is stated by the name."""
-    (sx, sy), (hx, hy) = element.resolved_segments()
-    color = _css(_element_color(element, theme, idx))
-    line = {"color": color, "width": element.line_width}
-    common = {"type": "scattergl", "mode": "lines", "line": line,
-              "opacity": element.alpha, "hoverinfo": "skip"}
-    show_label = element.label is not None and element.key is None  # key folds it in
-    traces = [
-        {**common, "x": sx, "y": sy, "name": element.label or element.id,
-         "showlegend": show_label},
-        {**common, "x": hx, "y": hy, "name": element.label or element.id,
-         "showlegend": False},
-    ]
-    if element.key is not None:
-        entry = element.legend_entry(theme, idx)
-        traces.append({**common, "x": [None], "y": [None],
-                       "name": entry.label, "showlegend": True})
-    return traces
 
-
-def _streamlines_traces(element: Streamlines, theme, idx: int) -> list[dict]:
-    """Field lines ([D118]): two NaN-gapped line traces (lines, heads)."""
-    (lx, ly), (hx, hy) = element.resolved_segments()
-    color = _css(_element_color(element, theme, idx))
-    line = {"color": color, "width": element.line_width}
-    common = {"type": "scattergl", "mode": "lines", "line": line,
-              "opacity": element.alpha, "hoverinfo": "skip",
-              "name": element.label or element.id}
-    return [
-        {**common, "x": lx, "y": ly, "showlegend": element.label is not None},
-        {**common, "x": hx, "y": hy, "showlegend": False},
-    ]
-
-
-def _stem_traces(element: Stem, theme, idx: int) -> list[dict]:
-    """Stem series ([D115]): one NaN-gapped line trace for every stem + a
-    marker head trace (native picks ride the head trace's source-id row)."""
-    sx, sy = element.resolved_segments()
-    n = len(sx) // 2
-    gap = np.full(n, np.nan)
-    gx = np.column_stack([sx[0::2], sx[1::2], gap]).ravel()
-    gy = np.column_stack([sy[0::2], sy[1::2], gap]).ravel()
-    color = _css(_element_color(element, theme, idx))
-    d = element.data
-    return [
-        {"type": "scattergl", "mode": "lines", "x": gx, "y": gy,
-         "line": {"color": color, "width": element.line_width},
-         "opacity": element.alpha, "hoverinfo": "skip",
-         "name": element.label or element.id, "showlegend": False},
-        {"type": "scattergl", "mode": "markers",
-         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
-         "marker": {"color": color, "size": 7, "symbol": _SYMBOL[element.marker]},
-         "opacity": element.alpha, "name": element.label or element.id,
-         "showlegend": element.label is not None},
-    ]
 
 
 def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
@@ -741,6 +673,16 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
     return [trace, mask]
 
 
+def honored_for(element_type: type) -> frozenset[str]:
+    """[D51]/[D123]: the native table row, else the lowering declaration."""
+    native = HONORED.get(element_type)
+    if native is not None:
+        return native
+    if isinstance(element_type, type) and issubclass(element_type, Element):
+        return element_type.HONORED_BY_LOWERING
+    return frozenset()
+
+
 _TRACE_BUILDERS: dict[type, Any] = {
     Scatter: _scatter_trace,
     Curve: _curve_trace,
@@ -757,9 +699,6 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Pie: _pie_trace,
     Contour: _contour_trace,
     Mesh: _mesh_trace,
-    Quiver: _quiver_traces,
-    Stem: _stem_traces,
-    Streamlines: _streamlines_traces,
 }
 
 # Recommended options each trace builder above actually consumes (spec §3.4 /
@@ -778,14 +717,6 @@ HONORED: dict[type, frozenset[str]] = {
                        "levels", "annotate"}),
     ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
-    HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    VLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
-    Span: frozenset({"color", "alpha", "label"}),
-    Text: frozenset({"color", "size", "anchor", "anchor_v", "rotation", "frame"}),
-    Arrow: frozenset({"head", "color", "line_width", "alpha", "label"}),
-    Rect: frozenset({"color", "line_width", "alpha", "fill", "label"}),
-    Ellipse: frozenset({"color", "line_width", "alpha", "fill", "label"}),
-    Polygon: frozenset({"color", "line_width", "alpha", "fill", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
@@ -793,11 +724,6 @@ HONORED: dict[type, frozenset[str]] = {
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
-    Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
-                       "alpha", "label", "key", "key_label"}),
-    Stem: frozenset({"baseline", "marker", "color", "line_width", "alpha", "label"}),
-    Streamlines: frozenset({"density", "color", "line_width", "alpha", "label"}),
-    RefLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
 }
 
 
@@ -814,14 +740,6 @@ def _elements(node):
     return [node]
 
 
-def _ref_css(element, theme) -> str:
-    """Annotation default color: theme foreground — chrome, not a palette series."""
-    from ...core.color import Color  # noqa: PLC0415
-
-    color = Color(element.color) if getattr(element, "color", None) is not None \
-        else theme.foreground
-    return _css(color)
-
 
 def _shape_coord(value: float, scale: str) -> float | None:
     """One annotation coordinate for a Plotly shape: a log axis wants log10
@@ -835,24 +753,12 @@ def _shape_coord(value: float, scale: str) -> float | None:
     return float(v) if np.isfinite(v) else None
 
 
-def _line_shape(pos: float | None, axis: str, element, css: str) -> dict | None:
-    if pos is None:
-        return None
-    free = "y" if axis == "x" else "x"
-    return {
-        "type": "line",
-        f"{free}ref": "paper", f"{free}0": 0.0, f"{free}1": 1.0,
-        f"{axis}ref": axis, f"{axis}0": pos, f"{axis}1": pos,
-        "opacity": element.alpha,
-        "line": {"color": css, "width": element.line_width,
-                 "dash": _dash(element.line_style)},
-    }
 
-
-def _refline_shape(element, theme, traces, x_scale: str, y_scale: str) -> dict | None:
-    """`y = slope·x + intercept` as a long segment spanning 3× the data range
-    ([D99]) — Plotly shapes can't be infinite-with-slope, so wide zoom-out can
-    run off its end (documented caveat). No log-scale form (warn + drop)."""
+def _refline_shape(rule, theme, traces, x_scale: str, y_scale: str) -> dict | None:
+    """A sloped `Rule` mark (`y = slope·x + at`, [D99]) as a long segment
+    spanning 3× the data range — Plotly shapes can't be infinite-with-slope, so
+    wide zoom-out can run off its end (documented caveat). No log-scale form
+    (warn + drop)."""
     if x_scale in ("log", "symlog") or y_scale in ("log", "symlog"):
         import warnings  # noqa: PLC0415
 
@@ -873,113 +779,24 @@ def _refline_shape(element, theme, traces, x_scale: str, y_scale: str) -> dict |
     x0, x1 = lo - span, hi + span
     if x_scale == "time":  # trace arrays are already epoch ms ([D94])
         x0, x1 = x0 / 1000.0, x1 / 1000.0  # back to data seconds for the maths
-    y0 = element.slope * x0 + element.intercept
-    y1 = element.slope * x1 + element.intercept
+    y0 = (rule.slope or 0.0) * x0 + rule.at
+    y1 = (rule.slope or 0.0) * x1 + rule.at
     return {
         "type": "line", "xref": "x", "yref": "y",
         "x0": _shape_coord(x0, x_scale), "x1": _shape_coord(x1, x_scale),
         "y0": _shape_coord(y0, y_scale), "y1": _shape_coord(y1, y_scale),
-        "opacity": element.alpha,
-        "line": {"color": _ref_css(element, theme), "width": element.line_width,
-                 "dash": _dash(element.line_style)},
+        "opacity": rule.stroke.alpha,
+        "line": {"color": _css(rule.stroke.color), "width": rule.stroke.width,
+                 "dash": _dash(rule.stroke.dash)},
     }
 
 
-def _outline_shape(points, element, css: str, x_scale: str, y_scale: str) -> dict | None:
-    """A closed data-space outline ([D97]) as a Plotly `path` shape."""
-    from ...core._geometry import svg_path  # noqa: PLC0415
-
-    xs = [_shape_coord(float(x), x_scale) for x, _y in points]
-    ys = [_shape_coord(float(y), y_scale) for _x, y in points]
-    if any(v is None for v in xs) or any(v is None for v in ys):
-        return None
-    shape = {"type": "path", "path": svg_path(list(zip(xs, ys, strict=True))),
-             "xref": "x", "yref": "y", "opacity": element.alpha,
-             "line": {"color": css, "width": element.line_width}}
-    if element.fill:
-        shape["fillcolor"] = css
-    return shape
-
-
-def _shape(element, theme, x_scale: str, y_scale: str) -> dict | None:
-    """An HLine / VLine / Span / Rect / Ellipse / Polygon as a Plotly layout
-    shape ([D70]/[D97])."""
-    css = _ref_css(element, theme)
-    if isinstance(element, HLine):
-        return _line_shape(_shape_coord(element.y, y_scale), "y", element, css)
-    if isinstance(element, VLine):
-        return _line_shape(_shape_coord(element.x, x_scale), "x", element, css)
-    if isinstance(element, Rect):
-        x0, x1 = _shape_coord(element.x0, x_scale), _shape_coord(element.x1, x_scale)
-        y0, y1 = _shape_coord(element.y0, y_scale), _shape_coord(element.y1, y_scale)
-        if None in (x0, x1, y0, y1):
-            return None
-        shape = {"type": "rect", "xref": "x", "yref": "y",
-                 "x0": x0, "x1": x1, "y0": y0, "y1": y1,
-                 "opacity": element.alpha,
-                 "line": {"color": css, "width": element.line_width}}
-        if element.fill:
-            shape["fillcolor"] = css
-        return shape
-    if isinstance(element, Ellipse):
-        from ...core._geometry import ellipse_points  # noqa: PLC0415
-
-        return _outline_shape(
-            ellipse_points(element.cx, element.cy, element.rx, element.ry,
-                           element.angle), element, css, x_scale, y_scale)
-    if isinstance(element, Polygon):
-        from ...core._geometry import close_points  # noqa: PLC0415
-
-        return _outline_shape(close_points(element.points), element, css,
-                              x_scale, y_scale)
-    axis = "y" if element.orient == "h" else "x"       # Span
-    scale = y_scale if axis == "y" else x_scale
-    lo, hi = _shape_coord(element.lo, scale), _shape_coord(element.hi, scale)
-    if lo is None or hi is None:
-        return None
-    free = "x" if axis == "y" else "y"
-    return {
-        "type": "rect",
-        f"{free}ref": "paper", f"{free}0": 0.0, f"{free}1": 1.0,
-        f"{axis}ref": axis, f"{axis}0": lo, f"{axis}1": hi,
-        "fillcolor": css, "opacity": element.alpha, "line": {"width": 0},
-    }
 
 
 # Arrow head vocabulary → Plotly arrowside ([D96]).
 _ARROWSIDE = {"end": "end", "both": "end+start", "none": "none"}
 _YANCHOR = {"center": "middle", "top": "top", "bottom": "bottom"}
 
-
-def _note(element, theme, x_scale: str, y_scale: str) -> dict | None:
-    """A Text or Arrow element as a Plotly layout annotation ([D96])."""
-    css = _ref_css(element, theme)
-    if isinstance(element, Arrow):
-        x1, y1 = _shape_coord(element.x1, x_scale), _shape_coord(element.y1, y_scale)
-        x0, y0 = _shape_coord(element.x0, x_scale), _shape_coord(element.y0, y_scale)
-        if None in (x0, y0, x1, y1):
-            return None
-        return {"x": x1, "y": y1, "ax": x0, "ay": y0,
-                "axref": "x", "ayref": "y", "text": "", "showarrow": True,
-                "arrowhead": 2, "arrowside": _ARROWSIDE[element.head],
-                "arrowcolor": css, "arrowwidth": max(element.line_width, 0.3),
-                "opacity": element.alpha}
-    x, y = _shape_coord(element.x, x_scale), _shape_coord(element.y, y_scale)
-    if x is None or y is None:
-        return None
-    font: dict = {"color": css}
-    if element.size is not None:
-        font["size"] = element.size
-    note = {"x": x, "y": y, "text": element.text.replace("\n", "<br>"),
-            "showarrow": False, "font": font, "xanchor": element.anchor,
-            "yanchor": _YANCHOR[element.anchor_v],
-            "textangle": -element.rotation}  # Plotly rotates clockwise
-    if element.frame:
-        note["bordercolor"] = css
-        note["borderwidth"] = 1
-        note["bgcolor"] = _css(theme.background)
-        note["borderpad"] = 3
-    return note
 
 
 def build(node, theme) -> tuple[dict, list[str]]:
@@ -1011,23 +828,32 @@ def build(node, theme) -> tuple[dict, list[str]]:
                 "RawFigure is a whole figure and can't be overlaid; render it on its own"
             )
         check_recommended(
-            element, backend_name="webengine",
-            honored=HONORED.get(type(element), frozenset()),
+            element, backend_name="webengine", honored=honored_for(type(element)),
         )
-        if isinstance(element, RefLine):
-            reflines.append(element)
+        builder = _TRACE_BUILDERS.get(type(element))  # native fast path wins
+        if (builder is None and isinstance(element, Element)
+                and type(element).lower is not Element.lower):
+            from ...core.lowering import LowerContext  # noqa: PLC0415
+            from ._marks import lowered_ops  # noqa: PLC0415
+
+            consumes_slot = element.DATA_KIND != "none"  # [D70] palette rule
+            lowered = element.lower(LowerContext(
+                theme=theme, series_index=idx if consumes_slot else 0,
+                show_legend=surf.legend_enabled))
+            for kind, payload in lowered_ops(lowered, element, theme,
+                                             x_scale, y_scale):
+                if not isinstance(payload, dict):
+                    reflines.append(payload)  # a sloped Rule — final-span pass ([D99])
+                elif kind == "trace":
+                    traces.append(payload)
+                    source_ids.append(element.id)
+                elif kind == "shape":
+                    shapes.append(payload)
+                else:
+                    notes.append(payload)
+            if consumes_slot:
+                idx += 1
             continue
-        if isinstance(element, (HLine, VLine, Span, Rect, Ellipse, Polygon)):
-            shape = _shape(element, theme, x_scale, y_scale)
-            if shape is not None:
-                shapes.append(shape)
-            continue
-        if isinstance(element, (Text, Arrow)):
-            note = _note(element, theme, x_scale, y_scale)
-            if note is not None:
-                notes.append(note)
-            continue
-        builder = _TRACE_BUILDERS.get(type(element))
         if builder is None:
             raise RendererMissingError(
                 f"webengine has no Plotly renderer for {type(element).__name__}"

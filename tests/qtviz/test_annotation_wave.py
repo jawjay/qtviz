@@ -94,12 +94,12 @@ def test_webengine_shapes():
             * qv.Polygon([(0, 0), (1, 0), (0.5, 1)]))
     shapes = _figure.build_figure(node, qv.Theme.light())["layout"]["shapes"]
     kinds = sorted(s["type"] for s in shapes)
-    assert kinds == ["path", "path", "rect"]
-    rect = next(s for s in shapes if s["type"] == "rect")
-    assert "fillcolor" in rect and rect["x0"] == 0.5
-    paths = [s for s in shapes if s["type"] == "path"]
-    assert all(s["path"].startswith("M ") and s["path"].endswith("Z") for s in paths)
-    assert all("fillcolor" not in s for s in paths)  # outline-only defaults
+    # [D122]: every shape is ONE svg-path from the shared core geometry
+    assert kinds == ["path", "path", "path"]
+    assert all(s["path"].startswith("M ") and s["path"].endswith("Z") for s in shapes)
+    filled = [s for s in shapes if "fillcolor" in s]
+    assert len(filled) == 1 and "M 0.5" in filled[0]["path"]  # the Rect, filled
+    assert sum("fillcolor" not in s for s in shapes) == 2  # outline-only defaults
 
 
 @pytest.mark.tier1

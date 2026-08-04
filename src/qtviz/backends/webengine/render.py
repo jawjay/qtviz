@@ -20,7 +20,7 @@ from ...core.backend import RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.event import EventBus, RangeEvent
 from ...core.threading import require_gui_thread
-from ...elements import ANNOTATION_TYPES, RawFigure
+from ...elements import RawFigure
 from . import _figure, _translate
 from .ext.plotly.backend import PlotlyBackend
 
@@ -173,15 +173,19 @@ class WebEngineBackend:
             self.renderers.register(element_type, _figure._TRACE_BUILDERS[element_type])
 
     def supports(self, element_type: type) -> bool:
-        # RawFigure is a passthrough (D26); annotations render as layout
-        # shapes/annotations ([D70]) — neither has a trace renderer.
-        return (element_type is RawFigure
-                or element_type in ANNOTATION_TYPES
-                or self.renderers.get(element_type) is not None)
+        # RawFigure is a passthrough (D26); everything else is a native trace
+        # builder or a [D122] lowering the mark adapter can draw.
+        if element_type is RawFigure or self.renderers.get(element_type) is not None:
+            return True
+        from ...core.element import Element  # noqa: PLC0415
+
+        return (issubclass(element_type, Element)
+                and element_type.lower is not Element.lower)
 
     def honored_options(self, element_type: type) -> frozenset[str]:
-        """Recommended options this backend honors for `element_type` (spec §3.4)."""
-        return _figure.HONORED.get(element_type, frozenset())
+        """Recommended options this backend honors (spec §3.4): the native
+        table row, else the element's own [D123] lowering declaration."""
+        return _figure.honored_for(element_type)
 
     def can_host(self, kind: str) -> bool:
         # No native mixed panes — the LayoutHost composes per-pane WebBridgeViews.

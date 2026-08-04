@@ -70,12 +70,15 @@ def test_layout_carries_theme(table):
 
 def test_supports_the_data_vocabulary():
     names = {t.__name__ for t in _figure.supported_types()}
+    # native trace builders only — the geometry tail (Quiver/Stem/Streamlines
+    # + annotations) now arrives through the [D122] mark adapter instead
     assert names == {
         "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars", "Spread",
         "BoxPlot", "Violin",
-        "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",  # parity 3+6, wave 3
-        "Stem", "Streamlines",                               # waves 1.4/1.5
+        "Area", "Ecdf", "Pie", "Contour", "Mesh",
     }
+    for lowered in (qv.Quiver, qv.Stem, qv.Streamlines, qv.HLine, qv.Text):
+        assert qv.backends.get("webengine").supports(lowered)
 
 
 def test_every_element_builds_at_least_one_trace(make_elements):
