@@ -27,6 +27,7 @@ from ...core.compose import Overlay, effective_scales, surface_of
 from ...core.element import Element
 from ...core.encoding import channel_title
 from ...data import resolve_node
+from ...data.pipeline import GridAux, RasterAux, raster_aux
 from ...elements import (
     Area,
     Bars,
@@ -47,6 +48,11 @@ from ...errors import IncompatibleOverlayError, RendererMissingError
 
 _SIZE_LO, _SIZE_HI = 5.0, 18.0
 _DASH = {"solid": "solid", "dashed": "dash", "dotted": "dot", "dashdot": "dashdot"}
+
+# [D124] typed aux reads — a missing aux reads as all-None fields
+_NO_AUX = RasterAux(None, None, None)
+_NO_GRID = GridAux(None)
+
 
 
 def _dash(style) -> str:
@@ -337,7 +343,7 @@ def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
 
 
 def _image_trace(element: Image, theme, idx: int) -> list[dict]:
-    agg = getattr(element, "_raster_agg", None)
+    agg = (raster_aux(element) or _NO_AUX).agg
     if agg is not None:  # datashaded raster: shade with the View's Theme (C5, matches native)
         from ...core.palette import palettes  # noqa: PLC0415
         from ...ext.datashader import shade_aggregate  # noqa: PLC0415

@@ -17,7 +17,10 @@ def raster_source_xy(element):
     resolved x/y when its data is eager (they're in memory anyway), or
     `(source_id, None, None)` for a lazy source — row identity there would
     force a full scan per brush, so only the bounds are emitted."""
-    source = getattr(element, "_raster_source", None)
+    from ...data.pipeline import raster_aux  # noqa: PLC0415
+
+    aux = raster_aux(element)
+    source = aux.source if aux else None
     if not isinstance(element, Image) or source is None:
         return None
     ref = source.data

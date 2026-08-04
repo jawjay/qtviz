@@ -49,8 +49,7 @@ class Element(Immutable):
     # [D124] one data contract: every element resolves `.data` (a class-level
     # `None` covers the data-less annotation class, so consumers write
     # `node.data`, never `getattr(node, "data", None)`), and `DATA_KIND`
-    # declares how it consumes data. The resolve pipeline still duck-types in
-    # wave 0–3; wave 4 switches it to dispatch on `DATA_KIND`.
+    # declares how it consumes data — the resolve pipeline dispatches on it.
     data: Any = None
     DATA_KIND: str = "tabular"  # "tabular" | "gridded" | "none"
     REQUIRED_OPTIONS: tuple[str, ...] = ()

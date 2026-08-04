@@ -14,6 +14,7 @@ import numpy as np
 
 from ...core.color import Color
 from ...core.encoding import channel_title
+from ...data.pipeline import GridAux, RasterAux, grid_aux, raster_aux
 from ...elements import (
     Area,
     Bars,
@@ -31,6 +32,13 @@ from ...elements import (
 )
 
 _LINE_STYLE = {"solid": "-", "dashed": "--", "dotted": ":", "dashdot": "-."}
+
+# [D124] typed aux reads — a missing aux reads as all-None fields
+_NO_AUX = RasterAux(None, None, None)
+_NO_GRID = GridAux(None)
+
+
+
 
 
 def _ls(style):
@@ -365,7 +373,7 @@ def render_histogram(element: Histogram, ctx):
 
 def render_image(element: Image, ctx):
     x0, y0, x1, y1 = element.extent
-    agg = getattr(element, "_raster_agg", None)
+    agg = (raster_aux(element) or _NO_AUX).agg
     if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
         result = _shade_raster(element, agg, ctx.theme)
         artist = ctx.parent_axes.imshow(
@@ -376,7 +384,7 @@ def render_image(element: Image, ctx):
             _add_legend(ctx.parent_axes, result.legend, ctx.theme, ctx.legend_position)
         _wire_dynamic_raster(element, artist, ctx)
         return artist
-    if getattr(element, "_grid_source", None) is not None:
+    if (grid_aux(element) or _NO_GRID).source is not None:
         # decimated lazy grid ([D74]) — shaded like the regrid loop ([D75])
         from ...core.palette import palettes  # noqa: PLC0415
         from ...data.regrid import shade_values  # noqa: PLC0415
@@ -422,14 +430,14 @@ def _shade_raster(element, aggregate, theme):
 def _raster_title(element) -> str | None:
     """Legend title for a datashaded raster — the source's `color_by` column, or
     `None` (→ a bare density `count` is labeled "density")."""
-    return getattr(getattr(element, "_raster_source", None), "color_by", None)
+    return getattr((raster_aux(element) or _NO_AUX).source, "color_by", None)
 
 
 def _wire_dynamic_raster(element, artist, ctx) -> None:
     """If this Image came from a datashaded Scatter/Curve, re-aggregate the source
     to the viewport on pan/zoom (4b) and emit the aggregated value under the cursor
     on hover ([D46]). Both are parked on the Axes so the RenderHandle disposes them."""
-    source = getattr(element, "_raster_source", None)
+    source = (raster_aux(element) or _NO_AUX).source
     if source is None:
         return
     from types import SimpleNamespace  # noqa: PLC0415
@@ -442,7 +450,7 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
     ax = ctx.parent_axes
     theme = ctx.theme
     position = ctx.legend_position
-    holder = SimpleNamespace(aggregate=getattr(element, "_raster_aggregate", None))
+    holder = SimpleNamespace(aggregate=(raster_aux(element) or _NO_AUX).aggregate)
     target = MplRasterTarget(artist, ax)
     refresh_legend = (  # refresh on re-aggregation (C3); a suppressed legend stays off
         (lambda lg: _add_legend(ax, lg, theme, position)) if ctx.show_legend
@@ -466,7 +474,7 @@ def _wire_dynamic_raster(element, artist, ctx) -> None:
 def _wire_dynamic_regrid(element, artist, ctx) -> None:
     """Viewport-regrid loop for a decimated lazy grid ([D75]) — mirrors the
     pyqtgraph wiring through the shared RasterController."""
-    source = getattr(element, "_grid_source", None)
+    source = (grid_aux(element) or _NO_GRID).source
     if source is None:
         return
     from ...core.palette import palettes  # noqa: PLC0415

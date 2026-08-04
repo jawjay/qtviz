@@ -9,16 +9,51 @@
 All of this runs off the GUI thread for lazy / rasterized nodes (see `View`),
 so a dask aggregation or compute never blocks the UI.
 
-Duck-typed (a node with `channels()` is an Element; one with `children` is a
-composite) so this module stays free of a `core` import cycle.
+Dispatch is on the [D124] `DATA_KIND` declaration (a node carrying one is an
+Element; one with `children` is a composite) so this module stays free of a
+`core` import cycle. The big-data side-channels ride a **typed** `_aux` slot
+(`RasterAux` / `GridAux`) instead of loose `object.__setattr__` attributes —
+same lifecycle (excluded from value identity), greppable, un-misspellable.
 """
 
 from __future__ import annotations
 
 import importlib.util
+from dataclasses import dataclass
+from typing import Any
 
 from ..errors import ValidationError
 from .ref import EagerTabularRef
+
+
+@dataclass(frozen=True)
+class RasterAux:
+    """[D124] the datashader side-channel: the (lazy) source element so a
+    backend can re-aggregate to the viewport on pan/zoom ([D21]); the theme-free
+    Aggregate so it can re-shade with its Theme + emit a legend (C2/C3); and the
+    pre-shade aggregate for hover reverse-lookup ([D46])."""
+
+    source: Any
+    agg: Any
+    aggregate: Any
+
+
+@dataclass(frozen=True)
+class GridAux:
+    """[D74]/[D75] decimated-lazy-grid side-channel: the lazy source ref the
+    viewport-regrid loop re-windows."""
+
+    source: Any
+
+
+def raster_aux(element) -> RasterAux | None:
+    aux = getattr(element, "_aux", None)
+    return aux if isinstance(aux, RasterAux) else None
+
+
+def grid_aux(element) -> GridAux | None:
+    aux = getattr(element, "_aux", None)
+    return aux if isinstance(aux, GridAux) else None
 
 # Auto-route to datashader above this many points; configurable via
 # set_raster_threshold. Lazy sources of unknown size are routed too (they may be
@@ -82,31 +117,25 @@ def _rasterize(node):
     aggregate = aggregate_element(node, width=width, height=height)
     result = shade_aggregate(aggregate)  # default palette; a backend re-shades with its Theme (C2)
     image = Image(result.rgba, extent=result.bounds, id=node.id)  # carry source id for events
-    # Stash the (lazy) source element so a backend can re-aggregate to the viewport
-    # on pan/zoom (4b, D21); the full (theme-free) Aggregate so a backend can re-shade
-    # the initial raster with its Theme + emit a legend (C2/C3); and the pre-shade
-    # aggregate for hover reverse-lookup ([D46]). Private → excluded from value identity.
-    object.__setattr__(image, "_raster_source", node)
-    object.__setattr__(image, "_raster_agg", aggregate)
-    object.__setattr__(image, "_raster_aggregate", result.aggregate)
+    object.__setattr__(image, "_aux", RasterAux(  # typed side-channel ([D124])
+        source=node, agg=aggregate, aggregate=result.aggregate))
     return image
 
 
 def resolve_node(node):
     """Resolve channel accessors / rasterize. Idempotent: already-resolved
-    Elements pass through. Safe off the GUI thread — pure data, no Qt."""
-    if hasattr(node, "channels"):  # Element
-        if getattr(node, "_resolved", False):
-            return node
+    Elements pass through. Safe off the GUI thread — pure data, no Qt.
+    Dispatch is the [D124] `DATA_KIND` declaration, not duck-typing."""
+    kind = getattr(node, "DATA_KIND", None)
+    if kind is not None:  # Element
+        if kind == "none" or getattr(node, "_resolved", False):
+            return node  # data-less (annotations, RawFigure) pass through
         if _needs_rasterize(node):
             return _rasterize(node)  # Scatter → datashaded Image
-        channels = node.channels()
-        if not channels:
-            # gridded element (e.g. Image): no tabular channels, but a lazy grid
-            # (dask/zarr) must still be materialized here, off the GUI thread.
-            # `getattr(..., "data", None)` keeps data-less elements (RawFigure)
-            # passing through untouched.
-            if getattr(getattr(node, "data", None), "is_lazy", False):
+        if kind == "gridded":
+            # no tabular channels, but a lazy grid (dask/zarr) must still be
+            # materialized here, off the GUI thread.
+            if getattr(node.data, "is_lazy", False):
                 ref = node.data
                 # [D74]: budget a lazy grid at screen raster instead of computing
                 # it whole (4× raster size = headroom above widget resolution).
@@ -115,12 +144,11 @@ def resolve_node(node):
                 shape = ref.schema().shape or ()
                 if len(shape) == 2 and shape[0] * shape[1] > budget:
                     # decimated → keep the lazy source reachable so the render
-                    # can wire the viewport-regrid loop ([D75]); private, like
-                    # the datashader _raster_source.
-                    object.__setattr__(resolved, "_grid_source", ref)
+                    # can wire the viewport-regrid loop ([D75])
+                    object.__setattr__(resolved, "_aux", GridAux(source=ref))
                 return resolved
             return node
-        arrays = node.data.resolve_channels(channels)
+        arrays = node.data.resolve_channels(node.channels())
         return node._replace_data(EagerTabularRef(arrays, arrays))
     if hasattr(node, "children"):  # Overlay / Layout
         return node.with_(children=tuple(resolve_node(c) for c in node.children))
@@ -130,9 +158,12 @@ def resolve_node(node):
 def node_is_lazy(node) -> bool:
     """True if any Element needs off-thread work — an out-of-core (lazy) data ref
     or a datashader rasterization."""
-    if hasattr(node, "channels"):
-        lazy_ref = bool(getattr(getattr(node, "data", None), "is_lazy", False))
-        return lazy_ref or _needs_rasterize(node)
+    kind = getattr(node, "DATA_KIND", None)
+    if kind is not None:
+        if kind == "none":
+            return False
+        return (bool(getattr(node.data, "is_lazy", False))
+                or _needs_rasterize(node))
     if hasattr(node, "children"):
         return any(node_is_lazy(c) for c in node.children)
     return False

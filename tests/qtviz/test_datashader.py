@@ -183,7 +183,8 @@ def test_resolve_transforms_curve_to_image():
     image = pipeline.resolve_node(curve)
     assert isinstance(image, qv.Image)
     assert image.id == curve.id
-    assert getattr(image, "_raster_source", None) is curve  # for re-aggregation (4b)
+    from qtviz.data.pipeline import raster_aux
+    assert raster_aux(image).source is curve  # for re-aggregation (4b)
 
 
 def test_rasterize_element_dispatches_by_glyph(typed_data):

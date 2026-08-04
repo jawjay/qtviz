@@ -12,6 +12,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from qtviz.data.pipeline import grid_aux
+
 qv = pytest.importorskip("qtviz")
 
 from qtviz.data import as_data_ref, resolve_node  # noqa: E402
@@ -115,12 +117,12 @@ def test_resolve_budgets_lazy_grid_and_stashes_source():
     resolved = resolve_node(el)
     values = resolved.data.grid().values
     assert values.size < 2048 * 2048                    # decimated, not full
-    assert getattr(resolved, "_grid_source", None) is not None
-    assert resolved._grid_source.is_lazy               # the ORIGINAL lazy ref
+    assert grid_aux(resolved) is not None
+    assert grid_aux(resolved).source.is_lazy               # the ORIGINAL lazy ref
 
 
 def test_resolve_leaves_small_lazy_grid_full_and_unstashed():
     z, _ = _big_zarr(shape=(32, 32), chunks=(16, 16))
     resolved = resolve_node(qv.Image(z, extent=(0.0, 0.0, 1.0, 1.0)))
     assert resolved.data.grid().values.shape == (32, 32)
-    assert getattr(resolved, "_grid_source", None) is None  # nothing to sharpen
+    assert grid_aux(resolved) is None  # nothing to sharpen
