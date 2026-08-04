@@ -41,6 +41,30 @@ Also:
   `Scatter(matplotlib_rasterized=)` (backend leak; `handle.native()` is the
   escape hatch).
 
+### Changed (wave 3 — [D129]/[D130]/[D131] semantic surface + more lowering)
+
+- **[D130] one colormap spec**: `norm=` accepts a name or `qv.Norm(kind, *,
+  gamma=, linthresh=, levels=)` (new public name); `clim=(lo, hi)` is the
+  separate range clamp. Replaces `vmin/vmax/gamma/linthresh/levels` on
+  Image/Mesh/Heatmap and `Scatter(color_norm=)` (now `norm=`). A `Norm`
+  parameter set for a kind that ignores it raises — the old "gamma needs
+  power" mistakes are structurally impossible.
+- **Spread redesigned** ([D129]): `Spread(data, x=|y=, lo=, hi=)` — exactly
+  one of `x`/`y` picks the orientation; six mutually-constrained accessors
+  become three. Lowers to a `Band` mark on every backend.
+- **Streamlines is data-first** ([D129]): `Streamlines({"u": U, "v": V},
+  extent=…, u=, v=)` — u/v are full channel accessors (expressions/callables
+  work), structurally identical to Quiver; the 2-D grid contract is checked
+  at geometry time.
+- **`annotate=` union** ([D131]): `True` ≡ `"auto"`, `False` ≡ off, a format
+  spec picks the text — one rule on Bars/Heatmap/Contour.
+- **Ecdf lowers** to a post-step `Polyline`; `Band` joins the drawn mark set.
+- **Tier amendments** (recorded in the design doc): the stats/raster family
+  (Histogram, Bars, Area, BoxPlot, Violin, Heatmap, Contour) stays native —
+  their numbers are already core-computed ([D67]/[D93]/[D105]); the per-backend
+  remainder is engine bar/fill idioms and category-axis side effects a forced
+  lowering would visibly change.
+
 ### Internal (wave 2 — the geometry tail renders through marks)
 
 - Per-backend mark adapters (`backends/*/_marks.py`): ~7 drawers each, written

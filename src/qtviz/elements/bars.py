@@ -35,7 +35,7 @@ class Bars(Element):
         orient: Literal["v", "h"] = "v",
         color: ColorSpec | None = None,
         color_by: Accessor | None = None,
-        annotate: str | None = None,
+        annotate: bool | str | None = None,
         label: str | None = None,
         backend_hint: str | None = None,
         id=None,
@@ -45,6 +45,11 @@ class Bars(Element):
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")
         if mode != "grouped" and by is None:
             raise ValidationError(f"Bars mode={mode!r} requires by= (it stacks the groups)")
+        # [D131] union: True ≡ "auto", False ≡ off, a format spec picks the text
+        if annotate is True:
+            annotate = "auto"
+        elif annotate is False:
+            annotate = None
         if annotate is not None:  # value labels format via the [D86] vocabulary
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 

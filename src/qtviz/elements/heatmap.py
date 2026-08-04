@@ -39,7 +39,7 @@ class Heatmap(NormedRaster, Element):
         aggregator: Literal["mean", "sum", "count", "max", "min", "last"] = "mean",
         norm: str | Norm = "linear",
         clim: tuple[float | None, float | None] | None = None,
-        annotate: str | None = None,
+        annotate: bool | str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -50,6 +50,11 @@ class Heatmap(NormedRaster, Element):
                 f"aggregator must be one of {GRID_AGGS}, got {aggregator!r}"
             )
         self.norm, self.clim = check_norm_clim(norm, clim, who="Heatmap")
+        # [D131] union: True ≡ "auto", False ≡ off, a format spec picks the text
+        if annotate is True:
+            annotate = "auto"
+        elif annotate is False:
+            annotate = None
         if annotate is not None and annotate != "auto":
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 

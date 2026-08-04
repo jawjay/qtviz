@@ -72,3 +72,12 @@ def test_image_requires_gridded_data(table):
     # Image needs an array grid; a tabular dict has no 2-D values → clear error.
     with pytest.raises((ValueError, TypeError)):
         qv.Image(table, extent=(0, 0, 1, 1))
+
+
+@pytest.mark.tier1
+def test_annotate_bool_union(table):
+    # [D131]: True ≡ "auto", False ≡ off — one union across Bars/Heatmap/Contour
+    assert qv.Bars(table, x="cat", y="y", annotate=True).annotate == "auto"
+    assert qv.Bars(table, x="cat", y="y", annotate=False).annotate is None
+    assert qv.Heatmap(table, x="x", y="y", z="z", annotate=True).annotate == "auto"
+    assert qv.Heatmap(table, x="x", y="y", z="z", annotate=".1f").annotate == ".1f"
