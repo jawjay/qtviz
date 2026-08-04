@@ -41,6 +41,28 @@ Also:
   `Scatter(matplotlib_rasterized=)` (backend leak; `handle.native()` is the
   escape hatch).
 
+### Internal (wave 2 — the geometry tail renders through marks)
+
+- Per-backend mark adapters (`backends/*/_marks.py`): ~7 drawers each, written
+  once; `render_lowered` dispatches any element whose `lower()` is overridden.
+  Native registrations win (fast-path override) — Scatter/Curve/Image/Mesh/
+  Pie/Bars untouched.
+- **12 elements now render through one core lowering** (Quiver, Streamlines,
+  Stem + the 9 annotations): 12 renderer entries deleted from each native
+  backend, the webengine annotation isinstance ladder deleted, their HONORED
+  rows replaced by per-element `HONORED_BY_LOWERING` + the tier-1 perturbation
+  guard. Migration gate: pre/post captures pixel-identical; the mpl/pg-heavy
+  example screenshots are byte-identical.
+- Event wiring declared, not isinstance'd ([D124]): brush registration via
+  `Element.select_xy()` (Scatter/Curve/Stem), pick wiring via
+  `Markers.pickable` inside the adapters.
+- Tier amendments recorded in the design doc: **ErrorBars stays native**
+  (every engine uses its native errorbar primitive with delta/cap semantics);
+  **`ArrowMark` added** to the vocabulary (engine-native screen-space heads).
+- Native escape-hatch types changed for shapes: one Polygon patch (mpl) / one
+  svg-path shape (webengine) built from the shared core geometry — the
+  `handle.native()` return type is non-contractual (docs/stability.md).
+
 ### Internal (wave 0 — IR foundation, no behavior change)
 
 - `core/marks.py` — the typed Mark vocabulary ([D121]): 8 frozen mark types
