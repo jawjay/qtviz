@@ -11,6 +11,8 @@ import pytest
 
 qv = pytest.importorskip("qtviz")
 
+# negotiation is internal machinery in 2.0 ([D135]) — import from core
+from qtviz.core.compose import negotiate  # noqa: E402
 from qtviz.elements.raw_figure import _detect_kind  # noqa: E402
 
 pytestmark = pytest.mark.tier1
@@ -64,7 +66,7 @@ def test_rawfigure_negotiates_only_to_webengine():
     import qtviz.backends as B
 
     rf = qv.RawFigure(object(), kind="plotly")
-    assert qv.negotiate(rf, "auto") == "webengine"
+    assert negotiate(rf, "auto") == "webengine"
     assert B.get("webengine").supports(qv.RawFigure)
     assert not B.get("pyqtgraph").supports(qv.RawFigure)
 

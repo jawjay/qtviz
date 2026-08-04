@@ -12,6 +12,9 @@ import pytest
 
 qv = pytest.importorskip("qtviz")
 
+# negotiation is internal machinery in 2.0 ([D135]) — import from core
+from qtviz.core.compose import auto_negotiate, negotiate  # noqa: E402
+
 _T = {"x": [0.0, 1.0, 2.0, 0.0, 1.0, 2.0],
       "y": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
       "g": ["a", "a", "a", "b", "b", "b"]}
@@ -62,10 +65,10 @@ def test_pie_negotiates_around_pyqtgraph():
     from qtviz.errors import UnsupportedElementError
 
     el = qv.Pie(_PIE, value="v")
-    assert qv.auto_negotiate(el) in ("matplotlib", "webengine")
+    assert auto_negotiate(el) in ("matplotlib", "webengine")
     if "pyqtgraph" in qv.backends.list_available():
         with pytest.raises(UnsupportedElementError):
-            qv.negotiate(el, "pyqtgraph")
+            negotiate(el, "pyqtgraph")
 
 
 # ── tier 1: webengine figure spec (pure) ─────────────────────────────────────
