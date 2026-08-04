@@ -1,6 +1,6 @@
 """0.4 increment 4 — color normalization ([D71], milestone-0.4 §5).
 
-`Scatter(color_by=…, color_norm="log")` maps colors through log10. Legend
+`Scatter(color_by=…, norm="log")` maps colors through log10. Legend
 honesty ([D48]): a log-normed color↔value relation is non-linear, so the
 emitted Legend is `linear=False` → an endpoints-only key on every backend,
 never a gradient bar implying linear ticks.
@@ -50,15 +50,15 @@ def test_log_norm_nonpositive_warns():
 @pytest.mark.tier1
 def test_color_norm_validation():
     with pytest.raises(ValidationError):
-        qv.Scatter(_DATA, x="x", y="y", color_by="mag", color_norm="sqrt")
+        qv.Scatter(_DATA, x="x", y="y", color_by="mag", norm="sqrt")
     with pytest.raises(ValidationError):
-        qv.Scatter(_DATA, x="x", y="y", color_norm="log")       # needs color_by
+        qv.Scatter(_DATA, x="x", y="y", norm="log")       # needs color_by
 
 
 # ── Tier-2: honest legends on the native backends ────────────────────────────
 @pytest.mark.tier2
 def test_pyqtgraph_log_norm_shows_endpoints_key_not_gradient(qtbot):
-    el = qv.Scatter(_DATA, x="x", y="y", color_by="mag", color_norm="log")
+    el = qv.Scatter(_DATA, x="x", y="y", color_by="mag", norm="log")
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     plot = view.handle.plots[0]
@@ -71,7 +71,7 @@ def test_pyqtgraph_log_norm_shows_endpoints_key_not_gradient(qtbot):
 def test_matplotlib_log_norm_shows_endpoints_key(qtbot):
     if not _has("matplotlib"):
         pytest.skip("matplotlib not registered")
-    el = qv.Scatter(_DATA, x="x", y="y", color_by="mag", color_norm="log")
+    el = qv.Scatter(_DATA, x="x", y="y", color_by="mag", norm="log")
     view = qv.View(el, backend="matplotlib")
     qtbot.addWidget(view)
     ax = view.handle.axes[0]
@@ -84,7 +84,7 @@ def test_matplotlib_log_norm_shows_endpoints_key(qtbot):
 def test_webengine_log_norm_uses_mapped_colors_not_linear_colorbar():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Scatter(_DATA, x="x", y="y", color_by="mag", color_norm="log")
+    el = qv.Scatter(_DATA, x="x", y="y", color_by="mag", norm="log")
     fig = _figure.build_figure(el, qv.Theme.light())
     marker = fig["data"][0]["marker"]
     assert isinstance(marker["color"], list)                    # pre-mapped css

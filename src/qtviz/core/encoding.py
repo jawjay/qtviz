@@ -166,6 +166,73 @@ def _symlog_inv(s: float, linthresh: float) -> float:
     return float(np.sign(s) * linthresh * 10.0 ** (abs(s) / linthresh - 1.0))
 
 
+class Norm:
+    """[D130] the one colormap-normalization spec, replacing the per-element
+    `norm/vmin/vmax/gamma/linthresh/levels` cluster. The string shorthand
+    (`norm="log"`) covers the 90% case; `Norm` carries only the transform's
+    own parameters — the value range clamp is the separate `clim=` ([D130]).
+    A parameter set for a kind that ignores it raises: accept-then-ignore is
+    the one sin this library refuses ([D51])."""
+
+    kind: str
+    gamma: float
+    linthresh: float
+    levels: tuple[float, ...] | None
+
+    __slots__ = ("kind", "gamma", "linthresh", "levels")
+
+    def __init__(self, kind: str = "linear", *, gamma: float = 1.0,
+                 linthresh: float = 1.0, levels=None) -> None:
+        from ..errors import ValidationError  # noqa: PLC0415
+
+        if kind not in RASTER_NORMS:
+            raise ValidationError(f"Norm kind must be one of {RASTER_NORMS}, got {kind!r}")
+        if float(gamma) <= 0:
+            raise ValidationError(f"Norm gamma must be positive, got {gamma!r}")
+        if float(gamma) != 1.0 and kind != "power":
+            raise ValidationError("Norm: gamma requires kind='power'")
+        if float(linthresh) <= 0:
+            raise ValidationError(f"Norm linthresh must be positive, got {linthresh!r}")
+        if float(linthresh) != 1.0 and kind != "symlog":
+            raise ValidationError("Norm: linthresh requires kind='symlog'")
+        if kind == "boundary":
+            if levels is None or len(levels) < 2:
+                raise ValidationError("Norm: kind='boundary' needs >= 2 ascending levels")
+            lv = tuple(float(v) for v in levels)
+            if any(b <= a for a, b in zip(lv, lv[1:], strict=False)):
+                raise ValidationError(f"Norm levels must be ascending, got {list(lv)}")
+        elif levels is not None:
+            raise ValidationError("Norm: levels requires kind='boundary'")
+        object.__setattr__(self, "kind", str(kind))
+        object.__setattr__(self, "gamma", float(gamma))
+        object.__setattr__(self, "linthresh", float(linthresh))
+        object.__setattr__(self, "levels",
+                           tuple(float(v) for v in levels) if levels is not None else None)
+
+    def __setattr__(self, *_a) -> None:
+        raise AttributeError("Norm is immutable")
+
+    def _key(self):
+        return (self.kind, self.gamma, self.linthresh, self.levels)
+
+    def __eq__(self, other) -> bool:
+        return isinstance(other, Norm) and self._key() == other._key()
+
+    def __hash__(self) -> int:
+        return hash(self._key())
+
+    def __repr__(self) -> str:
+        extras = []
+        if self.gamma != 1.0:
+            extras.append(f"gamma={self.gamma!r}")
+        if self.linthresh != 1.0:
+            extras.append(f"linthresh={self.linthresh!r}")
+        if self.levels is not None:
+            extras.append(f"levels={list(self.levels)!r}")
+        inner = ", ".join([repr(self.kind), *extras])
+        return f"Norm({inner})"
+
+
 def normalize_values(values, *, norm: str = "linear", vmin=None, vmax=None,
                      gamma: float = 1.0, linthresh: float = 1.0, levels=None):
     """Raster color normalization ([D105]), computed once in core so every
@@ -342,6 +409,9 @@ def heatmap_cell_labels(
 def norm_engaged(element) -> bool:
     """Whether the [D105] norm surface is in use — legends/limits only then,
     so pre-existing plain rasters keep their exact look."""
-    return (getattr(element, "norm", "linear") != "linear"
+    kind = getattr(element, "norm_kind", None)
+    if kind is None:  # non-raster caller — the plain string field
+        kind = getattr(element, "norm", "linear")
+    return (kind != "linear"
             or getattr(element, "vmin", None) is not None
             or getattr(element, "vmax", None) is not None)

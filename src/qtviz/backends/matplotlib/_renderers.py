@@ -94,7 +94,7 @@ def _color_mapping(element, d, theme):
     return map_colors(
         np.asarray(d.series("color")), palette=theme.palette,
         continuous_palette=palettes.get("viridis"), title=channel_title(element.color_by),
-        norm=getattr(element, "color_norm", "linear"),
+        norm=getattr(element, "norm", "linear"),
     )
 
 
@@ -514,9 +514,9 @@ def _norm_display(element, values, ctx, ax):
 
     if not norm_engaged(element):
         return values, {}
-    linthresh = getattr(element, "linthresh", 1.0)
-    levels = getattr(element, "levels", None)
-    normed, lo, hi = normalize_values(values, norm=element.norm, vmin=element.vmin,
+    linthresh = element.linthresh
+    levels = element.norm_levels
+    normed, lo, hi = normalize_values(values, norm=element.norm_kind, vmin=element.vmin,
                                       vmax=element.vmax, gamma=element.gamma,
                                       linthresh=linthresh, levels=levels)
     if ctx.show_legend:
@@ -525,7 +525,7 @@ def _norm_display(element, values, ctx, ax):
         from matplotlib.ticker import FuncFormatter  # noqa: PLC0415
 
         cmap = _mpl_cmap(element.colormap)
-        if element.norm == "boundary":
+        if element.norm_kind == "boundary":
             # discrete bar: the same evenly-sampled bin colors the grid uses,
             # ticked at the level boundaries with their true values ([D114])
             k = len(levels)
@@ -538,7 +538,7 @@ def _norm_display(element, values, ctx, ax):
             sm = ScalarMappable(norm=Normalize(0.0, 1.0), cmap=cmap)
             bar = ax.figure.colorbar(sm, ax=ax)
             bar.ax.yaxis.set_major_formatter(FuncFormatter(
-                lambda t, _p: format(denormalize(t, lo, hi, element.norm, element.gamma,
+                lambda t, _p: format(denormalize(t, lo, hi, element.norm_kind, element.gamma,
                                                  linthresh=linthresh, levels=levels), "g")))
         bar.ax.tick_params(colors=ctx.theme.foreground.mpl())
     return normed, {"vmin": 0.0, "vmax": 1.0}
@@ -797,21 +797,19 @@ RENDERERS: dict[type, Any] = {
 
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "color_norm", "label", "axis"}),
+                        "norm", "label", "axis"}),
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
     Bars: frozenset({"color", "color_by", "by", "mode", "orient",
                      "annotate", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma",
-                     "linthresh", "levels"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
-                       "levels", "annotate"}),
+    Image: frozenset({"colormap", "interpolation", "norm", "clim"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "clim", "annotate"}),
     ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
-    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
+    Mesh: frozenset({"colormap", "norm", "clim"}),
 }

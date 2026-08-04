@@ -20,6 +20,7 @@ from .backends import set_backend_priority, set_default_backend
 from .core.capabilities import Capabilities
 from .core.color import Color, ColorSpec
 from .core.compose import Layout, Overlay, auto_negotiate, negotiate
+from .core.encoding import Norm
 from .core.event import (
     Event,
     HoverEvent,
@@ -99,7 +100,7 @@ __all__ = [
     # streaming ([D76])
     "stream", "StreamRef",
     # styling
-    "Color", "ColorSpec", "Palette", "palettes", "Theme",
+    "Color", "ColorSpec", "Norm", "Palette", "palettes", "Theme",
     "OverlayOptions", "LayoutOptions", "AxisSpec",
     # backends + capabilities
     "Capabilities", "set_default_backend", "set_backend_priority",

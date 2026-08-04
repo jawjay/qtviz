@@ -34,26 +34,29 @@ def test_validation():
     from qtviz.errors import ValidationError
 
     qv.Image(_S, extent=(0, 0, 4, 2), norm="symlog")
-    qv.Image(_S, extent=(0, 0, 4, 2), norm="symlog", linthresh=0.1)
-    qv.Image(_Z, extent=(0, 0, 4, 3), norm="boundary", levels=[0.0, 10.0, 100.0, 1000.0])
+    qv.Image(_S, extent=(0, 0, 4, 2), norm=qv.Norm("symlog", linthresh=0.1))
+    qv.Image(_Z, extent=(0, 0, 4, 3),
+             norm=qv.Norm("boundary", levels=[0.0, 10.0, 100.0, 1000.0]))
+    # [D130]: the cross-field mistakes are now structurally impossible — the
+    # parameters live inside Norm, and Norm validates itself.
     with pytest.raises(ValidationError):
-        qv.Image(_S, extent=(0, 0, 4, 2), norm="symlog", linthresh=0.0)
+        qv.Norm("symlog", linthresh=0.0)
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), linthresh=0.5)      # linthresh needs symlog
+        qv.Norm("linear", linthresh=0.5)                      # linthresh needs symlog
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), norm="boundary")    # boundary needs levels
+        qv.Norm("boundary")                                   # boundary needs levels
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), norm="boundary", levels=[1.0])   # too short
+        qv.Norm("boundary", levels=[1.0])                     # too short
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), norm="boundary", levels=[3.0, 1.0, 2.0])
+        qv.Norm("boundary", levels=[3.0, 1.0, 2.0])           # not ascending
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), levels=[0.0, 1.0])  # levels need boundary
-    # the same guard runs on Heatmap and Mesh (shared check_norm)
+        qv.Norm("linear", levels=[0.0, 1.0])                  # levels need boundary
+    # the same spec guards every raster element (shared check_norm_clim)
     with pytest.raises(ValidationError):
         qv.Heatmap({"x": [0.0], "y": [0.0], "z": [1.0]}, x="x", y="y", z="z",
-                   norm="boundary")
+                   norm="nope")
     with pytest.raises(ValidationError):
-        qv.Mesh(np.ones((1, 1)), x=[0, 1], y=[0, 1], norm="boundary")
+        qv.Mesh(np.ones((1, 1)), x=[0, 1], y=[0, 1], norm="nope")
 
 
 # ── tier 1: symlog core ──────────────────────────────────────────────────────
@@ -124,8 +127,9 @@ def test_webengine_norm_tail_hides_the_scale():
     assert sym["showscale"] is False                          # non-linear rule ([D48])
     assert float(np.nanmax(sym["z"])) == 1.0
     bnd = _figure.build_figure(
-        qv.Image(_Z, extent=(0, 0, 4, 3), norm="boundary",
-                 levels=[0.0, 10.0, 100.0, 1000.0]), light)["data"][0]
+        qv.Image(_Z, extent=(0, 0, 4, 3),
+                 norm=qv.Norm("boundary", levels=[0.0, 10.0, 100.0, 1000.0])),
+        light)["data"][0]
     assert bnd["showscale"] is False
     assert len(np.unique(bnd["z"][np.isfinite(bnd["z"])])) == 3
 
@@ -133,8 +137,8 @@ def test_webengine_norm_tail_hides_the_scale():
 # ── tier 2 ───────────────────────────────────────────────────────────────────
 @pytest.mark.tier2
 @pytest.mark.parametrize("kwargs", [
-    {"norm": "symlog", "linthresh": 0.5},
-    {"norm": "boundary", "levels": [0.0, 10.0, 100.0, 1000.0]},
+    {"norm": qv.Norm("symlog", linthresh=0.5)},
+    {"norm": qv.Norm("boundary", levels=[0.0, 10.0, 100.0, 1000.0])},
 ])
 def test_backends_color_identically(kwargs, qtbot):
     pytest.importorskip("matplotlib")
@@ -152,7 +156,7 @@ def test_backends_color_identically(kwargs, qtbot):
 def test_mpl_boundary_colorbar_has_level_ticks(qtbot):
     pytest.importorskip("matplotlib")
     levels = [0.0, 10.0, 100.0, 1000.0]
-    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm="boundary", levels=levels)
+    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm=qv.Norm("boundary", levels=levels))
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     fig = handle.axes[0].figure
@@ -166,7 +170,7 @@ def test_mpl_boundary_colorbar_has_level_ticks(qtbot):
 def test_mpl_symlog_colorbar_denormalizes(qtbot):
     pytest.importorskip("matplotlib")
     el = qv.Image(_S, extent=(0, 0, 4, 2), norm="symlog",
-                  vmin=-1000.0, vmax=1000.0)
+                  clim=(-1000.0, 1000.0))
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     cbar_ax = handle.axes[0].figure.axes[1]

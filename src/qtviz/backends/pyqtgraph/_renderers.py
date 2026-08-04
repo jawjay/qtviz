@@ -94,7 +94,7 @@ def _color_mapping(element, d, theme):
     return map_colors(
         np.asarray(d.series("color")), palette=theme.palette,
         continuous_palette=palettes.get("viridis"), title=channel_title(element.color_by),
-        norm=getattr(element, "color_norm", "linear"),
+        norm=getattr(element, "norm", "linear"),
     )
 
 
@@ -528,15 +528,15 @@ def _norm_display(element, values, ctx):
     if not norm_engaged(element):
         return values, None, None
     normed, lo, hi = normalize_values(
-        values, norm=element.norm, vmin=element.vmin, vmax=element.vmax,
+        values, norm=element.norm_kind, vmin=element.vmin, vmax=element.vmax,
         gamma=element.gamma, linthresh=getattr(element, "linthresh", 1.0),
-        levels=getattr(element, "levels", None))
+        levels=element.norm_levels)
     lut = _pg_lut(element.colormap)
     step = max(len(lut) // 8, 1)
     ramp = tuple(Color(f"#{r:02x}{g:02x}{b:02x}") for r, g, b in
                  (row[:3] for row in lut[::step]))
     legend = Legend(kind="continuous", vmin=lo, vmax=hi, ramp=ramp,
-                    linear=element.norm == "linear")
+                    linear=element.norm_kind == "linear")
     return normed, (0.0, 1.0), legend
 
 
@@ -908,20 +908,19 @@ RENDERERS: dict[type, Any] = {
 # Keep in sync with the renderers — the conformance test guards this.
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "color_norm", "label", "axis"}),
+                        "norm", "label", "axis"}),
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
     Bars: frozenset({"color", "color_by", "by", "mode", "orient",
                      "annotate", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     # (Image "interpolation" unwired on pg)
-    Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
-                       "levels", "annotate"}),
+    Image: frozenset({"colormap", "norm", "clim"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "clim", "annotate"}),
     ErrorBars: frozenset({"color", "direction", "label", "lo_limit", "hi_limit"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Contour: frozenset({"levels", "colormap", "line_width", "label", "annotate"}),  # not filled
-    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
+    Mesh: frozenset({"colormap", "norm", "clim"}),
 }

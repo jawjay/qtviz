@@ -94,7 +94,7 @@ def test_mpl_mesh(qtbot):
 def test_pg_mesh(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Mesh(_Z, x=_XE, y=_YE, vmin=0.0, vmax=20.0)
+    el = qv.Mesh(_Z, x=_XE, y=_YE, clim=(0.0, 20.0))
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     item = handle.native(el.id)

@@ -106,7 +106,7 @@ def test_milestone_0_4_acceptance(qtbot, tmp_path):
     qtbot.addWidget(vh)
     assert 3.0 in np.asarray(vh.native(hm.id).image).ravel()
     # log-norm honesty: endpoints key, no gradient bar
-    vn = qv.View(qv.Scatter(_DATA, x="x", y="y", color_by="mag", color_norm="log"),
+    vn = qv.View(qv.Scatter(_DATA, x="x", y="y", color_by="mag", norm="log"),
                  backend="pyqtgraph")
     qtbot.addWidget(vn)
     assert getattr(vn.handle.plots[0], "_qtviz_cbar", None) is None

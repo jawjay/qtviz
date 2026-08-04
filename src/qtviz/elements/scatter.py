@@ -16,7 +16,7 @@ class Scatter(Element):
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker",
-                           "color_norm", "label", "axis")
+                           "norm", "label", "axis")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -31,7 +31,7 @@ class Scatter(Element):
         size_by: Accessor | None = None,
         marker: Literal["circle", "square", "triangle", "diamond", "cross"] = "circle",
         alpha: float = 1.0,
-        color_norm: Literal["linear", "log"] = "linear",
+        norm: Literal["linear", "log"] = "linear",
         label: str | None = None,
         axis: Literal["y", "y2"] = "y",
         raster: Literal["native", "auto", "datashader"] = "native",
@@ -47,16 +47,16 @@ class Scatter(Element):
         check_alpha(alpha, who="Scatter")
         check_agg(agg, color_by, raster, who="Scatter")
         check_axis(axis, raster, who="Scatter")
-        if color_norm not in ("linear", "log"):
-            raise ValidationError(f"color_norm must be 'linear' or 'log', got {color_norm!r}")
-        if color_norm != "linear" and color_by is None:
-            raise ValidationError("color_norm requires color_by (it norms the mapped column)")
+        if norm not in ("linear", "log"):
+            raise ValidationError(f"Scatter norm must be 'linear' or 'log', got {norm!r}")
+        if norm != "linear" and color_by is None:
+            raise ValidationError("Scatter norm requires color_by (it norms the mapped column)")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color, self.color_by = color, color_by
         self.size, self.size_by = size, size_by
         self.marker, self.alpha = marker, alpha
-        self.color_norm = color_norm
+        self.norm = norm
         self.label = label
         self.axis = axis
         self.raster = raster

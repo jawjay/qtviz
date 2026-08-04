@@ -33,17 +33,17 @@ def test_validation():
     from qtviz.errors import ValidationError
 
     qv.Image(_Z, extent=(0, 0, 4, 3), norm="log")
-    qv.Image(_Z, extent=(0, 0, 4, 3), norm="power", gamma=0.5)
+    qv.Image(_Z, extent=(0, 0, 4, 3), norm=qv.Norm("power", gamma=0.5))
     qv.Heatmap({"x": [0.0, 1.0], "y": [0.0, 0.0], "z": [1.0, 2.0]},
-               x="x", y="y", z="z", vmin=0.0, vmax=5.0)
+               x="x", y="y", z="z", clim=(0.0, 5.0))
     with pytest.raises(ValidationError):
         qv.Image(_Z, extent=(0, 0, 4, 3), norm="sqrt")
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), gamma=0.5)          # gamma needs power
+        qv.Norm("linear", gamma=0.5)                          # gamma needs power
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), vmin=5.0, vmax=1.0)
+        qv.Image(_Z, extent=(0, 0, 4, 3), clim=(5.0, 1.0))
     with pytest.raises(ValidationError):
-        qv.Image(_Z, extent=(0, 0, 4, 3), norm="log", vmin=-1.0)
+        qv.Image(_Z, extent=(0, 0, 4, 3), norm="log", clim=(-1.0, None))
 
 
 @pytest.mark.tier1
@@ -76,7 +76,7 @@ def test_webengine_norms():
 
     light = qv.Theme.light()
     lin = _figure.build_figure(
-        qv.Image(_Z, extent=(0, 0, 4, 3), vmin=100.0, vmax=500.0), light)["data"][0]
+        qv.Image(_Z, extent=(0, 0, 4, 3), clim=(100.0, 500.0)), light)["data"][0]
     assert (lin["zmin"], lin["zmax"]) == (100.0, 500.0)       # raw z, honest bar
     assert "showscale" not in lin
     logt = _figure.build_figure(
@@ -128,7 +128,7 @@ def test_backends_color_identically(qtbot):
     """[D110] payoff: the normalized grids matplotlib and pyqtgraph draw are
     bit-identical (one core normalization)."""
     pytest.importorskip("matplotlib")
-    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm="power", gamma=0.4)
+    el = qv.Image(_Z, extent=(0, 0, 4, 3), norm=qv.Norm("power", gamma=0.4))
     h1 = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(h1.widget)
     h2 = _backend("pyqtgraph").render(el, theme=qv.Theme.light())

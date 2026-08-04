@@ -6,11 +6,13 @@ from typing import Literal
 
 from ..core._stats import GRID_AGGS
 from ..core.element import Element
+from ..core.encoding import Norm
 from ..data import Accessor, DataLike, as_data_ref
 from ..errors import ValidationError
+from ._norm import NormedRaster, check_norm_clim
 
 
-class Heatmap(Element):
+class Heatmap(NormedRaster, Element):
     """A grid of tidy x/y cells shaded by a `z` value. Duplicate rows landing on
     one cell reduce through `aggregator` ([D69]; the pre-0.4 implicit behavior
     was `"last"`, kept in the vocabulary).
@@ -22,8 +24,8 @@ class Heatmap(Element):
     and skip labels rather than smear unreadable text."""
 
     REQUIRED_OPTIONS = ("x", "y", "z")
-    RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "vmin", "vmax", "gamma",
-                           "annotate", "linthresh", "levels")
+    RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "clim",
+                           "annotate")
     CHANNELS = ("x", "y", "z")
 
     def __init__(
@@ -35,25 +37,19 @@ class Heatmap(Element):
         z: Accessor,
         colormap: str = "viridis",
         aggregator: Literal["mean", "sum", "count", "max", "min", "last"] = "mean",
-        norm: Literal["linear", "log", "power", "symlog", "boundary"] = "linear",
-        vmin: float | None = None,
-        vmax: float | None = None,
-        gamma: float = 1.0,
-        linthresh: float = 1.0,
-        levels: tuple[float, ...] | list[float] | None = None,
+        norm: str | Norm = "linear",
+        clim: tuple[float | None, float | None] | None = None,
         annotate: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        from .image import check_norm  # noqa: PLC0415 — shared [D105] guard
-
+        
         if aggregator not in GRID_AGGS:
             raise ValidationError(
                 f"aggregator must be one of {GRID_AGGS}, got {aggregator!r}"
             )
-        check_norm(norm, vmin, vmax, gamma, who="Heatmap",
-                   linthresh=linthresh, levels=levels)
+        self.norm, self.clim = check_norm_clim(norm, clim, who="Heatmap")
         if annotate is not None and annotate != "auto":
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
@@ -62,12 +58,6 @@ class Heatmap(Element):
         self.x, self.y, self.z = x, y, z
         self.colormap = colormap
         self.aggregator = aggregator
-        self.norm = norm
-        self.vmin = float(vmin) if vmin is not None else None
-        self.vmax = float(vmax) if vmax is not None else None
-        self.gamma = float(gamma)
-        self.linthresh = float(linthresh)
-        self.levels = tuple(float(v) for v in levels) if levels is not None else None
         self.annotate = annotate
         self._validate_tabular()
         self._freeze()
@@ -80,8 +70,8 @@ class Heatmap(Element):
         from ..core.encoding import heatmap_cell_labels  # noqa: PLC0415
 
         return heatmap_cell_labels(
-            xs, ys, grid, spec=self.annotate, norm=self.norm,
+            xs, ys, grid, spec=self.annotate, norm=self.norm_kind,
             vmin=self.vmin, vmax=self.vmax, gamma=self.gamma,
-            linthresh=self.linthresh, levels=self.levels,
+            linthresh=self.linthresh, levels=self.norm_levels,
             colormap=self.colormap,
             foreground=theme.foreground, background=theme.background)

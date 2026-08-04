@@ -36,7 +36,7 @@ FROZEN_1_0 = frozenset({
     "set_raster_threshold", "set_raster_size",
     "stream", "StreamRef",                        # live sources ([D76])
     # styling
-    "Color", "ColorSpec", "Palette", "palettes", "Theme",
+    "Color", "ColorSpec", "Norm", "Palette", "palettes", "Theme",  # Norm: [D130]
     "OverlayOptions", "LayoutOptions", "AxisSpec",
     # backends + capabilities
     "Capabilities", "set_default_backend", "set_backend_priority",

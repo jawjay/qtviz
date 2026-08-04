@@ -106,7 +106,7 @@ def _color_by_list(element, d, theme) -> list[str]:
         palette=theme.palette,
         continuous_palette=palettes.get("viridis"),
         title=channel_title(element.color_by),
-        norm=getattr(element, "color_norm", "linear"),
+        norm=getattr(element, "norm", "linear"),
     )
     return [
         f"rgb({int(round(r * 255))},{int(round(g * 255))},{int(round(b * 255))})"
@@ -144,7 +144,7 @@ def _scatter_trace(element: Scatter, theme, idx: int) -> list[dict]:
         from ...core.encoding import is_categorical  # noqa: PLC0415
 
         values = np.asarray(d.series("color"))
-        if is_categorical(values) or element.color_norm == "log":
+        if is_categorical(values) or element.norm == "log":
             # categorical, or log-normed continuous: pre-mapped css colors — a
             # linear Plotly colorbar would lie about a log mapping ([D48])
             marker["color"] = _color_by_list(element, d, theme)
@@ -398,15 +398,15 @@ def _apply_norm(trace: dict, element, values) -> None:
 
     if not norm_engaged(element):
         return
-    if element.norm == "linear":
+    if element.norm_kind == "linear":
         normed, lo, hi = normalize_values(values, norm="linear", vmin=element.vmin,
                                           vmax=element.vmax)
         trace["zmin"], trace["zmax"] = lo, hi
         return
     normed, _lo, _hi = normalize_values(
-        values, norm=element.norm, vmin=element.vmin, vmax=element.vmax,
+        values, norm=element.norm_kind, vmin=element.vmin, vmax=element.vmax,
         gamma=element.gamma, linthresh=getattr(element, "linthresh", 1.0),
-        levels=getattr(element, "levels", None))
+        levels=element.norm_levels)
     trace["z"] = normed
     trace["zmin"], trace["zmax"] = 0.0, 1.0
     trace["showscale"] = False
@@ -664,23 +664,21 @@ _TRACE_BUILDERS: dict[type, Any] = {
 # [D51]). Anything in RECOMMENDED_OPTIONS but NOT here warns-and-degrades.
 HONORED: dict[type, frozenset[str]] = {
     Scatter: frozenset({"color", "color_by", "size", "size_by", "alpha", "marker",
-                        "color_norm", "label", "axis"}),
+                        "norm", "label", "axis"}),
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
     Bars: frozenset({"color", "color_by", "orient", "by", "mode",
                      "annotate", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
-    Image: frozenset({"colormap", "interpolation", "norm", "vmin", "vmax", "gamma",
-                     "linthresh", "levels"}),
-    Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
-                       "levels", "annotate"}),
+    Image: frozenset({"colormap", "interpolation", "norm", "clim"}),
+    Heatmap: frozenset({"colormap", "aggregator", "norm", "clim", "annotate"}),
     ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Pie: frozenset({"by", "hole", "alpha"}),
     Contour: frozenset({"levels", "filled", "colormap", "line_width", "label", "annotate"}),
-    Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
+    Mesh: frozenset({"colormap", "norm", "clim"}),
 }
 
 

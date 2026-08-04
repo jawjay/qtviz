@@ -32,7 +32,7 @@ _NON_DEFAULT = {
     "step": "post", "hole": 0.4, "axis": "y2", "levels": 4, "filled": True,
     "head": "both", "fill": True, "rotation": 30.0, "anchor_v": "top", "frame": True,
     "annotate": ".1f", "marker_every": 3,
-    "norm": "power", "vmin": 0.2, "vmax": 0.9,  # ("gamma" needs norm="power")
+    "norm": "power", "clim": (0.2, 0.9),  # (gamma/linthresh/levels live inside Norm, [D130])
     "arrow_scale": 0.5, "head_scale": 2.0, "baseline": 0.5,
     # ("mode" is skipped: stacking requires by=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
@@ -119,9 +119,9 @@ def test_recommended_options_are_honored_or_warned(backend, make_elements, qtbot
         for opt in et.RECOMMENDED_OPTIONS:
             if opt not in _NON_DEFAULT:
                 continue  # column-valued (color_by/size_by) — honored everywhere
-            if opt == "levels" and et.__name__ in ("Image", "Heatmap", "Mesh"):
-                # raster `levels` requires norm='boundary' (like gamma needs
-                # power) — cross-backend behavior is covered by test_norms_tail
+            if opt == "norm" and et.__name__ == "Scatter":
+                # Scatter norm is linear|log and needs color_by — its honor
+                # path is covered by test_color_norm
                 continue
             variant = el.with_(**{opt: _NON_DEFAULT[opt]})
             _degrade.reset()  # re-arm the warn-once registry for this assertion
