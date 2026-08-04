@@ -386,10 +386,10 @@ def render_image(element: Image, ctx):
         from ...core.palette import palettes  # noqa: PLC0415
         from ...data.regrid import shade_values  # noqa: PLC0415
 
-        rgba, legend = shade_values(element.data.grid().values, palettes.get("viridis"))
+        rgba, legend = shade_values(element.resolved_grid().values, palettes.get("viridis"))
         item = pg.ImageItem(rgba, axisOrder="row-major")
     else:
-        values = np.asarray(element.data.grid().values)
+        values = np.asarray(element.resolved_grid().values)
         if values.ndim == 3:  # RGBA raster (e.g. a user-built image): row 0 = ymin
             item = pg.ImageItem(values, axisOrder="row-major")
         else:
@@ -626,7 +626,7 @@ def _pg_colormap(name: str):
 def render_mesh(element: Mesh, ctx):
     """Non-uniform rectilinear grid ([D106]) via `PColorMeshItem` (spiked:
     edge-corner meshgrids, explicit levels). Shares the [D105] norm path."""
-    values = element.check_shape(element.data.grid().values)
+    values = element.check_shape(element.resolved_grid().values)
     display, levels, norm_legend = _norm_display(element, values, ctx)
     xg, yg = np.meshgrid(np.asarray(element.x), np.asarray(element.y))
     kwargs: dict = {"colorMap": _pg_colormap(element.colormap)}
@@ -650,7 +650,7 @@ def render_contour(element: Contour, ctx):
 
     from ...core._stats import contour_levels  # noqa: PLC0415
 
-    values = np.asarray(element.data.grid().values, dtype="float64")
+    values = np.asarray(element.resolved_grid().values, dtype="float64")
     lv = contour_levels(values, element.levels)
     x0, y0, x1, y1 = element.extent
     ny, nx = values.shape

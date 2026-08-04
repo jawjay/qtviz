@@ -389,7 +389,7 @@ def render_image(element: Image, ctx):
         from ...core.palette import palettes  # noqa: PLC0415
         from ...data.regrid import shade_values  # noqa: PLC0415
 
-        rgba, legend = shade_values(element.data.grid().values, palettes.get("viridis"))
+        rgba, legend = shade_values(element.resolved_grid().values, palettes.get("viridis"))
         artist = ctx.parent_axes.imshow(
             rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
         )
@@ -397,7 +397,7 @@ def render_image(element: Image, ctx):
             _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
         _wire_dynamic_regrid(element, artist, ctx)
         return artist
-    values = np.asarray(element.data.grid().values)
+    values = np.asarray(element.resolved_grid().values)
     if values.ndim == 3:  # RGBA raster (e.g. a user-built image)
         artist = ctx.parent_axes.imshow(
             values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
@@ -634,7 +634,7 @@ def render_pie(element: Pie, ctx):
 def render_mesh(element: Mesh, ctx):
     """Non-uniform rectilinear grid ([D106]) — edges straight to pcolormesh;
     the [D105] norm surface shared with Image/Heatmap."""
-    values = element.check_shape(element.data.grid().values)
+    values = element.check_shape(element.resolved_grid().values)
     display, norm_kw = _norm_display(element, values, ctx, ctx.parent_axes)
     return ctx.parent_axes.pcolormesh(
         np.asarray(element.x), np.asarray(element.y), display,
@@ -646,7 +646,7 @@ def render_contour(element: Contour, ctx):
     core (`contour_levels`) so every backend draws the same lines."""
     from ...core._stats import contour_levels  # noqa: PLC0415
 
-    values = np.asarray(element.data.grid().values, dtype="float64")
+    values = np.asarray(element.resolved_grid().values, dtype="float64")
     lv = contour_levels(values, element.levels)
     x0, y0, x1, y1 = element.extent
     ax = ctx.parent_axes

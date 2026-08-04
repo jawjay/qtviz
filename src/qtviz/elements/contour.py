@@ -68,6 +68,11 @@ class Contour(Element):
         require_gridded(self.data, who="Contour")
         self._freeze()
 
+    def resolved_grid(self):
+        """[D124] the one gridded accessor: the resolved `GridData` — replaces
+        scattered `element.resolved_grid()` reach-through in the backends."""
+        return self.resolved_grid()
+
     def resolved_labels(self):
         """The core-placed inline labels ([D117]), or `[]` when off — one
         call site per backend renderer."""
@@ -77,6 +82,6 @@ class Contour(Element):
 
         from ..core._stats import contour_label_specs, contour_levels  # noqa: PLC0415
 
-        values = np.asarray(self.data.grid().values, dtype="float64")
+        values = np.asarray(self.resolved_grid().values, dtype="float64")
         lv = contour_levels(values, self.levels)
         return contour_label_specs(values, lv, self.extent, spec=self.annotate)

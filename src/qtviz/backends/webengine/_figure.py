@@ -351,7 +351,7 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
         rgba = shade_aggregate(agg, palette=theme.palette,
                                continuous_palette=palettes.get("viridis")).rgba
         return [{"type": "image", "z": rgba, "name": element.id}]
-    values = np.asarray(element.data.grid().values)
+    values = np.asarray(element.resolved_grid().values)
     x0, y0, x1, y1 = element.extent
     if values.ndim == 2:
         nrows, ncols = values.shape
@@ -576,7 +576,7 @@ def _pie_trace(element: Pie, theme, idx: int) -> list[dict]:
 def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
     """Non-uniform grid ([D106]): a Plotly heatmap whose x/y carry one more
     entry than z — Plotly reads them as block boundaries (the edges)."""
-    values = element.check_shape(element.data.grid().values)
+    values = element.check_shape(element.resolved_grid().values)
     trace = {
         "type": "heatmap", "z": values,
         "x": np.asarray(element.x, dtype="float64"),
@@ -593,7 +593,7 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
     non-uniform explicit sequence approximates and warns."""
     from ...core._stats import contour_levels  # noqa: PLC0415
 
-    values = np.asarray(element.data.grid().values, dtype="float64")
+    values = np.asarray(element.resolved_grid().values, dtype="float64")
     lv = contour_levels(values, element.levels)
     step = float(lv[1] - lv[0]) if len(lv) > 1 else 1.0
     if len(lv) > 2 and not np.allclose(np.diff(lv), step):
