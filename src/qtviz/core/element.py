@@ -121,6 +121,17 @@ class Element(Immutable):
         object.__setattr__(obj, "_resolved", True)
         return obj
 
+    def opts(self, **kw):
+        """[D133] surface configuration without abandoning the algebra:
+        `el.opts(title=…, x="t [s]", y=AxisSpec(scale="log"))` wraps this
+        element in a one-child `Overlay` carrying the options — the exact
+        `Overlay([el], options=…)` construction, as sugar. `x`/`y`/`y2` take a
+        label string or an `AxisSpec`. Chain on the result to refine."""
+        from .compose import Overlay  # noqa: PLC0415
+        from .options import OverlayOptions  # noqa: PLC0415
+
+        return Overlay((self,), options=OverlayOptions(**kw))
+
     # composition operators — lazy imports avoid an element↔compose cycle
     def __mul__(self, other):
         from .compose import Overlay

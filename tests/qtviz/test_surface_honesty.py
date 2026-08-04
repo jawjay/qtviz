@@ -48,9 +48,9 @@ def test_fully_wired_surface_does_not_warn(backend, qtbot):
     node = qv.Overlay(
         [qv.Curve(_T, x="x", y="y", label="c")],
         options=qv.OverlayOptions(
-            title="T", x_label="x", y_label="y", aspect=1.0, grid=False,
-            legend_position="right", background="#eeeeee",
-            x=qv.AxisSpec(lim=(0.0, 2.0), invert=True, tick_format=".1f"),
+            title="T", y="y", aspect=1.0, grid=False,
+            legend="right", background="#eeeeee",
+            x=qv.AxisSpec(label="x", lim=(0.0, 2.0), invert=True, tick_format=".1f"),
         ),
     )
     _degrade.reset()

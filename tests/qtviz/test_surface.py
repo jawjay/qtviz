@@ -34,7 +34,7 @@ def test_surface_of_returns_overlay_options(data):
     assert isinstance(surface_of(el), qv.OverlayOptions)
     assert surface_of(el).title is None
     # overlay → its own options
-    ov = _surface(el, title="T", x_label="X", y_label="Y")
+    ov = _surface(el, title="T", x="X", y="Y")
     assert surface_of(ov).title == "T"
     assert surface_of(ov) is ov.options
 
@@ -44,7 +44,7 @@ def test_surface_of_returns_overlay_options(data):
 def test_pyqtgraph_applies_title_and_labels(qtbot, data):
     if "pyqtgraph" not in qv.backends.list_available():
         pytest.skip("pyqtgraph not registered")
-    node = _surface(qv.Scatter(data, x="x", y="y"), title="Sine", x_label="t", y_label="v")
+    node = _surface(qv.Scatter(data, x="x", y="y"), title="Sine", x="t", y="v")
     view = qv.View(node, backend="pyqtgraph")
     qtbot.addWidget(view)
     plot = view.handle.plots[0]
@@ -67,7 +67,7 @@ def test_pyqtgraph_bare_element_has_no_title(qtbot, data):
 def test_matplotlib_applies_title_and_labels(qtbot, data):
     if "matplotlib" not in qv.backends.list_available():
         pytest.skip("matplotlib not registered")
-    node = _surface(qv.Scatter(data, x="x", y="y"), title="Sine", x_label="t", y_label="v")
+    node = _surface(qv.Scatter(data, x="x", y="y"), title="Sine", x="t", y="v")
     view = qv.View(node, backend="matplotlib")
     qtbot.addWidget(view)
     ax = view.handle.axes[0]
@@ -80,8 +80,8 @@ def test_matplotlib_applies_title_and_labels(qtbot, data):
 def test_matplotlib_per_pane_labels_in_layout(qtbot, data):
     if "matplotlib" not in qv.backends.list_available():
         pytest.skip("matplotlib not registered")
-    left = _surface(qv.Curve(data, x="x", y="y"), title="L", x_label="lx")
-    right = _surface(qv.Scatter(data, x="x", y="y"), title="R", x_label="rx")
+    left = _surface(qv.Curve(data, x="x", y="y"), title="L", x="lx")
+    right = _surface(qv.Scatter(data, x="x", y="y"), title="R", x="rx")
     view = qv.View(qv.Layout([left, right]), backend="matplotlib")
     qtbot.addWidget(view)
     titles = {ax.get_title() for ax in view.handle.axes}
@@ -93,7 +93,7 @@ def test_matplotlib_per_pane_labels_in_layout(qtbot, data):
 def test_webengine_layout_carries_title_and_labels(data):
     from qtviz.backends.webengine import _figure
 
-    node = _surface(qv.Scatter(data, x="x", y="y"), title="Sine", x_label="t", y_label="v")
+    node = _surface(qv.Scatter(data, x="x", y="y"), title="Sine", x="t", y="v")
     fig = _figure.build_figure(node, qv.Theme.light())
     layout = fig["layout"]
     assert layout["title"]["text"] == "Sine"
@@ -107,7 +107,7 @@ def test_webengine_axis_titles_are_independent(data):
     x-only label leaks onto the y axis."""
     from qtviz.backends.webengine import _figure
 
-    node = _surface(qv.Scatter(data, x="x", y="y"), x_label="only-x")
+    node = _surface(qv.Scatter(data, x="x", y="y"), x="only-x")
     layout = _figure.build_figure(node, qv.Theme.light())["layout"]
     assert layout["xaxis"]["title"].get("text") == "only-x"
     assert "text" not in layout["yaxis"]["title"]

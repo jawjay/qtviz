@@ -14,6 +14,26 @@ from ..errors import ValidationError
 from ._immutable import Immutable
 from .color import ColorSpec
 
+
+class _Unset:
+    """Sentinel for `.opts()` field-wise merges ([D133]) — `None` must stay a
+    real value (e.g. `background=None` clears)."""
+
+    def __repr__(self) -> str:  # pragma: no cover — cosmetic
+        return "UNSET"
+
+
+UNSET = _Unset()
+
+
+def _as_axis(value) -> AxisSpec | None:
+    """The [D133] shorthand: a bare string is the axis label."""
+    if value is None or isinstance(value, AxisSpec):
+        return value
+    if isinstance(value, str):
+        return AxisSpec(label=value)
+    raise ValidationError(f"axis config must be a label string or AxisSpec, got {value!r}")
+
 # The axis-scale vocabulary (semantic, backend-agnostic; feasibility §2.1). A backend
 # renders the subset it declares in `Capabilities.scales`; the rest warn-and-degrade
 # to linear ([D59]). `time` is reserved (gated on the data layer carrying datetime).
@@ -83,54 +103,49 @@ class OverlayOptions(Immutable):
     plus the twin `y2`, [D88]), `aspect`, legend toggle + position, background,
     grid toggle ([D87]).
 
-    `x_label`/`y_label` are conveniences that populate `x.label`/`y.label` (so the
-    canonical axis config has one home, `AxisSpec`); they remain readable as
-    properties for back-compat. `y2` configures the right-hand axis that appears
-    when any series element sets `axis="y2"` — it is ignored when none does."""
+    `x`/`y`/`y2` take an `AxisSpec` or — the [D133] shorthand — a bare string
+    meaning the axis label; `AxisSpec.label` is the one canonical home. `y2`
+    configures the right-hand axis that appears when any series element sets
+    `axis="y2"` — it is ignored when none does. `legend` is one union field
+    ([D133]): `True`/`"auto"` places automatically, `"right"`/`"top"` place
+    explicitly, `False`/`"none"` hides everything."""
 
     def __init__(
         self,
         *,
         title: str | None = None,
-        x_label: str | None = None,
-        y_label: str | None = None,
-        x: AxisSpec | None = None,
-        y: AxisSpec | None = None,
-        y2: AxisSpec | None = None,
+        x: AxisSpec | str | None = None,
+        y: AxisSpec | str | None = None,
+        y2: AxisSpec | str | None = None,
         aspect: float | None = None,
-        legend: bool = True,
-        legend_position: str = "auto",
+        legend: bool | str = "auto",
         background: ColorSpec | None = None,
         grid: bool = True,
     ) -> None:
-        if legend_position not in _LEGEND_POSITIONS:
+        if not isinstance(legend, bool) and legend not in _LEGEND_POSITIONS:
             raise ValidationError(
-                f"legend_position must be one of {_LEGEND_POSITIONS}, got {legend_position!r}"
+                f"legend must be a bool or one of {_LEGEND_POSITIONS}, got {legend!r}"
             )
         self.title = title
-        self.x = x if x is not None else AxisSpec(label=x_label)
-        self.y = y if y is not None else AxisSpec(label=y_label)
-        self.y2 = y2
+        self.x = _as_axis(x) or AxisSpec()
+        self.y = _as_axis(y) or AxisSpec()
+        self.y2 = _as_axis(y2)
         self.aspect = float(aspect) if aspect is not None else None
         self.legend = legend
-        self.legend_position = legend_position
         self.background = background
         self.grid = bool(grid)
         self._freeze()
 
     @property
     def legend_enabled(self) -> bool:
-        """The one switch backends consult: `legend=False` or `position="none"`
-        both hide every legend on the surface (aggregated *and* color-mapping)."""
-        return self.legend and self.legend_position != "none"
+        """The one switch backends consult: `legend=False`/`"none"` hides every
+        legend on the surface (aggregated *and* color-mapping)."""
+        return self.legend not in (False, "none")
 
     @property
-    def x_label(self) -> str | None:
-        return self.x.label
-
-    @property
-    def y_label(self) -> str | None:
-        return self.y.label
+    def legend_position(self) -> str:
+        """The placement backends translate: `"auto"` unless placed explicitly."""
+        return self.legend if self.legend in ("right", "top", "none") else "auto"
 
 
 def _as_pairs(m) -> tuple | None:

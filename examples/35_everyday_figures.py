@@ -85,7 +85,7 @@ dual_panel = qv.Overlay(
     [qv.Curve(telemetry, x="t", y="temp", label="°C"),
      qv.Curve(telemetry, x="t", y="pressure", axis="y2", label="Pa",
               line_style="dashed")],
-    options=qv.OverlayOptions(title="Dual axis", y_label="°C",
+    options=qv.OverlayOptions(title="Dual axis", y="°C",
                               y2=qv.AxisSpec(label="Pa", tick_format="eng")),
 )
 

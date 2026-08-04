@@ -7,7 +7,7 @@ and, inside a `Layout`, each pane keeps its own labels.
 
     points * trend                                   # an overlay (no labels)
     qv.Overlay([points, trend], options=qv.OverlayOptions(
-        title="Sensor response", x_label="drive (V)", y_label="output (mV)"))
+        title="Sensor response", x="drive (V)", y="output (mV)"))
 
 Try a different engine — the labels come out the same:
     qv.View(figure, backend="matplotlib")
@@ -38,8 +38,8 @@ def build(backend: str = "pyqtgraph"):
         [measured, trend],
         options=qv.OverlayOptions(
             title="Sensor response",
-            x_label="drive voltage (V)",
-            y_label="output (mV)",
+            x="drive voltage (V)",
+            y="output (mV)",
         ),
     )
 
@@ -48,8 +48,8 @@ def build(backend: str = "pyqtgraph"):
         [qv.Histogram(data, value="resid", color="#7bd47b")],
         options=qv.OverlayOptions(
             title="Residuals",
-            x_label="error (mV)",
-            y_label="count",
+            x="error (mV)",
+            y="count",
         ),
     )
 

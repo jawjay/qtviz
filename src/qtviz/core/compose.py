@@ -14,7 +14,7 @@ from typing import Literal, Union
 from ..errors import IncompatibleOverlayError, NoBackendForError, UnsupportedElementError
 from ._immutable import Immutable
 from .element import Element
-from .options import LayoutOptions, OverlayOptions
+from .options import UNSET, AxisSpec, LayoutOptions, OverlayOptions
 
 Node = Union[Element, "Overlay", "Layout"]
 
@@ -84,6 +84,37 @@ class Overlay(Immutable):
     def over(self, other: Node) -> Overlay:
         return self.__mul__(other)
 
+    def opts(self, *, title=UNSET, x=UNSET, y=UNSET, y2=UNSET, aspect=UNSET,
+             legend=UNSET, background=UNSET, grid=UNSET) -> Overlay:
+        """[D133] field-wise options merge: only the fields you pass change
+        (`UNSET` keeps; `None` clears where meaningful). For `x`/`y`/`y2` a
+        bare string merges into the existing spec's `.label`; a full
+        `AxisSpec` replaces it. Chains — later calls win per field."""
+        cur = self.options
+        def axis(new, old):
+            if new is UNSET:
+                return old
+            if isinstance(new, str):
+                base = old if isinstance(old, AxisSpec) else AxisSpec()
+                return base.with_(label=new)
+            return new
+        merged = OverlayOptions(
+            title=cur.title if title is UNSET else title,
+            x=axis(x, cur.x), y=axis(y, cur.y), y2=axis(y2, cur.y2),
+            aspect=cur.aspect if aspect is UNSET else aspect,
+            legend=cur.legend if legend is UNSET else legend,
+            background=cur.background if background is UNSET else background,
+            grid=cur.grid if grid is UNSET else grid,
+        )
+        return Overlay(self.children, options=merged, backend_hint=self.backend_hint)
+
+    def __repr__(self) -> str:
+        shown = {k: v for k, v in self.options._fields().items()
+                 if v != getattr(OverlayOptions(), k)}
+        inner = ", ".join(f"{k}={v!r}" for k, v in shown.items())
+        return (f"Overlay({len(self.children)} children"
+                + (f", {inner}" if inner else "") + ")")
+
 
 class Layout(Immutable):
     """Side-by-side / grid / splitter / tabs / dock. Built by `+`. Children
@@ -118,6 +149,34 @@ class Layout(Immutable):
 
     def __mul__(self, other: Node) -> Overlay:
         return Overlay((self, other))
+
+    def opts(self, *, title=UNSET, rows=UNSET, cols=UNSET, spacing=UNSET,
+             link_x=UNSET, link_y=UNSET, tab_labels=UNSET,
+             width_ratios=UNSET, height_ratios=UNSET) -> Layout:
+        """[D133] field-wise merge of the layout options (`title` here is the
+        container suptitle). Only passed fields change; chains."""
+        cur = self.options
+        merged = LayoutOptions(
+            rows=cur.rows if rows is UNSET else rows,
+            cols=cur.cols if cols is UNSET else cols,
+            spacing=cur.spacing if spacing is UNSET else spacing,
+            link_x=cur.link_x if link_x is UNSET else link_x,
+            link_y=cur.link_y if link_y is UNSET else link_y,
+            tab_labels=cur.tab_labels if tab_labels is UNSET else tab_labels,
+            dock_areas=cur.dock_areas,
+            title=cur.title if title is UNSET else title,
+            width_ratios=cur.width_ratios if width_ratios is UNSET else width_ratios,
+            height_ratios=cur.height_ratios if height_ratios is UNSET else height_ratios,
+        )
+        return Layout(self.children, kind=self.kind, options=merged,
+                      backend_hint=self.backend_hint, cells=self.cells)
+
+    def __repr__(self) -> str:
+        shown = {k: v for k, v in self.options._fields().items()
+                 if v != getattr(LayoutOptions(), k)}
+        inner = ", ".join(f"{k}={v!r}" for k, v in shown.items())
+        return (f"Layout({len(self.children)} children, kind={self.kind!r}"
+                + (f", {inner}" if inner else "") + ")")
 
     @classmethod
     def grid(cls, children, **kw) -> Layout:

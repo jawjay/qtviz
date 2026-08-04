@@ -68,9 +68,9 @@ def test_all_styling_elements_carry_label():
 
 @pytest.mark.tier1
 def test_legend_position_vocabulary_validated():
-    assert qv.OverlayOptions(legend_position="top").legend_position == "top"
+    assert qv.OverlayOptions(legend="top").legend_position == "top"
     with pytest.raises(ValidationError):
-        qv.OverlayOptions(legend_position="bottom-left")
+        qv.OverlayOptions(legend="bottom-left")
 
 
 # ── Tier-2: overlay aggregation on the native backends ───────────────────────
@@ -150,7 +150,7 @@ def test_no_double_legend_with_color_by(backend, qtbot):
 
 @pytest.mark.tier2
 def test_legend_position_none_suppresses(qtbot):
-    view = qv.View(_labeled_overlay(legend_position="none"), backend="pyqtgraph")
+    view = qv.View(_labeled_overlay(legend="none"), backend="pyqtgraph")
     qtbot.addWidget(view)
     assert getattr(view.handle.plots[0], "_qtviz_legend", None) is None
 
@@ -159,7 +159,7 @@ def test_legend_position_none_suppresses(qtbot):
 def test_matplotlib_legend_position_top(qtbot):
     if not _has("matplotlib"):
         pytest.skip("matplotlib not registered")
-    view = qv.View(_labeled_overlay(legend_position="top"), backend="matplotlib")
+    view = qv.View(_labeled_overlay(legend="top"), backend="matplotlib")
     qtbot.addWidget(view)
     legend = view.handle.axes[0].get_legend()
     assert legend._loc == 9  # mpl code for "upper center"
@@ -232,7 +232,7 @@ def test_webengine_continuous_color_by_emits_colorbar():
 def test_webengine_legend_position_top():
     from qtviz.backends.webengine import _figure
 
-    fig = _figure.build_figure(_labeled_overlay(legend_position="top"), qv.Theme.light())
+    fig = _figure.build_figure(_labeled_overlay(legend="top"), qv.Theme.light())
     assert fig["layout"]["legend"]["orientation"] == "h"
 
 

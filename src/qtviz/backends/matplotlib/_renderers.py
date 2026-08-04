@@ -379,7 +379,8 @@ def render_image(element: Image, ctx):
     if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
         result = _shade_raster(element, agg, ctx.theme)
         artist = ctx.parent_axes.imshow(
-            result.rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto", alpha=element.alpha,
+            result.rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+            alpha=element.alpha,
         )
         if result.legend is not None and ctx.show_legend:
             # category key / colorbar (C3)

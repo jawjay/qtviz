@@ -43,10 +43,9 @@ def test_axisspec_validates_and_is_immutable():
 
 @pytest.mark.tier1
 def test_overlayoptions_axis_config_and_label_convenience():
-    # x_label convenience populates x.label; x= carries the full AxisSpec
-    o1 = qv.OverlayOptions(x_label="t", y_label="v")
+    # [D133]: a bare string is the axis label — AxisSpec.label the one home
+    o1 = qv.OverlayOptions(x="t", y="v")
     assert o1.x.label == "t" and o1.y.label == "v"
-    assert o1.x_label == "t"  # back-compat read property
     o2 = qv.OverlayOptions(x=qv.AxisSpec(scale="log", lim=(1.0, 10.0)), aspect=1.0)
     assert o2.x.scale == "log" and o2.aspect == 1.0
     # carried by the surface normalizer

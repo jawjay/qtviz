@@ -174,7 +174,7 @@ qv.Overlay([a, b], options=qv.OverlayOptions(
     title="Spectrum",
     x=qv.AxisSpec(scale="log", lim=(1, 1e4)),   # events stay in DATA space (R1)
     y=qv.AxisSpec(tick_format="eng"),           # SI ticks; ".0%", ",d", "%H:%M",
-    legend=True, legend_position="right",       # templates: "{:.0f} ms", "${:,.0f}"
+    legend=True, legend="right",       # templates: "{:.0f} ms", "${:,.0f}"
     grid=False,
 ))
 
