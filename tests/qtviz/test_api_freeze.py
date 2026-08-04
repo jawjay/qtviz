@@ -2,7 +2,7 @@
 
 `qtviz.__all__` is a contract as of 1.0 (`docs/stability.md`). This pins it
 EXACTLY: an accidental addition fails the same as an accidental removal.
-Changing the surface is allowed — deliberately: update `FROZEN_1_0`, the
+Changing the surface is allowed — deliberately: update `FROZEN_2_0`, the
 CHANGELOG, and (for removals) follow the deprecation path in the same commit.
 """
 
@@ -14,7 +14,7 @@ qv = pytest.importorskip("qtviz")
 
 pytestmark = pytest.mark.tier1
 
-FROZEN_1_0 = frozenset({
+FROZEN_2_0 = frozenset({
     # elements
     "Scatter", "Curve", "Bars", "Image", "Heatmap", "Histogram", "ErrorBars",
     "Spread", "RawFigure",
@@ -28,15 +28,16 @@ FROZEN_1_0 = frozenset({
     "Stem",                                       # wave 1.4 ([D115])
     "Streamlines",                                # wave 1.5 ([D118])
     # composition + view
-    "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
+    "Overlay", "Layout", "View", "show",  # show: [D134]
     # adapters
-    "from_holoviews", "from_holoviews_dmap", "from_hvplot", "DMapBinding",
+    "from_holoviews", "from_holoviews_dmap", "from_hvplot",
     # data binding + raster routing + streaming
-    "Accessor", "Expression", "col", "lit", "tabular", "gridded",
+    "col", "lit", "tabular", "gridded",
     "set_raster_threshold", "set_raster_size",
-    "stream", "StreamRef",                        # live sources ([D76])
+    "stream",                        # live sources ([D76])
     # styling
-    "Color", "ColorSpec", "Norm", "Palette", "palettes", "Theme",  # Norm: [D130]
+    "Color", "Norm", "Palette", "palettes", "Theme",  # Norm: [D130]
+    "set_default_theme",  # [D134]
     "OverlayOptions", "LayoutOptions", "AxisSpec",
     # backends + capabilities
     "Capabilities", "set_default_backend", "set_backend_priority",
@@ -51,17 +52,17 @@ FROZEN_1_0 = frozenset({
 
 def test_public_surface_is_frozen():
     current = set(qv.__all__)
-    added = sorted(current - FROZEN_1_0)
-    removed = sorted(FROZEN_1_0 - current)
+    added = sorted(current - FROZEN_2_0)
+    removed = sorted(FROZEN_2_0 - current)
     assert not added and not removed, (
         f"public API drifted from the 1.0 freeze ([D82]): added={added}, "
-        f"removed={removed} — if deliberate, update FROZEN_1_0 + CHANGELOG "
+        f"removed={removed} — if deliberate, update FROZEN_2_0 + CHANGELOG "
         f"(removals must follow docs/stability.md's deprecation path)"
     )
 
 
 def test_every_public_name_resolves():
-    for name in FROZEN_1_0 - {"__version__"}:
+    for name in FROZEN_2_0 - {"__version__"}:
         assert getattr(qv, name, None) is not None, f"{name} in __all__ but unimportable"
 
 

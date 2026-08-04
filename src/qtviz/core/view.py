@@ -152,7 +152,9 @@ class View(QWidget):
     def __init__(self, root, *, backend="auto", theme: Theme | None = None,
                  toolbar: bool = False, parent=None) -> None:
         super().__init__(parent)
-        self._theme = theme or Theme.light()
+        from .theme import default_theme  # noqa: PLC0415
+
+        self._theme = theme or default_theme()
         self._backend_choice = backend
         self._subs: list[tuple] = []          # (event_type, cb, throttle_ms)
         self._want_toolbar = toolbar          # backend-native toolbar ([D95])
@@ -334,7 +336,19 @@ class View(QWidget):
             self._error = None
 
     # ── events ──
-    def on(self, event_type: type, cb: Callable, *, throttle_ms: int | None = None) -> Disposable:
+    def on(self, event_type: type, cb: Callable, *, throttle_ms: int | None = None,
+           source=None) -> Disposable:
+        """Subscribe to a typed event. `source=` ([D134]) filters by the
+        emitting element — pass an Element (or its id), or a sequence of
+        either; it replaces the `e.source_id == el.id` lambda idiom."""
+        if source is not None:
+            items = source if isinstance(source, (list, tuple, set)) else (source,)
+            wanted = frozenset(getattr(x, "id", x) for x in items)
+            inner = cb
+
+            def cb(ev, _inner=inner, _wanted=wanted):  # noqa: A001 — deliberate rebind
+                if getattr(ev, "source_id", None) in _wanted:
+                    _inner(ev)
         record = (event_type, cb, throttle_ms)
         self._subs.append(record)
         live = (
@@ -364,3 +378,23 @@ class View(QWidget):
     @property
     def loading(self) -> bool:
         return self._placeholder is not None or self._superseded is not None
+
+
+def show(node, *, title: str | None = None, size: tuple[int, int] = (960, 640),
+         backend: str = "auto", theme: Theme | None = None, block: bool = True) -> View:
+    """[D134] the one-liner for scripts: wrap `node` in a `View` (an existing
+    `View` passes through), size/title/show it, and — with `block=True` — run
+    the Qt event loop. Returns the View either way, so `block=False` hands
+    back a live widget for embedding or tests. `View` itself stays a plain
+    QWidget for real applications."""
+    from PySide6.QtWidgets import QApplication  # noqa: PLC0415
+
+    app = QApplication.instance() or QApplication([])
+    view = node if isinstance(node, View) else View(node, backend=backend, theme=theme)
+    view.resize(*size)
+    if title is not None:
+        view.setWindowTitle(title)
+    view.show()
+    if block:
+        app.exec()
+    return view

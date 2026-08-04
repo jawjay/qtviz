@@ -58,8 +58,7 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - Overlay
         - Layout
         - View
-        - negotiate
-        - auto_negotiate
+        - show
 
 ## Data binding
 
@@ -70,14 +69,11 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
       members:
         - col
         - lit
-        - Expression
-        - Accessor
         - tabular
         - gridded
         - set_raster_threshold
         - set_raster_size
         - stream
-        - StreamRef
 
 ## Encoding & styling
 
@@ -87,10 +83,10 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
       show_root_toc_entry: false
       members:
         - Color
-        - ColorSpec
         - Palette
         - palettes
         - Theme
+        - set_default_theme
         - Norm
         - OverlayOptions
         - LayoutOptions
@@ -133,7 +129,6 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
         - from_holoviews
         - from_holoviews_dmap
         - from_hvplot
-        - DMapBinding
 
 ## Backends & capabilities
 

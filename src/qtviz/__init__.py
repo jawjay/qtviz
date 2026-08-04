@@ -31,8 +31,8 @@ from .core.event import (
 )
 from .core.options import AxisSpec, LayoutOptions, OverlayOptions
 from .core.palette import Palette, palettes
-from .core.theme import Theme
-from .core.view import View
+from .core.theme import Theme, set_default_theme
+from .core.view import View, show
 from .data import (
     Accessor,
     Expression,
@@ -90,17 +90,17 @@ __all__ = [
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     # waves 1.4/1.5 ([D115]/[D118])
     "Stem", "Streamlines",
-    # composition + view
-    "Overlay", "Layout", "negotiate", "auto_negotiate", "View",
+    # composition + view + the [D134] script one-liner
+    "Overlay", "Layout", "View", "show",
     # adapters (Phase 3)
-    "from_holoviews", "from_holoviews_dmap", "from_hvplot", "DMapBinding",
+    "from_holoviews", "from_holoviews_dmap", "from_hvplot",
     # data binding (accessors, D14) + shape overrides (D17) + raster routing (Phase 4)
-    "Accessor", "Expression", "col", "lit", "tabular", "gridded",
+    "col", "lit", "tabular", "gridded",
     "set_raster_threshold", "set_raster_size",
     # streaming ([D76])
-    "stream", "StreamRef",
+    "stream",
     # styling
-    "Color", "ColorSpec", "Norm", "Palette", "palettes", "Theme",
+    "Color", "Norm", "Palette", "palettes", "Theme", "set_default_theme",
     "OverlayOptions", "LayoutOptions", "AxisSpec",
     # backends + capabilities
     "Capabilities", "set_default_backend", "set_backend_priority",

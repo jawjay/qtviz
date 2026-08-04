@@ -83,3 +83,17 @@ class Theme(Immutable):
                 "construct it first or use Theme.light()/dark()."
             )
         return cls.from_qt_palette(app.palette(), font_family=app.font().family())
+
+
+_DEFAULT_THEME: Theme | None = None
+
+
+def set_default_theme(theme: Theme | None) -> None:
+    """[D134] the app-level default a `View(theme=None)` consults — symmetry
+    with `set_default_backend`. `None` restores the built-in light theme."""
+    global _DEFAULT_THEME
+    _DEFAULT_THEME = theme
+
+
+def default_theme() -> Theme:
+    return _DEFAULT_THEME if _DEFAULT_THEME is not None else Theme.light()
