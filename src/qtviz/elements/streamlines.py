@@ -11,8 +11,8 @@ from ..errors import ValidationError
 
 
 class Streamlines(Element):
-    """Streamlines of a vector field: `u`/`v` are 2-D arrays on the
-    `Image`/`Contour` grid contract, placed in data space by `extent` —
+    """Streamlines of a vector field: `u`/`v` are accessors resolving to 2-D
+    arrays on the `Image`/`Contour` grid contract, placed in data space by `extent` —
     deliberately grids, not per-point columns, because field topology needs
     the grid. The integrator runs once in core (`_streamlines`): seeds on a
     coarse mask grid (`30×30 · density`), RK4 both directions with bilinear
@@ -25,18 +25,22 @@ class Streamlines(Element):
     draw gradient polylines — the same honesty tier as `Curve(color_by=)`;
     revisit together), no varying line width, no start-point control."""
 
-    # [D124]: holds raw 2-D arrays, no DataRef today; becomes "gridded"
-    # when [D129] makes it data-first (wave 3).
-    DATA_KIND = "none"
-    REQUIRED_OPTIONS = ("extent",)
+    # [D129]/[D124]: data-first — u/v are channel accessors (the full
+    # str | Expression | Callable | ArrayLike union) resolved against `data`,
+    # structurally identical to Quiver; the 2-D grid contract is validated at
+    # geometry time. Consumption is the standard channel path.
+    DATA_KIND = "tabular"
+    REQUIRED_OPTIONS = ("u", "v", "extent")
+    CHANNELS = ("u", "v")
     RECOMMENDED_OPTIONS = ("density", "color", "line_width", "alpha", "label")
     HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
     def __init__(
         self,
-        u,
-        v,
+        data,
         *,
+        u="u",
+        v="v",
         extent: tuple[float, float, float, float],
         density: float = 1.0,
         color: ColorSpec | None = None,
@@ -48,17 +52,12 @@ class Streamlines(Element):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Streamlines")
-        u = np.asarray(u, dtype="float64")
-        v = np.asarray(v, dtype="float64")
-        if u.ndim != 2 or v.ndim != 2:
-            raise ValidationError("Streamlines u/v must be 2-D arrays on the "
-                                  "Image/Contour grid contract")
-        if u.shape != v.shape:
-            raise ValidationError(
-                f"Streamlines u/v shapes must match, got {u.shape} vs {v.shape}")
         if not 0.0 < float(density) <= 5.0:
             raise ValidationError(
                 f"Streamlines density must be in (0, 5], got {density!r}")
+        from ..data import as_data_ref  # noqa: PLC0415
+
+        self.data = as_data_ref(data)
         self.u = u
         self.v = v
         self.extent = tuple(float(b) for b in extent)
@@ -81,11 +80,25 @@ class Streamlines(Element):
         return Lowered(marks=(Polyline(lx, ly, stroke), Polyline(hx, hy, stroke)),
                        legend=self.legend_entry(ctx.theme, ctx.series_index))
 
+    def _grids(self):
+        """The resolved 2-D field arrays — the grid contract checked here
+        (accessors may be callables, opaque until resolve)."""
+        u = np.asarray(self.data.series("u"), dtype="float64")
+        v = np.asarray(self.data.series("v"), dtype="float64")
+        if u.ndim != 2 or v.ndim != 2:
+            raise ValidationError("Streamlines u/v must resolve to 2-D arrays "
+                                  "on the Image/Contour grid contract")
+        if u.shape != v.shape:
+            raise ValidationError(
+                f"Streamlines u/v shapes must match, got {u.shape} vs {v.shape}")
+        return u, v
+
     def resolved_paths(self):
         """The shared core integration ([D110]): `(paths, heads)` polylines."""
         from ..core._streamlines import streamline_paths  # noqa: PLC0415
 
-        return streamline_paths(self.u, self.v, self.extent, self.density)
+        u, v = self._grids()
+        return streamline_paths(u, v, self.extent, self.density)
 
     def resolved_segments(self):
         """The two NaN-separated polylines every backend draws — all lines

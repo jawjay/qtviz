@@ -21,6 +21,7 @@ from ...core.lowering import LowerContext
 from ...core.marks import (
     MARK_TYPES,
     ArrowMark,
+    Band,
     Markers,
     PolygonMark,
     Polyline,
@@ -72,6 +73,22 @@ def draw_markers(m: Markers, ctx):
         useCache=True, hoverable=m.pickable)
     ctx.parent_axes.addItem(item)
     return item
+
+
+def draw_band(m: Band, ctx):
+    x_log, y_log = _xy_log(ctx)
+    if m.orient == "h":  # ([D99]) band spans x as a function of y
+        y = logify(m.pos, y_log)
+        lo = pg.PlotDataItem(logify(m.lo, x_log), y)
+        hi = pg.PlotDataItem(logify(m.hi, x_log), y)
+    else:
+        x = logify(m.pos, x_log)
+        lo = pg.PlotDataItem(x, logify(m.lo, y_log))
+        hi = pg.PlotDataItem(x, logify(m.hi, y_log))
+    fill = pg.FillBetweenItem(lo, hi, brush=pg.mkBrush(_qcolor(m.fill.color, m.fill.alpha)))
+    for it in (lo, hi, fill):
+        ctx.parent_axes.addItem(it)
+    return fill
 
 
 def draw_rule(m: Rule, ctx):
@@ -200,6 +217,7 @@ def draw_arrow(m: ArrowMark, ctx):
 
 MARK_DRAWERS = {
     Polyline: draw_polyline,
+    Band: draw_band,
     Markers: draw_markers,
     Rule: draw_rule,
     SpanMark: draw_span,

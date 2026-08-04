@@ -54,7 +54,7 @@ def build(theme: qv.Theme | None = None):
     anomalies = df[df["flag"]]
     print(f"flagged {len(anomalies)} anomalous samples of {len(df)}")
 
-    band = qv.Spread(df, x="t", y_lo="lo", y_hi="hi", color="#3a6ea5", alpha=0.25,
+    band = qv.Spread(df, x="t", lo="lo", hi="hi", color="#3a6ea5", alpha=0.25,
                      label="tolerance")
     signal = qv.Curve(df, x="t", y="temp", color="#9ecbff", line_width=1.0, label="signal")
     baseline = qv.Curve(df, x="t", y="baseline", color="#ffb454", line_width=2.0,

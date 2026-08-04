@@ -33,7 +33,7 @@ def build():
         "hi": fit + 0.25,
     }
 
-    band = qv.Spread(data, x="x", y_lo="lo", y_hi="hi", color="#5fa8ff", alpha=0.25)
+    band = qv.Spread(data, x="x", lo="lo", hi="hi", color="#5fa8ff", alpha=0.25)
     line = qv.Curve(data, x="x", y="fit", color="#1f6fff", line_width=2.5)
     points = qv.Scatter(data, x="x", y="y", color="#ff6b6b", size=5)
 

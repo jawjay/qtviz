@@ -33,7 +33,7 @@ def test_validation_error_is_both_qtviz_and_value_error():
         lambda t: qv.Scatter(t, x="x", y="y", size=5.0, size_by="z"),           # exclusive
         lambda t: qv.Scatter(t, x="nope", y="y"),                               # unknown column
         lambda t: qv.Curve(t, x="x", y="y", alpha=-0.1),
-        lambda t: qv.Spread(t, x="x", y_lo="y_lo", y_hi="y_hi", alpha=2.0),
+        lambda t: qv.Spread(t, x="x", lo="y_lo", hi="y_hi", alpha=2.0),
     ],
 )
 def test_construction_rejections_raise_validation_error(table, build):

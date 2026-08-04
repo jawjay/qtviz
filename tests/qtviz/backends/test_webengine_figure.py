@@ -73,11 +73,11 @@ def test_supports_the_data_vocabulary():
     # native trace builders only — the geometry tail (Quiver/Stem/Streamlines
     # + annotations) now arrives through the [D122] mark adapter instead
     assert names == {
-        "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars", "Spread",
+        "Scatter", "Curve", "Bars", "Histogram", "Image", "Heatmap", "ErrorBars",
         "BoxPlot", "Violin",
         "Area", "Ecdf", "Pie", "Contour", "Mesh",
     }
-    for lowered in (qv.Quiver, qv.Stem, qv.Streamlines, qv.HLine, qv.Text):
+    for lowered in (qv.Quiver, qv.Stem, qv.Streamlines, qv.Spread, qv.HLine, qv.Text):
         assert qv.backends.get("webengine").supports(lowered)
 
 

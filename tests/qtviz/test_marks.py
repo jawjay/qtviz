@@ -116,8 +116,10 @@ def test_data_kind_metadata():
     assert qv.Histogram.DATA_KIND == "tabular"
     for gridded in (qv.Image, qv.Contour, qv.Mesh):
         assert gridded.DATA_KIND == "gridded"
-    for data_less in (qv.HLine, qv.Text, qv.Rect, qv.RawFigure, qv.Streamlines):
+    for data_less in (qv.HLine, qv.Text, qv.Rect, qv.RawFigure):
         assert data_less.DATA_KIND == "none"
+    # [D129]: Streamlines is data-first — u/v resolve through the channel path
+    assert qv.Streamlines.DATA_KIND == "tabular"
 
 
 def test_data_less_elements_resolve_data_without_getattr():
@@ -208,7 +210,9 @@ def _mk_stem(**kw):
 _LOWERED_CTORS = {
     "Quiver": _quiver,
     "Stem": _mk_stem,
-    "Streamlines": lambda **kw: qv.Streamlines(_U2D, -_U2D, extent=(0, 1, 0, 1), **kw),
+    "Spread": lambda **kw: qv.Spread({"t": [0.0, 1.0], "a": [0.0, 0.5], "b": [1.0, 2.0]},
+                                     x="t", lo="a", hi="b", **kw),
+    "Streamlines": lambda **kw: qv.Streamlines({"u": _U2D, "v": -_U2D}, extent=(0, 1, 0, 1), **kw),
     "HLine": lambda **kw: qv.HLine(1.0, **kw),
     "VLine": lambda **kw: qv.VLine(2.0, **kw),
     "Span": lambda **kw: qv.Span(0.2, 0.8, **kw),

@@ -33,7 +33,7 @@ def build():
         qv.Image(image, extent=(0, 0, 60, 40)),
         qv.Heatmap(grid, x="gx", y="gy", z="gz"),
         qv.ErrorBars(line, x="x", y="y", err="err"),
-        qv.Spread(line, x="x", y_lo="lo", y_hi="hi"),
+        qv.Spread(line, x="x", lo="lo", hi="hi"),
     ]
     layout = qv.Layout(panels, options=qv.LayoutOptions(cols=4))
     return qv.View(layout, theme=qv.Theme.dark())

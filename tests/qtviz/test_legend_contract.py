@@ -59,7 +59,7 @@ def test_all_styling_elements_carry_label():
         qv.Bars(_DATA, x="x", y="y", label="b"),
         qv.Histogram(_DATA, value="y", label="h"),
         qv.ErrorBars({"x": [1.0], "y": [2.0], "e": [0.1]}, x="x", y="y", err="e", label="e"),
-        qv.Spread({"x": [1.0], "lo": [0.0], "hi": [2.0]}, x="x", y_lo="lo", y_hi="hi",
+        qv.Spread({"x": [1.0], "lo": [0.0], "hi": [2.0]}, x="x", lo="lo", hi="hi",
                   label="sp"),
     ]
     assert [el.legend_entry(theme).label for el in els] == ["s", "c", "b", "h", "e", "sp"]

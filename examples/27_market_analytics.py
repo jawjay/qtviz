@@ -41,7 +41,7 @@ def _ohlc() -> pd.DataFrame:
 def build(theme: qv.Theme | None = None):
     df = _ohlc()
 
-    band = qv.Spread(df, x="day", y_lo="boll_lo", y_hi="boll_hi", color="#4b6584", alpha=0.25)
+    band = qv.Spread(df, x="day", lo="boll_lo", hi="boll_hi", color="#4b6584", alpha=0.25)
     price = qv.Curve(df, x="day", y="price", color="#e8eaed", line_width=1.6)
     ma20 = qv.Curve(df, x="day", y="ma20", color="#f7b500", line_width=1.4)
     ma50 = qv.Curve(df, x="day", y="ma50", color="#26de81", line_width=1.4, line_style="dashed")

@@ -33,7 +33,6 @@ from ...elements import (
     Image,
     Mesh,
     Scatter,
-    Spread,
     Violin,
 )
 
@@ -777,24 +776,6 @@ def render_ecdf(element: Ecdf, ctx):
     return item
 
 
-def render_spread(element: Spread, ctx):
-    d = element.data
-    x_log, y_log = _xy_log(ctx)
-    if element.orient == "h":  # ([D99]) band spans x as a function of y
-        y = logify(_col(d, "y"), y_log)
-        lo = pg.PlotDataItem(logify(_col(d, "x_lo"), x_log), y)
-        hi = pg.PlotDataItem(logify(_col(d, "x_hi"), x_log), y)
-    else:
-        x = logify(_col(d, "x"), x_log)
-        lo = pg.PlotDataItem(x, logify(_col(d, "y_lo"), y_log))
-        hi = pg.PlotDataItem(x, logify(_col(d, "y_hi"), y_log))
-    brush = _color(element.color, ctx.theme, ctx.series_index).qt()
-    brush.setAlphaF(element.alpha)
-    fill = pg.FillBetweenItem(lo, hi, brush=brush)
-    for it in (lo, hi, fill):
-        ctx.parent_axes.addItem(it)
-    return fill
-
 
 def _ref_color(spec, theme) -> Color:
     """Annotation default: the theme foreground — a reference is chrome, not a
@@ -930,7 +911,6 @@ RENDERERS: dict[type, Any] = {
     Image: render_image,
     Heatmap: render_heatmap,
     ErrorBars: render_errorbars,
-    Spread: render_spread,
     BoxPlot: render_boxplot,
     Violin: render_violin,
     Area: render_area,
@@ -956,7 +936,6 @@ HONORED: dict[type, frozenset[str]] = {
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
                        "levels", "annotate"}),
     ErrorBars: frozenset({"color", "direction", "label", "lo_limit", "hi_limit"}),
-    Spread: frozenset({"color", "alpha", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),

@@ -2,7 +2,7 @@
 ([D98]/[D99]).
 
 `Bars(annotate=)` via the [D86] format vocabulary; `Spread` grows the
-horizontal orientation (`y`/`x_lo`/`x_hi`); `RefLine(slope, intercept)`;
+horizontal orientation (`y=` + `lo`/`hi`); `RefLine(slope, intercept)`;
 dash tuples anywhere `line_style` is accepted; `marker_every`; five new
 marker shapes — and the pre-existing pg wart where "triangle" pointed down
 is fixed (pg "t1" points up like mpl "^"/Plotly "triangle-up").
@@ -36,7 +36,7 @@ def test_validation():
     qv.HLine(1.0, line_style=(6.0, 2.0))
     qv.RefLine(2.0, 1.0)
     qv.Bars(_B, x="cat", y="v", annotate=".1f")
-    qv.Spread(_T, y="y", x_lo="x", x_hi="x")
+    qv.Spread(_T, y="y", lo="x", hi="x")
     with pytest.raises(ValidationError):
         qv.Curve(_T, x="x", y="y", line_style=(4.0,))         # odd-length dash
     with pytest.raises(ValidationError):
@@ -46,9 +46,9 @@ def test_validation():
     with pytest.raises(ValidationError):
         qv.Bars(_B, x="cat", y="v", annotate="nope}")
     with pytest.raises(ValidationError):
-        qv.Spread(_T, x="x", y_lo="y", x_hi="x")              # mixed orientations
+        qv.Spread(_T, x="x", y="y", lo="a", hi="b")           # both positions
     with pytest.raises(ValidationError):
-        qv.Spread(_T, x="x", y_lo="y")                        # incomplete set
+        qv.Spread(_T, lo="a", hi="b")                         # no position at all
 
 
 @pytest.mark.tier1
@@ -72,7 +72,7 @@ def test_webengine_polish_traces():
     assert bar["text"] == ["3", "5", "2"] and bar["textposition"] == "outside"
     # horizontal spread
     spread = _figure.build_figure(
-        qv.Spread(_T, y="y", x_lo="x", x_hi="x"), light)["data"]
+        qv.Spread(_T, y="y", lo="x", hi="x"), light)["data"]
     assert spread[1]["fill"] == "tonextx"
     # refline spans beyond the data range
     fig = _figure.build_figure(
@@ -119,7 +119,7 @@ def test_mpl_polish(qtbot):
     qtbot.addWidget(h2.widget)
     texts = [t.get_text() for t in h2.axes[0].texts]
     assert texts == ["3.0", "5.0", "2.0"]
-    spread = qv.Spread(_T, y="y", x_lo="x", x_hi="x")
+    spread = qv.Spread(_T, y="y", lo="x", hi="x")
     h3 = b.render(spread, theme=qv.Theme.light())
     qtbot.addWidget(h3.widget)
     assert len(h3.axes[0].collections) == 1        # fill_betweenx PolyCollection

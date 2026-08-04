@@ -42,7 +42,6 @@ from ...elements import (
     Pie,
     RawFigure,
     Scatter,
-    Spread,
     Violin,
 )
 from ...errors import IncompatibleOverlayError, RendererMissingError
@@ -442,31 +441,6 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
     }]
 
 
-def _spread_trace(element: Spread, theme, idx: int) -> list[dict]:
-    d = element.data
-    color = _element_color(element, theme, idx)
-    line_css = _css(color)
-    common = {"type": "scatter", "mode": "lines",
-              "line": {"width": 0, "color": line_css},
-              "name": element.label or element.id}
-    if element.orient == "h":  # ([D99]) band spans x as a function of y
-        y = _floats(d.series("y"))
-        lo = {**common, "x": _floats(d.series("x_lo")), "y": y,
-              "showlegend": False, "hoverinfo": "skip"}
-        hi = {**common, "x": _floats(d.series("x_hi")), "y": y, "fill": "tonextx",
-              "fillcolor": _rgba_css(color, element.alpha),
-              "showlegend": element.label is not None}
-        return [lo, hi]
-    x = _floats(d.series("x"))
-    # lower edge first (no fill), then upper edge filling down to it.
-    lo = {**common, "x": x, "y": _floats(d.series("y_lo")),
-          "showlegend": False, "hoverinfo": "skip"}
-    hi = {**common, "x": x, "y": _floats(d.series("y_hi")), "fill": "tonexty",
-          "fillcolor": _rgba_css(color, element.alpha),
-          "showlegend": element.label is not None}
-    return [lo, hi]
-
-
 
 def _dist_groups(element, theme, idx: int):
     """Shared BoxPlot/Violin prep: per-category groups + names + swatches."""
@@ -691,7 +665,6 @@ _TRACE_BUILDERS: dict[type, Any] = {
     Image: _image_trace,
     Heatmap: _heatmap_trace,
     ErrorBars: _errorbars_trace,
-    Spread: _spread_trace,
     BoxPlot: _boxplot_trace,
     Violin: _violin_trace,
     Area: _area_traces,
@@ -716,7 +689,6 @@ HONORED: dict[type, frozenset[str]] = {
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
                        "levels", "annotate"}),
     ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
-    Spread: frozenset({"color", "alpha", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),

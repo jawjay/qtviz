@@ -23,11 +23,11 @@ qv.Mesh(array2d,  x=xe, y=np.geomspace(1, 64, 13),  # "symlog",
         norm="boundary", levels=[0, 1, 2, 4, 8])                # "boundary"
 qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, labels=True)
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
-qv.Streamlines(u2d, v2d, extent=(0, 0, 10, 10), density=1.5)
+qv.Streamlines({"u": u2d, "v": v2d}, extent=(0, 0, 10, 10), density=1.5)
 qv.Pie(table, value="share", by="browser", hole=0.4)
 qv.ErrorBars(table, x="x", y="y", err="sigma",
              lo_limit="is_lo", hi_limit="is_hi")              # "beyond" arrow caps
-qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
+qv.Spread(table, x="t", lo="lo", hi="hi")   # filled confidence band
 qv.BoxPlot(table, value="score", by="cohort")
 qv.Violin(table,  value="score", by="cohort")
 ```

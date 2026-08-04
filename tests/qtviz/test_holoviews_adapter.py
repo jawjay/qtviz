@@ -107,12 +107,12 @@ def test_errorbars_asymmetric():
 @pytest.mark.tier1
 def test_spread_maps_delta_to_lo_hi():
     """hv Spread is y ± Δ (vdims [y, spread]); qtviz Spread wants explicit
-    y_lo/y_hi → Expression arithmetic, both referencing {y, spread} [D42]."""
+    lo/hi → Expression arithmetic, both referencing {y, spread} [D42]."""
     sp = hv.Spread([(0, 1, 0.1), (1, 2, 0.2)], vdims=["y", "spread"])
     node = from_holoviews(sp)
     assert isinstance(node, qv.Spread)
-    assert node.y_lo.columns() == {"y", "spread"}
-    assert node.y_hi.columns() == {"y", "spread"}
+    assert node.lo.columns() == {"y", "spread"}
+    assert node.hi.columns() == {"y", "spread"}
 
 
 @pytest.mark.tier1

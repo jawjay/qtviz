@@ -167,7 +167,7 @@ def _convert(obj: Any, hv) -> Any:
     if isinstance(obj, hv.Area):  # band [y, y2] → Spread; single vdim → Curve
         if len(obj.vdims) >= 2:
             return Spread(obj.dframe(), x=obj.kdims[0].name,
-                          y_lo=col(obj.vdims[0].name), y_hi=col(obj.vdims[1].name))
+                          lo=col(obj.vdims[0].name), hi=col(obj.vdims[1].name))
         return Curve(obj.dframe(), x=obj.kdims[0].name, y=obj.vdims[0].name)
     if isinstance(obj, hv.Curve):
         return Curve(obj.dframe(), x=obj.kdims[0].name, y=obj.vdims[0].name)
@@ -181,7 +181,7 @@ def _convert(obj: Any, hv) -> Any:
     if isinstance(obj, hv.Spread):  # vdims [y, Δ] → y ± Δ [D42]
         y, delta = obj.vdims[0].name, obj.vdims[1].name
         return Spread(obj.dframe(), x=obj.kdims[0].name,
-                      y_lo=col(y) - col(delta), y_hi=col(y) + col(delta))
+                      lo=col(y) - col(delta), hi=col(y) + col(delta))
     if isinstance(obj, hv.ErrorBars):
         x, y = obj.kdims[0].name, obj.vdims[0].name
         err: Any

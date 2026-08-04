@@ -28,7 +28,6 @@ from ...elements import (
     Mesh,
     Pie,
     Scatter,
-    Spread,
     Violin,
 )
 
@@ -706,19 +705,6 @@ def render_errorbars(element: ErrorBars, ctx):
     return [container, shafts, heads]
 
 
-def render_spread(element: Spread, ctx):
-    d = element.data
-    color = _color(element.color, ctx.theme, ctx.series_index).mpl()
-    if element.orient == "h":  # ([D99]) band spans x as a function of y
-        return ctx.parent_axes.fill_betweenx(
-            _col(d, "y"), _col(d, "x_lo"), _col(d, "x_hi"),
-            color=color, alpha=element.alpha,
-        )
-    return ctx.parent_axes.fill_between(
-        _col(d, "x"), _col(d, "y_lo"), _col(d, "y_hi"),
-        color=color, alpha=element.alpha,
-    )
-
 
 def _ref_color(spec, theme) -> Color:
     """Annotation default: the theme foreground — chrome, not a palette series."""
@@ -807,7 +793,6 @@ RENDERERS: dict[type, Any] = {
     Image: render_image,
     Heatmap: render_heatmap,
     ErrorBars: render_errorbars,
-    Spread: render_spread,
     BoxPlot: render_boxplot,
     Violin: render_violin,
     Area: render_area,
@@ -835,7 +820,6 @@ HONORED: dict[type, frozenset[str]] = {
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
                        "levels", "annotate"}),
     ErrorBars: frozenset({"direction", "color", "label", "lo_limit", "hi_limit"}),
-    Spread: frozenset({"color", "alpha", "label"}),
     BoxPlot: frozenset({"by", "color", "alpha", "label"}),
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),

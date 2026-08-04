@@ -17,6 +17,7 @@ import numpy as np
 
 from ...core.marks import (
     ArrowMark,
+    Band,
     Markers,
     PolygonMark,
     Polyline,
@@ -24,7 +25,7 @@ from ...core.marks import (
     SpanMark,
     TextMark,
 )
-from ._figure import _SYMBOL, _css, _dash, _shape_coord
+from ._figure import _SYMBOL, _css, _dash, _rgba_css, _shape_coord
 
 Op = tuple[str, "dict | Rule"]
 
@@ -63,13 +64,34 @@ def markers_ops(m: Markers, name: str) -> list[Op]:
         color = _css(m.fill) if m.fill is not None else None
     trace = {"type": "scattergl", "mode": "markers", "x": m.x, "y": m.y,
              "marker": {"color": color, "size": m.size, "symbol": _SYMBOL[m.marker]},
-             "opacity": m.alpha, "name": name, "showlegend": False}
+             "opacity": m.alpha, "name": name, "showlegend": False,
+             "_legend_target": True}
     return [("trace", trace)]
 
 
 def _rgba_css_row(row) -> str:
     r, g, b, a = (float(v) for v in row)
     return f"rgba({round(r * 255)}, {round(g * 255)}, {round(b * 255)}, {a:.3g})"
+
+
+def band_ops(m: Band, name: str) -> list[Op]:
+    """Two width-0 line traces; the second fills to the first ([D99] both
+    orientations). The filled trace is the legend sample (`_legend_target`)."""
+    css = _css(m.fill.color)
+    common = {"type": "scatter", "mode": "lines",
+              "line": {"width": 0, "color": css}, "name": name}
+    fill_css = _rgba_css(m.fill.color, m.fill.alpha)
+    if m.orient == "h":
+        lo = {**common, "x": m.lo, "y": m.pos,
+              "showlegend": False, "hoverinfo": "skip"}
+        hi = {**common, "x": m.hi, "y": m.pos, "fill": "tonextx",
+              "fillcolor": fill_css, "showlegend": False, "_legend_target": True}
+    else:
+        lo = {**common, "x": m.pos, "y": m.lo,
+              "showlegend": False, "hoverinfo": "skip"}
+        hi = {**common, "x": m.pos, "y": m.hi, "fill": "tonexty",
+              "fillcolor": fill_css, "showlegend": False, "_legend_target": True}
+    return [("trace", lo), ("trace", hi)]
 
 
 def rule_ops(m: Rule, x_scale: str, y_scale: str) -> list[Op]:
@@ -168,9 +190,10 @@ def arrow_ops(m: ArrowMark, x_scale: str, y_scale: str) -> list[Op]:
 
 def lowered_ops(lowered, element, theme, x_scale: str, y_scale: str) -> list[Op]:
     """All ops for one lowered element, legend behavior preserved: the entry
-    rides the Markers trace when one exists (Stem's head sample, [D115]),
-    else the first trace (Quiver/Streamlines); an `"arrow"`-glyph entry
-    ([D112] reference key) becomes a legend-only null trace like pre-IR."""
+    rides the trace flagged `_legend_target` (a Band's filled trace, a
+    Markers trace — Stem's head sample, [D115]) when one exists, else the
+    first trace (Quiver/Streamlines); an `"arrow"`-glyph entry ([D112]
+    reference key) becomes a legend-only null trace like pre-IR."""
     name = element.id
     ops: list[Op] = []
     marker_trace: dict | None = None
@@ -178,6 +201,8 @@ def lowered_ops(lowered, element, theme, x_scale: str, y_scale: str) -> list[Op]
     for mark in lowered.marks:
         if isinstance(mark, Polyline):
             mark_ops = polyline_ops(mark, name)
+        elif isinstance(mark, Band):
+            mark_ops = band_ops(mark, name)
         elif isinstance(mark, Markers):
             mark_ops = markers_ops(mark, name)
         elif isinstance(mark, Rule):
@@ -193,11 +218,13 @@ def lowered_ops(lowered, element, theme, x_scale: str, y_scale: str) -> list[Op]
         else:  # pragma: no cover — the total-drawer guard keeps this dead
             raise TypeError(f"webengine cannot draw mark {type(mark).__name__}")
         for kind, payload in mark_ops:
-            if kind == "trace":
+            if kind == "trace" and isinstance(payload, dict):
                 if first_trace is None:
-                    first_trace = payload  # type: ignore[assignment]
+                    first_trace = payload
+                if payload.pop("_legend_target", False) and marker_trace is None:
+                    marker_trace = payload  # preferred legend sample
                 if isinstance(mark, Markers) and marker_trace is None:
-                    marker_trace = payload  # type: ignore[assignment]
+                    marker_trace = payload
             ops.append((kind, payload))
     entry = lowered.legend
     if entry is not None:

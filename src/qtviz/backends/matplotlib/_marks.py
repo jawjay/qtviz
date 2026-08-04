@@ -15,6 +15,7 @@ import numpy as np
 from ...core.lowering import LowerContext
 from ...core.marks import (
     ArrowMark,
+    Band,
     Markers,
     PolygonMark,
     Polyline,
@@ -59,6 +60,15 @@ def draw_markers(m: Markers, ctx):
     return ctx.parent_axes.scatter(
         m.x, m.y, color=color, s=size, alpha=m.alpha, marker=_MARKER[m.marker],
         edgecolors=None if m.edge is None else m.edge.color.mpl())
+
+
+def draw_band(m: Band, ctx):
+    color = m.fill.color.mpl()
+    if m.orient == "h":  # ([D99]) band spans x as a function of y
+        return ctx.parent_axes.fill_betweenx(m.pos, m.lo, m.hi,
+                                             color=color, alpha=m.fill.alpha)
+    return ctx.parent_axes.fill_between(m.pos, m.lo, m.hi,
+                                        color=color, alpha=m.fill.alpha)
 
 
 def _slope_scales_ok(ctx) -> bool:
@@ -143,6 +153,7 @@ def draw_arrow(m: ArrowMark, ctx):
 
 MARK_DRAWERS = {
     Polyline: draw_polyline,
+    Band: draw_band,
     Markers: draw_markers,
     Rule: draw_rule,
     SpanMark: draw_span,

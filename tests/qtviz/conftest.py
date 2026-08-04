@@ -80,7 +80,7 @@ def make_elements(table, grid):
             "Bars": qv.Bars(table, x="cat", y="y"),
             "Histogram": qv.Histogram(table, value="y"),
             "ErrorBars": qv.ErrorBars(table, x="x", y="y", err="err"),
-            "Spread": qv.Spread(table, x="x", y_lo="y_lo", y_hi="y_hi"),
+            "Spread": qv.Spread(table, x="x", lo="y_lo", hi="y_hi"),
             "Image": qv.Image(values, extent=bounds),
             "Heatmap": qv.Heatmap(table, x="x", y="y", z="z"),
             # annotation / reference elements ([D70], 0.4)
@@ -105,7 +105,7 @@ def make_elements(table, grid):
                             y=np.geomspace(1.0, 20.0, 21)),
             "Quiver": qv.Quiver(table, x="x", y="y", u="z", v="y"),
             "Stem": qv.Stem(table, x="x", y="y"),
-            "Streamlines": qv.Streamlines(values, -values, extent=bounds),
+            "Streamlines": qv.Streamlines({"u": values, "v": -values}, extent=bounds),
             "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"],
                            "cat": ["p", "q", "p"]},  # the honor-matrix by= column
                           value="v", by="l"),
