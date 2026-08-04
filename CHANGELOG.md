@@ -41,6 +41,29 @@ Also:
   `Scatter(matplotlib_rasterized=)` (backend leak; `handle.native()` is the
   escape hatch).
 
+### Changed (wave 4 — [D123]/[D124]/[D125]/[D132] structural cleanup)
+
+- **Honesty tables retired** ([D123]): every element now declares
+  `HONORED_NATIVE` (one set, in core); a backend declares only its deltas —
+  pyqtgraph's two (`Contour − filled`, `Image − interpolation`) are the whole
+  per-backend surface. 78 byte-identical rows × 3 backends are gone.
+- **Typed side-channels** ([D124]): the datashader/lazy-grid attributes
+  (`_raster_source`/`_raster_agg`/`_raster_aggregate`/`_grid_source`) became
+  one typed `_aux` slot (`RasterAux`/`GridAux`) with accessor helpers; the
+  resolve pipeline dispatches on `DATA_KIND` instead of duck-typing; gridded
+  reads go through `resolved_grid()`.
+- **Entry-point backends** ([D125]): discovery is the `qtviz.backends`
+  entry-point group — a third-party backend registers with zero qtviz edits;
+  stale-metadata installs fall back to the built-ins.
+- **Style uniformity** ([D132]): `alpha` on every visible element (added:
+  Bars, Image, Mesh, Heatmap, ErrorBars, Contour); `line_width` uniform at
+  1.5 (Quiver 1.0→1.5; ErrorBars gains the param — webengine error-bar
+  thickness now follows it); Scatter takes the full 10-marker vocabulary;
+  `axis="y2"` on every tabular xy element (added: Bars, Area, Spread, Stem,
+  Histogram, Ecdf, ErrorBars).
+- Benchmarks pass unchanged post-IR ([D126] settled: Curve/Bars stay native;
+  [D127]: Pie stays absent on pyqtgraph).
+
 ### Changed (wave 3 — [D129]/[D130]/[D131] semantic surface + more lowering)
 
 - **[D130] one colormap spec**: `norm=` accepts a name or `qv.Norm(kind, *,
