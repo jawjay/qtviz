@@ -80,8 +80,8 @@ class Mesh(NormedRaster, Element):
 
     def resolved_grid(self):
         """[D124] the one gridded accessor: the resolved `GridData` — replaces
-        scattered `element.resolved_grid()` reach-through in the backends."""
-        return self.resolved_grid()
+        scattered `element.data.grid()` reach-through in the backends."""
+        return self.data.grid()
 
     def check_shape(self, values) -> np.ndarray:
         """Render-seam guard: `(len(y)-1, len(x)-1)` values."""

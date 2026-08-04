@@ -70,8 +70,8 @@ class Contour(Element):
 
     def resolved_grid(self):
         """[D124] the one gridded accessor: the resolved `GridData` — replaces
-        scattered `element.resolved_grid()` reach-through in the backends."""
-        return self.resolved_grid()
+        scattered `element.data.grid()` reach-through in the backends."""
+        return self.data.grid()
 
     def resolved_labels(self):
         """The core-placed inline labels ([D117]), or `[]` when off — one
