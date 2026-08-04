@@ -252,7 +252,7 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
             _continuous_marker_color(element, values, marker)
     else:
         marker = {"color": _css(_element_color(element, theme, idx))}
-    trace = {"type": "bar", "marker": marker,
+    trace = {"type": "bar", "marker": marker, "opacity": element.alpha,
              "name": element.label or element.id, "showlegend": element.label is not None}
     if element.orient == "h":
         trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
@@ -289,7 +289,7 @@ def _group_bars_traces(element: Bars, theme) -> list[dict]:
     swatches = category_swatches(gs, theme.palette)
     horizontal = element.orient == "h"  # categories on y, lengths on x ([D85])
     traces = [{
-        "type": "bar",
+        "type": "bar", "opacity": element.alpha,
         **({"x": mat[gi], "y": cats, "orientation": "h"} if horizontal
            else {"x": cats, "y": mat[gi]}),
         "marker": {"color": _css(swatches[gi])},
@@ -361,11 +361,12 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
             "y": np.linspace(y0, y1, nrows),
             "colorscale": _colorscale(element.colormap),
             "zsmooth": "best" if element.interpolation == "bilinear" else False,
-            "name": element.id,
+            "opacity": element.alpha, "name": element.id,
         }
         _apply_norm(trace, element, values)
         return [trace]
-    return [{"type": "image", "z": values, "name": element.id}]  # RGBA raster (user-built)
+    return [{"type": "image", "z": values, "opacity": element.alpha,
+             "name": element.id}]  # RGBA raster (user-built)
 
 
 def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
@@ -377,7 +378,8 @@ def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
                                element.aggregator)  # real reduction ([D69])
     trace = {
         "type": "heatmap", "x": xs, "y": ys, "z": grid,
-        "colorscale": _colorscale(element.colormap), "name": element.id,
+        "colorscale": _colorscale(element.colormap),
+        "opacity": element.alpha, "name": element.id,
     }
     labels = element.resolved_cell_labels(xs, ys, grid, theme)  # ([D113])
     if labels:
@@ -423,11 +425,13 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
     color = _css(_element_color(element, theme, idx))
     lo, hi, arrows = element.resolved_limits()  # limited sides zeroed ([D116])
     err = {"type": "data", "array": hi, "arrayminus": lo,
-           "symmetric": False, "color": color}
+           "symmetric": False, "color": color,
+           "thickness": element.line_width}
     trace = {
         "type": "scattergl", "mode": "markers",
         "x": _floats(d.series("x")), "y": _floats(d.series("y")),
-        "marker": {"color": color}, "name": element.label or element.id,
+        "marker": {"color": color}, "opacity": element.alpha,
+        "name": element.label or element.id,
         "showlegend": element.label is not None,
     }
     if element.direction in ("y", "both"):
@@ -441,7 +445,8 @@ def _errorbars_trace(element: ErrorBars, theme, idx: int) -> list[dict]:
     return [trace, {
         "type": "scattergl", "mode": "lines",
         "x": np.concatenate([sx, gap, hx]), "y": np.concatenate([sy, gap, hy]),
-        "line": {"color": color, "width": 1.5}, "hoverinfo": "skip",
+        "line": {"color": color, "width": element.line_width},
+        "opacity": element.alpha, "hoverinfo": "skip",
         "name": element.label or element.id, "showlegend": False,
     }]
 
@@ -581,7 +586,8 @@ def _mesh_trace(element: Mesh, theme, idx: int) -> list[dict]:
         "type": "heatmap", "z": values,
         "x": np.asarray(element.x, dtype="float64"),
         "y": np.asarray(element.y, dtype="float64"),
-        "colorscale": _colorscale(element.colormap), "name": element.id,
+        "colorscale": _colorscale(element.colormap),
+        "opacity": element.alpha, "name": element.id,
     }
     _apply_norm(trace, element, values)
     return [trace]
@@ -613,6 +619,7 @@ def _contour_trace(element: Contour, theme, idx: int) -> list[dict]:
         "contours": {"coloring": "fill" if element.filled else "lines",
                      "start": float(lv[0]), "end": float(lv[-1]), "size": step},
         "line": {"width": element.line_width},
+        "opacity": element.alpha,
         "showscale": element.filled,  # colorbar for filled, like matplotlib
         "name": element.label or element.id, "showlegend": False,
     }

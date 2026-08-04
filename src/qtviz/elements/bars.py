@@ -21,7 +21,7 @@ class Bars(Element):
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("by", "mode", "color", "color_by", "orient",
-                           "annotate", "label")
+                           "annotate", "alpha", "label", "axis")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
     HONORED_NATIVE = frozenset({"annotate", "by", "color", "color_by", "label", "mode", "orient"})
@@ -39,11 +39,18 @@ class Bars(Element):
         color: ColorSpec | None = None,
         color_by: Accessor | None = None,
         annotate: bool | str | None = None,
+        alpha: float = 1.0,
         label: str | None = None,
+        axis: Literal["y", "y2"] = "y",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        from ..core._validate import check_alpha  # noqa: PLC0415
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_alpha(alpha, who="Bars")
+        check_axis(axis, "native", who="Bars")
         if mode not in _MODES:
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")
         if mode != "grouped" and by is None:
@@ -68,7 +75,9 @@ class Bars(Element):
         self.color = color
         self.color_by = color_by
         self.annotate = annotate
+        self.alpha = float(alpha)
         self.label = label
+        self.axis = axis
         self._validate_tabular()
         self._freeze()
 

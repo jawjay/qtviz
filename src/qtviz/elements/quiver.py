@@ -42,7 +42,7 @@ class Quiver(Element):
         arrow_scale: float | str = "auto",
         head_scale: float = 1.0,
         color: ColorSpec | None = None,
-        line_width: float = 1.0,
+        line_width: float = 1.5,  # [D132] uniform default
         alpha: float = 1.0,
         label: str | None = None,
         key: float | None = None,

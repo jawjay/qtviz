@@ -21,7 +21,7 @@ class Area(Element):
     on unique x (duplicate rows in a group sum, like `Bars`)."""
 
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("by", "mode", "color", "alpha", "label")
+    RECOMMENDED_OPTIONS = ("by", "mode", "color", "alpha", "label", "axis")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
     HONORED_NATIVE = frozenset({"alpha", "by", "color", "label", "mode"})
@@ -38,6 +38,7 @@ class Area(Element):
         color: ColorSpec | None = None,
         alpha: float = 0.6,
         label: str | None = None,
+        axis: str = "y",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -54,7 +55,11 @@ class Area(Element):
         self.mode = mode
         self.color = color
         self.alpha = alpha
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_axis(axis, "native", who="Area")
         self.label = label
+        self.axis = axis
         self._validate_tabular()
         self._freeze()
 

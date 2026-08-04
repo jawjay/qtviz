@@ -20,7 +20,7 @@ class Stem(Element):
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("baseline", "marker", "color", "line_width", "alpha",
-                           "label")
+                           "label", "axis")
     CHANNELS = ("x", "y")
     HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
@@ -37,6 +37,7 @@ class Stem(Element):
         line_width: float = 1.5,
         alpha: float = 1.0,
         label: str | None = None,
+        axis: Literal["y", "y2"] = "y",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -49,7 +50,11 @@ class Stem(Element):
         self.color = color
         self.line_width = float(line_width)
         self.alpha = alpha
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_axis(axis, "native", who="Stem")
         self.label = label
+        self.axis = axis
         self._validate_tabular()
         self._freeze()
 

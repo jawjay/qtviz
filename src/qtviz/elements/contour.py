@@ -25,11 +25,12 @@ class Contour(Element):
 
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("extent",)
-    RECOMMENDED_OPTIONS = ("levels", "filled", "colormap", "line_width", "label",
+    RECOMMENDED_OPTIONS = ("levels", "filled", "colormap", "line_width", "alpha", "label",
                            "annotate")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"annotate", "colormap", "filled", "label", "levels", "line_width"})
+    HONORED_NATIVE = frozenset({"alpha", "annotate", "colormap", "filled", "label",
+                                "levels", "line_width"})
 
     def __init__(
         self,
@@ -40,6 +41,7 @@ class Contour(Element):
         filled: bool = False,
         colormap: str = "viridis",
         line_width: float = 1.5,
+        alpha: float = 1.0,
         label: str | None = None,
         annotate: bool | str = False,
         backend_hint: str | None = None,
@@ -62,7 +64,11 @@ class Contour(Element):
         self.levels = levels
         self.filled = bool(filled)
         self.colormap = colormap
+        from ..core._validate import check_alpha  # noqa: PLC0415
+
+        check_alpha(alpha, who="Contour")
         self.line_width = line_width
+        self.alpha = float(alpha)
         self.label = label
         self.annotate = annotate
         require_gridded(self.data, who="Contour")

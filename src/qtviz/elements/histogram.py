@@ -16,10 +16,10 @@ class Histogram(Element):
     computed once in core so every backend draws the same bars ([D93])."""
 
     REQUIRED_OPTIONS = ("value",)
-    RECOMMENDED_OPTIONS = ("bins", "density", "color", "alpha", "label")
+    RECOMMENDED_OPTIONS = ("bins", "density", "color", "alpha", "label", "axis")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"alpha", "bins", "color", "density", "label"})
+    HONORED_NATIVE = frozenset({"alpha", "axis", "bins", "color", "density", "label"})
     CHANNELS = ("value",)
 
     def __init__(
@@ -32,6 +32,7 @@ class Histogram(Element):
         color: ColorSpec | None = None,
         alpha: float = 1.0,
         label: str | None = None,
+        axis: str = "y",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -50,6 +51,10 @@ class Histogram(Element):
         self.density = density
         self.color = color
         self.alpha = alpha
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_axis(axis, "native", who="Histogram")
         self.label = label
+        self.axis = axis
         self._validate_tabular()
         self._freeze()

@@ -17,7 +17,7 @@ class Spread(Element):
     the band edges."""
 
     REQUIRED_OPTIONS = ("lo", "hi")
-    RECOMMENDED_OPTIONS = ("color", "alpha", "label")
+    RECOMMENDED_OPTIONS = ("color", "alpha", "label", "axis")
     HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
     def __init__(
@@ -31,6 +31,7 @@ class Spread(Element):
         color: ColorSpec | None = None,
         alpha: float = 0.3,
         label: str | None = None,
+        axis: str = "y",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -45,7 +46,11 @@ class Spread(Element):
         self.data = as_data_ref(data)
         self.color = color
         self.alpha = alpha
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_axis(axis, "native", who="Spread")
         self.label = label
+        self.axis = axis
         self._validate_tabular()
         self._freeze()
 

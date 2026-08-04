@@ -17,10 +17,10 @@ class Image(NormedRaster, Element):
 
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("extent",)
-    RECOMMENDED_OPTIONS = ("colormap", "interpolation", "norm", "clim")
+    RECOMMENDED_OPTIONS = ("colormap", "interpolation", "norm", "clim", "alpha")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"clim", "colormap", "interpolation", "norm"})
+    HONORED_NATIVE = frozenset({"alpha", "clim", "colormap", "interpolation", "norm"})
 
     def __init__(
         self,
@@ -31,11 +31,16 @@ class Image(NormedRaster, Element):
         interpolation: Literal["nearest", "bilinear"] = "bilinear",
         norm: str | Norm = "linear",
         clim: tuple[float | None, float | None] | None = None,
+        alpha: float = 1.0,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        from ..core._validate import check_alpha  # noqa: PLC0415
+
+        check_alpha(alpha, who="Image")
         self.norm, self.clim = check_norm_clim(norm, clim, who="Image")
+        self.alpha = float(alpha)
         self.data = as_data_ref(data)
         self.extent = tuple(float(b) for b in extent)
         self.colormap = colormap

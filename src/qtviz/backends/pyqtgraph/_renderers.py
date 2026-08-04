@@ -279,6 +279,7 @@ def render_bars(element: Bars, ctx):
                  "width": 0.6})
     item = pg.BarGraphItem(**geo, **({"brushes": brushes} if brushes is not None
                                      else {"brush": brush}))
+    item.setOpacity(element.alpha)
     if element.orient == "h":
         _bar_label_items(ctx, logify(x, y_log), height, logify(height, x_log), element)
     else:
@@ -405,6 +406,7 @@ def render_image(element: Image, ctx):
                 add_legend(ctx.parent_axes, norm_legend, ctx.theme,
                            ctx.legend_position)
     x0, y0, x1, y1 = element.extent
+    item.setOpacity(element.alpha)
     item.setRect(QRectF(x0, y0, x1 - x0, y1 - y0))
     ctx.parent_axes.addItem(item)
     if legend is not None and ctx.show_legend:
@@ -575,6 +577,7 @@ def render_heatmap(element: Heatmap, ctx):
     # row-major: grid[j, i] is (ys[j], xs[i]) — the pg default (col-major) drew
     # every heatmap transposed relative to matplotlib/webengine ([D92]).
     item = pg.ImageItem(grid, axisOrder="row-major")
+    item.setOpacity(element.alpha)
     item.setLookupTable(_pg_lut(element.colormap))
     if levels is not None:
         item.setLevels(levels)
@@ -633,6 +636,7 @@ def render_mesh(element: Mesh, ctx):
     if levels is not None:
         kwargs.update(levels=levels, enableAutoLevels=False)
     item = pg.PColorMeshItem(xg, yg, display, **kwargs)
+    item.setOpacity(element.alpha)
     ctx.parent_axes.addItem(item)
     if norm_legend is not None and ctx.show_legend:
         from ._legend import add_legend  # noqa: PLC0415
@@ -684,6 +688,9 @@ def render_contour(element: Contour, ctx):
                                anchor=(0.5, 0.5), angle=lb.angle)  # CCW ([D96])
             text.setPos(lb.x, lb.y)
             ctx.parent_axes.addItem(text)
+    for it in items:
+        if isinstance(it, pg.IsocurveItem):
+            it.setOpacity(element.alpha)
     return items
 
 
@@ -698,7 +705,9 @@ def render_errorbars(element: ErrorBars, ctx):
         kwargs["bottom"], kwargs["top"] = _log_deltas(y, lo, hi, y_log, ly)
     if element.direction in ("x", "both"):  # ([D92]: direction was unwired)
         kwargs["left"], kwargs["right"] = _log_deltas(x, lo, hi, x_log, lx)
-    pen = pg.mkPen(_color(element.color, ctx.theme, ctx.series_index).qt(), width=1.5)
+    qc = _color(element.color, ctx.theme, ctx.series_index).qt()
+    qc.setAlphaF(element.alpha)
+    pen = pg.mkPen(qc, width=element.line_width)
     item = pg.ErrorBarItem(x=lx, y=ly, beam=0.0, pen=pen, **kwargs)
     ctx.parent_axes.addItem(item)
     if arrows is None:

@@ -38,10 +38,10 @@ class Mesh(NormedRaster, Element):
 
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("x", "y")
-    RECOMMENDED_OPTIONS = ("colormap", "norm", "clim")
+    RECOMMENDED_OPTIONS = ("colormap", "norm", "clim", "alpha")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"clim", "colormap", "norm"})
+    HONORED_NATIVE = frozenset({"alpha", "clim", "colormap", "norm"})
 
     def __init__(
         self,
@@ -52,11 +52,16 @@ class Mesh(NormedRaster, Element):
         colormap: str = "viridis",
         norm: str | Norm = "linear",
         clim: tuple[float | None, float | None] | None = None,
+        alpha: float = 1.0,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        from ..core._validate import check_alpha  # noqa: PLC0415
+
+        check_alpha(alpha, who="Mesh")
         self.norm, self.clim = check_norm_clim(norm, clim, who="Mesh")
+        self.alpha = float(alpha)
         xe = _check_edges("x", x)
         ye = _check_edges("y", y)
         self.data = as_data_ref(data)

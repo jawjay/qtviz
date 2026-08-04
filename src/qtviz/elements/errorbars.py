@@ -25,7 +25,8 @@ class ErrorBars(Element):
     RECOMMENDED_OPTIONS = ("direction", "color", "label", "lo_limit", "hi_limit")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"color", "direction", "hi_limit", "label", "lo_limit"})
+    HONORED_NATIVE = frozenset({"alpha", "axis", "color", "direction", "hi_limit",
+                                "label", "line_width", "lo_limit"})
 
     def __init__(
         self,
@@ -36,7 +37,10 @@ class ErrorBars(Element):
         err: Accessor | tuple[Accessor, Accessor],
         direction: Literal["y", "x", "both"] = "y",
         color: ColorSpec | None = None,
+        line_width: float = 1.5,
+        alpha: float = 1.0,
         label: str | None = None,
+        axis: str = "y",
         lo_limit: Accessor | None = None,
         hi_limit: Accessor | None = None,
         backend_hint: str | None = None,
@@ -51,7 +55,15 @@ class ErrorBars(Element):
         self.x, self.y = x, y
         self.err = err
         self.direction = direction
+        from ..core._validate import check_alpha  # noqa: PLC0415
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_alpha(alpha, who="ErrorBars")
+        check_axis(axis, "native", who="ErrorBars")
         self.color = color
+        self.line_width = float(line_width)
+        self.alpha = float(alpha)
+        self.axis = axis
         self.label = label
         self.lo_limit = lo_limit
         self.hi_limit = hi_limit

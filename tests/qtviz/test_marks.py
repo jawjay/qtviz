@@ -246,6 +246,10 @@ def test_honored_by_lowering_is_honest(name, option):
     Lowered when perturbed — silent drops are structurally impossible."""
     from qtviz.data import resolve_node
 
+    if option == "axis":
+        # honored by surface ROUTING (ctx.parent_axes → the y2 host), not by
+        # the marks themselves — visible in the render, invisible to lowering
+        return
     ctor = _LOWERED_CTORS[name]
     prereq = _PREREQ.get(option, {}) if name == "Quiver" else {}
     # lower() runs on *resolved* elements ([D122]) — roles, not column names

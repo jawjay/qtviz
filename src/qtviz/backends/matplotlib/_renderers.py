@@ -309,11 +309,12 @@ def render_bars(element: Bars, ctx):
     bar, thick, _ticks = _bar_fns(ctx.parent_axes, element.orient)
     if element.color_by is not None:  # per-bar colors ([D100])
         rgba, legend = _color_mapping(element, element.data, ctx.theme)
-        container = bar(x, height, **{thick: 0.8}, color=list(rgba))
+        container = bar(x, height, **{thick: 0.8}, color=list(rgba),
+                        alpha=element.alpha)
         if ctx.show_legend:
             _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     else:
-        container = bar(x, height, **{thick: 0.8},
+        container = bar(x, height, **{thick: 0.8}, alpha=element.alpha,
                         color=_color(element.color, ctx.theme, ctx.series_index).mpl())
     _label_bars(ctx.parent_axes, container, element, ctx.theme)
     return container
@@ -343,13 +344,14 @@ def _render_group_bars(element: Bars, ctx):
         w = total_w / len(gs)
         for gi in range(len(gs)):
             artists.append(bar(pos - total_w / 2 + w / 2 + gi * w, mat[gi],
-                               **{thick: w * 0.95}, color=swatches[gi].mpl()))
+                               **{thick: w * 0.95}, color=swatches[gi].mpl(),
+                               alpha=element.alpha))
             _label_bars(ax, artists[-1], element, ctx.theme)
     else:  # stacked
         bases = np.zeros(len(xs))
         for gi in range(len(gs)):
             artists.append(bar(pos, mat[gi], **{thick: 0.6, base_kw: bases},
-                               color=swatches[gi].mpl()))
+                               color=swatches[gi].mpl(), alpha=element.alpha))
             _label_bars(ax, artists[-1], element, ctx.theme, inside=True)
             bases = bases + mat[gi]
     if ctx.show_legend:
@@ -377,7 +379,7 @@ def render_image(element: Image, ctx):
     if agg is not None:  # datashaded raster: shade + legend with the View's Theme (C2/C3)
         result = _shade_raster(element, agg, ctx.theme)
         artist = ctx.parent_axes.imshow(
-            result.rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+            result.rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto", alpha=element.alpha,
         )
         if result.legend is not None and ctx.show_legend:
             # category key / colorbar (C3)
@@ -391,7 +393,7 @@ def render_image(element: Image, ctx):
 
         rgba, legend = shade_values(element.resolved_grid().values, palettes.get("viridis"))
         artist = ctx.parent_axes.imshow(
-            rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+            rgba, extent=(x0, x1, y0, y1), origin="lower", aspect="auto", alpha=element.alpha,
         )
         if ctx.show_legend:
             _add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
@@ -400,7 +402,7 @@ def render_image(element: Image, ctx):
     values = np.asarray(element.resolved_grid().values)
     if values.ndim == 3:  # RGBA raster (e.g. a user-built image)
         artist = ctx.parent_axes.imshow(
-            values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+            values, extent=(x0, x1, y0, y1), origin="lower", aspect="auto", alpha=element.alpha,
             interpolation=element.interpolation,
         )
         _wire_dynamic_raster(element, artist, ctx)
@@ -408,7 +410,7 @@ def render_image(element: Image, ctx):
     display, norm_kw = _norm_display(  # ([D105])
         element, np.asarray(values, dtype="float64"), ctx, ctx.parent_axes)
     return ctx.parent_axes.imshow(
-        display, extent=(x0, x1, y0, y1), origin="lower", aspect="auto",
+        display, extent=(x0, x1, y0, y1), origin="lower", aspect="auto", alpha=element.alpha,
         cmap=_mpl_cmap(element.colormap), interpolation=element.interpolation,
         **norm_kw,
     )
@@ -563,7 +565,7 @@ def render_heatmap(element: Heatmap, ctx):
     y0, y1 = _heat_extent(ax, ys, "y")
     labels = element.resolved_cell_labels(xs, ys, grid, ctx.theme)  # pre-norm grid ([D113])
     grid, norm_kw = _norm_display(element, grid, ctx, ax)  # ([D105])
-    artist = ax.imshow(grid, origin="lower", aspect="auto",
+    artist = ax.imshow(grid, origin="lower", aspect="auto", alpha=element.alpha,
                        cmap=_mpl_cmap(element.colormap), extent=(x0, x1, y0, y1),
                        **norm_kw)
     for lb in labels:
@@ -638,7 +640,7 @@ def render_mesh(element: Mesh, ctx):
     display, norm_kw = _norm_display(element, values, ctx, ctx.parent_axes)
     return ctx.parent_axes.pcolormesh(
         np.asarray(element.x), np.asarray(element.y), display,
-        cmap=_mpl_cmap(element.colormap), **norm_kw)
+        alpha=element.alpha, cmap=_mpl_cmap(element.colormap), **norm_kw)
 
 
 def render_contour(element: Contour, ctx):
@@ -653,13 +655,14 @@ def render_contour(element: Contour, ctx):
     if element.filled:
         cs = ax.contourf(values, levels=lv, extent=(x0, x1, y0, y1),
                          origin="lower", cmap=_mpl_cmap(element.colormap),
-                         extend="both")
+                         alpha=element.alpha, extend="both")
         if ctx.show_legend:
             bar = ax.figure.colorbar(cs, ax=ax)
             bar.ax.tick_params(colors=ctx.theme.foreground.mpl())
     else:
         cs = ax.contour(values, levels=lv, extent=(x0, x1, y0, y1), origin="lower",
-                        cmap=_mpl_cmap(element.colormap), linewidths=element.line_width)
+                        cmap=_mpl_cmap(element.colormap), alpha=element.alpha,
+                        linewidths=element.line_width)
     _draw_contour_labels(element, ax, ctx.theme)
     return cs
 
@@ -692,13 +695,16 @@ def render_errorbars(element: ErrorBars, ctx):
         kwargs["xerr"] = err
     color = _color(element.color, ctx.theme, ctx.series_index).mpl()
     container = ctx.parent_axes.errorbar(
-        _col(d, "x"), _col(d, "y"), fmt="o", color=color, **kwargs,
+        _col(d, "x"), _col(d, "y"), fmt="o", color=color, alpha=element.alpha,
+        elinewidth=element.line_width, **kwargs,
     )
     if arrows is None:
         return container
     (sx, sy), (hx, hy) = arrows  # the two-polyline primitive Quiver uses
-    (shafts,) = ctx.parent_axes.plot(sx, sy, color=color, lw=1.5)
-    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=1.5)
+    (shafts,) = ctx.parent_axes.plot(sx, sy, color=color, lw=element.line_width,
+                                     alpha=element.alpha)
+    (heads,) = ctx.parent_axes.plot(hx, hy, color=color, lw=element.line_width,
+                                    alpha=element.alpha)
     return [container, shafts, heads]
 
 

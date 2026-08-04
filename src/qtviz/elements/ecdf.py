@@ -15,7 +15,7 @@ class Ecdf(Element):
     post-step curve path."""
 
     REQUIRED_OPTIONS = ("value",)
-    RECOMMENDED_OPTIONS = ("color", "line_width", "alpha", "label")
+    RECOMMENDED_OPTIONS = ("color", "line_width", "alpha", "label", "axis")
     CHANNELS = ("value",)
     HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
@@ -28,6 +28,7 @@ class Ecdf(Element):
         line_width: float = 1.5,
         alpha: float = 1.0,
         label: str | None = None,
+        axis: str = "y",
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -38,7 +39,11 @@ class Ecdf(Element):
         self.color = color
         self.line_width = line_width
         self.alpha = alpha
+        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+
+        check_axis(axis, "native", who="Ecdf")
         self.label = label
+        self.axis = axis
         self._validate_tabular()
         self._freeze()
 

@@ -24,11 +24,11 @@ class Heatmap(NormedRaster, Element):
     and skip labels rather than smear unreadable text."""
 
     REQUIRED_OPTIONS = ("x", "y", "z")
-    RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "clim",
+    RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "clim", "alpha",
                            "annotate")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"aggregator", "annotate", "clim", "colormap", "norm"})
+    HONORED_NATIVE = frozenset({"alpha", "aggregator", "annotate", "clim", "colormap", "norm"})
     CHANNELS = ("x", "y", "z")
 
     def __init__(
@@ -42,6 +42,7 @@ class Heatmap(NormedRaster, Element):
         aggregator: Literal["mean", "sum", "count", "max", "min", "last"] = "mean",
         norm: str | Norm = "linear",
         clim: tuple[float | None, float | None] | None = None,
+        alpha: float = 1.0,
         annotate: bool | str | None = None,
         backend_hint: str | None = None,
         id=None,
@@ -52,7 +53,11 @@ class Heatmap(NormedRaster, Element):
             raise ValidationError(
                 f"aggregator must be one of {GRID_AGGS}, got {aggregator!r}"
             )
+        from ..core._validate import check_alpha  # noqa: PLC0415
+
+        check_alpha(alpha, who="Heatmap")
         self.norm, self.clim = check_norm_clim(norm, clim, who="Heatmap")
+        self.alpha = float(alpha)
         # [D131] union: True ≡ "auto", False ≡ off, a format spec picks the text
         if annotate is True:
             annotate = "auto"
