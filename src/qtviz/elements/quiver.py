@@ -27,6 +27,9 @@ class Quiver(Element):
     RECOMMENDED_OPTIONS = ("arrow_scale", "head_scale", "color", "line_width",
                            "alpha", "label", "key", "key_label")
     CHANNELS = ("x", "y", "u", "v")
+    # [D123]: everything recommended survives lowering — geometry params into
+    # the polylines, style into the Stroke, label/key into the legend entry.
+    HONORED_BY_LOWERING = frozenset(RECOMMENDED_OPTIONS)
 
     def __init__(
         self,
@@ -90,6 +93,23 @@ class Quiver(Element):
         swatch = Color(spec) if spec is not None else theme.palette[index % len(theme.palette)]
         return LegendEntry(label, swatch, glyph="arrow",
                            line_width=self.line_width, head_scale=self.head_scale)
+
+    def lower(self, ctx):
+        """[D122] pilot lowering — the whole cross-backend implementation:
+        two NaN-separated polylines from the [D107] geometry, style resolved
+        into one `Stroke`, legend routed through `legend_entry()`. Not yet on
+        the render path: backends still dispatch through their registries
+        until wave 2 flips them to draw marks."""
+        from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
+        from ..core.marks import Polyline, Stroke  # noqa: PLC0415
+
+        (sx, sy), (hx, hy) = self.resolved_segments()
+        stroke = Stroke(resolve_color(self.color, ctx.theme, ctx.series_index),
+                        width=self.line_width, alpha=self.alpha)
+        return Lowered(
+            marks=(Polyline(sx, sy, stroke), Polyline(hx, hy, stroke)),
+            legend=self.legend_entry(ctx.theme, ctx.series_index),
+        )
 
     def resolved_segments(self):
         """The shared core geometry from the resolved channels ([D110])."""

@@ -23,6 +23,7 @@ class Contour(Element):
     so every backend places identical labels — deliberately *not* mpl's
     native `clabel` ([D110] over engine fidelity)."""
 
+    DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("bounds",)
     RECOMMENDED_OPTIONS = ("levels", "filled", "colormap", "line_width", "label",
                            "labels")

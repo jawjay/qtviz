@@ -31,6 +31,8 @@ def _detect_kind(figure) -> str:
 class RawFigure(Element):
     """Host an existing Plotly / Bokeh / HoloViews figure unchanged (webengine only)."""
 
+    DATA_KIND = "none"  # [D124]: the foreign figure is opaque, not a DataRef
+
     def __init__(self, figure, *, kind: str | None = None, backend_hint=None, id=None) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         self.figure = figure

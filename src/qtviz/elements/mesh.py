@@ -35,6 +35,7 @@ class Mesh(Element):
     uniform-bounds one). Non-uniform spacing is the point: log-spaced
     frequency rows, irregular time bins. Shares the [D105] norm surface."""
 
+    DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("x_edges", "y_edges")
     RECOMMENDED_OPTIONS = ("colormap", "norm", "vmin", "vmax", "gamma",
                            "linthresh", "levels")

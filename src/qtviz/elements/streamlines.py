@@ -25,6 +25,9 @@ class Streamlines(Element):
     draw gradient polylines — the same honesty tier as `Curve(color_by=)`;
     revisit together), no varying line width, no start-point control."""
 
+    # [D124]: holds raw 2-D arrays, no DataRef today; becomes "gridded"
+    # when [D129] makes it data-first (wave 3).
+    DATA_KIND = "none"
     REQUIRED_OPTIONS = ("bounds",)
     RECOMMENDED_OPTIONS = ("density", "color", "line_width", "alpha", "label")
 

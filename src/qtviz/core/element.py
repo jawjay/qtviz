@@ -46,11 +46,21 @@ def validate_channels(data, channels: dict, *, who: str) -> None:
 
 
 class Element(Immutable):
-    data: Any  # every data-bearing subclass sets it (annotations are data-less)
+    # [D124] one data contract: every element resolves `.data` (a class-level
+    # `None` covers the data-less annotation class, so consumers write
+    # `node.data`, never `getattr(node, "data", None)`), and `DATA_KIND`
+    # declares how it consumes data. The resolve pipeline still duck-types in
+    # wave 0–3; wave 4 switches it to dispatch on `DATA_KIND`.
+    data: Any = None
+    DATA_KIND: str = "tabular"  # "tabular" | "gridded" | "none"
     REQUIRED_OPTIONS: tuple[str, ...] = ()
     RECOMMENDED_OPTIONS: tuple[str, ...] = ()
     # Fixed channel roles bound to accessors; default role == field name.
     CHANNELS: tuple[str, ...] = ()
+    # [D123] the options this element's `lower()` carries into marks/legend —
+    # declared beside the lowering, proven honest by the perturbation guard
+    # (tests/qtviz/test_marks.py). Empty on elements that don't lower.
+    HONORED_BY_LOWERING: frozenset[str] = frozenset()
 
     def __init__(self, *, backend_hint: str | None = None, id: ElementId | None = None) -> None:
         self.backend_hint = backend_hint
@@ -79,6 +89,23 @@ class Element(Immutable):
         spec = getattr(self, "color", None)
         swatch = Color(spec) if spec is not None else theme.palette[index % len(theme.palette)]
         return LegendEntry(str(label), swatch)
+
+    def lower(self, ctx):
+        """This element's Mark lowering ([D122]) — `Lowered | None`. `None`
+        (the default) means the element does not lower: every backend must
+        register a native renderer for it, and `type(el).lower is not
+        Element.lower` is the dispatch predicate backends use. Overrides run
+        on *resolved* data and must be pure: marks in linear data space
+        ([D121]), style resolved through `ctx`. A registered native renderer
+        wins over lowering (the fast-path override)."""
+        return None
+
+    def select_xy(self):
+        """Brush/pick registration coordinates `(x, y) | None` for elements a
+        backend wires natively ([D124] — the declared replacement for
+        isinstance tuples in backend event code). Lowered elements carry this
+        on `Lowered.select_xy` instead."""
+        return None
 
     def _replace_data(self, ref):
         """Low-level copy with `data` swapped (no re-validation) — used by the

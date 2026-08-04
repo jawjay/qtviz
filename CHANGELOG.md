@@ -4,6 +4,34 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased — 2.0]
+
+The Mark IR + uniform-surface arc
+([`design/2.0-mark-ir-and-surface.md`](design/2.0-mark-ir-and-surface.md),
+[D121]–[D136]) — a clean 2.0 break: internal waves land first (no public
+surface change until the wave-1 renames; the freeze list flips to
+`FROZEN_2_0` last).
+
+### Internal (wave 0 — IR foundation, no behavior change)
+
+- `core/marks.py` — the typed Mark vocabulary ([D121]): 8 frozen mark types
+  (`Polyline`, `Markers`, `Band`, `Rects`, `PolygonMark`, `TextMark`,
+  `Rule`, `SpanMark`) with resolved `Stroke`/`Fill` style and
+  `structurally_equal`, the [D123] honesty primitive. Positions are linear
+  data space; log pretransform becomes a pyqtgraph-adapter concern.
+- `core/lowering.py` — `LowerContext`/`Lowered`/`resolve_color`;
+  `Element.lower()` hook ([D122], default "does not lower") with a pilot
+  `Quiver.lower()` proving mark-level golden parity against
+  `resolved_segments()`. Not yet on the render path (wave 2 flips backends
+  to draw marks).
+- [D124] groundwork: `Element.data` always resolves (`None` on data-less
+  elements), `DATA_KIND` metadata, `select_xy()` hook,
+  `HONORED_BY_LOWERING` declaration.
+- [D125] backend protocol formalized: `honored_options()` and
+  `requires_display` join the `Backend` protocol; `export(fmt, path, *,
+  dpi=, transparent=)` widened on the base handle (composite export now
+  warns instead of silently ignoring `dpi`/`transparent`).
+
 ## [Unreleased]
 
 Parity program ([`design/parity-program.md`](design/parity-program.md)) — the

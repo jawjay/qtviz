@@ -48,7 +48,7 @@ def test_annotations_are_data_less_and_resolve_untouched():
     from qtviz.data import resolve_node
 
     el = qv.VLine(2.0)
-    assert not hasattr(el, "data")
+    assert el.data is None                         # [D124]: data-less, but `.data` resolves
     assert resolve_node(el) is el                  # passthrough, like RawFigure
     node = resolve_node(qv.Scatter(_DATA, x="x", y="y") * qv.HLine(3.0))
     assert isinstance(node.children[1], qv.HLine)

@@ -23,6 +23,7 @@ from ..errors import ValidationError
 class _Reference(Element):
     """Shared base: neutral legend swatch (theme foreground, not a palette slot)."""
 
+    DATA_KIND = "none"  # [D124]: annotations are data-less; `.data` is the base None
     label: str | None  # declared for typing; Text carries no label
 
     def legend_entry(self, theme, index: int = 0):

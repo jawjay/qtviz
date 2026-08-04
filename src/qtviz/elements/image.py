@@ -45,6 +45,7 @@ class Image(Element):
     rasters). `norm`/`vmin`/`vmax`/`gamma` engage the [D105] color surface —
     normalized once in core, colorbar/limits appear only when used."""
 
+    DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("bounds",)
     RECOMMENDED_OPTIONS = ("colormap", "interpolation", "norm", "vmin", "vmax", "gamma",
                            "linthresh", "levels")
