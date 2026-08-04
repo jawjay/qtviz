@@ -16,7 +16,7 @@ class Contour(Element):
     sequence of values. `filled=True` shades between levels; pyqtgraph draws
     lines only and warns on `filled` (capability-honest).
 
-    `labels=` ([D117]) writes each level's value inline on its longest
+    `annotate=` ([D117]) writes each level's value inline on its longest
     iso-line — `True` for `%g`, or any [D86] format spec. Placement (marching
     squares → arc-length midpoint, tangent angle normalized upright, and a
     background mask segment that breaks the line) is computed once in core,
@@ -26,7 +26,7 @@ class Contour(Element):
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("extent",)
     RECOMMENDED_OPTIONS = ("levels", "filled", "colormap", "line_width", "label",
-                           "labels")
+                           "annotate")
 
     def __init__(
         self,
@@ -38,15 +38,15 @@ class Contour(Element):
         colormap: str = "viridis",
         line_width: float = 1.5,
         label: str | None = None,
-        labels: bool | str = False,
+        annotate: bool | str = False,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        if isinstance(labels, str):
+        if isinstance(annotate, str):
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
-            validate_tick_format(labels, who="Contour(labels=)")
+            validate_tick_format(annotate, who="Contour(annotate=)")
         if isinstance(levels, bool) or (isinstance(levels, int) and levels < 1):
             raise ValidationError(f"Contour levels must be a positive int or a "
                                   f"sequence of values, got {levels!r}")
@@ -61,14 +61,14 @@ class Contour(Element):
         self.colormap = colormap
         self.line_width = line_width
         self.label = label
-        self.labels = labels
+        self.annotate = annotate
         require_gridded(self.data, who="Contour")
         self._freeze()
 
     def resolved_labels(self):
         """The core-placed inline labels ([D117]), or `[]` when off — one
         call site per backend renderer."""
-        if self.labels is False:
+        if self.annotate is False:
             return []
         import numpy as np  # noqa: PLC0415
 
@@ -76,4 +76,4 @@ class Contour(Element):
 
         values = np.asarray(self.data.grid().values, dtype="float64")
         lv = contour_levels(values, self.levels)
-        return contour_label_specs(values, lv, self.extent, spec=self.labels)
+        return contour_label_specs(values, lv, self.extent, spec=self.annotate)

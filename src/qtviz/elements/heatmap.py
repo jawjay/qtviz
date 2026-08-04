@@ -15,7 +15,7 @@ class Heatmap(Element):
     one cell reduce through `aggregator` ([D69]; the pre-0.4 implicit behavior
     was `"last"`, kept in the vocabulary).
 
-    `cell_labels=` ([D113]) writes each aggregated value at its cell center —
+    `annotate=` ([D113]) writes each aggregated value at its cell center —
     `"auto"` for `%g`, or any [D86] format spec (`".1f"`, `"{:.0%}"`, …). The
     text color is computed in core per cell (WCAG luminance of the cell's ramp
     color → theme foreground or background), and grids above ~400 cells warn
@@ -23,7 +23,7 @@ class Heatmap(Element):
 
     REQUIRED_OPTIONS = ("x", "y", "z")
     RECOMMENDED_OPTIONS = ("colormap", "aggregator", "norm", "vmin", "vmax", "gamma",
-                           "cell_labels", "linthresh", "levels")
+                           "annotate", "linthresh", "levels")
     CHANNELS = ("x", "y", "z")
 
     def __init__(
@@ -41,7 +41,7 @@ class Heatmap(Element):
         gamma: float = 1.0,
         linthresh: float = 1.0,
         levels: tuple[float, ...] | list[float] | None = None,
-        cell_labels: str | None = None,
+        annotate: str | None = None,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -54,10 +54,10 @@ class Heatmap(Element):
             )
         check_norm(norm, vmin, vmax, gamma, who="Heatmap",
                    linthresh=linthresh, levels=levels)
-        if cell_labels is not None and cell_labels != "auto":
+        if annotate is not None and annotate != "auto":
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
-            validate_tick_format(cell_labels, who="Heatmap(cell_labels=)")
+            validate_tick_format(annotate, who="Heatmap(annotate=)")
         self.data = as_data_ref(data)
         self.x, self.y, self.z = x, y, z
         self.colormap = colormap
@@ -68,19 +68,19 @@ class Heatmap(Element):
         self.gamma = float(gamma)
         self.linthresh = float(linthresh)
         self.levels = tuple(float(v) for v in levels) if levels is not None else None
-        self.cell_labels = cell_labels
+        self.annotate = annotate
         self._validate_tabular()
         self._freeze()
 
     def resolved_cell_labels(self, xs, ys, grid, theme):
         """The core-computed labels ([D113]) for an already-pivoted grid, or
         `[]` when the option is off — one call site per backend renderer."""
-        if self.cell_labels is None:
+        if self.annotate is None:
             return []
         from ..core.encoding import heatmap_cell_labels  # noqa: PLC0415
 
         return heatmap_cell_labels(
-            xs, ys, grid, spec=self.cell_labels, norm=self.norm,
+            xs, ys, grid, spec=self.annotate, norm=self.norm,
             vmin=self.vmin, vmax=self.vmax, gamma=self.gamma,
             linthresh=self.linthresh, levels=self.levels,
             colormap=self.colormap,

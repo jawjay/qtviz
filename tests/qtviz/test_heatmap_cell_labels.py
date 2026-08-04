@@ -31,10 +31,10 @@ def _backend(name):
 
 @pytest.mark.tier1
 def test_validation():
-    qv.Heatmap(_T, x="x", y="y", z="z", cell_labels="auto")
-    qv.Heatmap(_T, x="x", y="y", z="z", cell_labels=".1f")
+    qv.Heatmap(_T, x="x", y="y", z="z", annotate="auto")
+    qv.Heatmap(_T, x="x", y="y", z="z", annotate=".1f")
     with pytest.raises(ValidationError):
-        qv.Heatmap(_T, x="x", y="y", z="z", cell_labels="{bad}{spec}")
+        qv.Heatmap(_T, x="x", y="y", z="z", annotate="{bad}{spec}")
 
 
 @pytest.mark.tier1
@@ -104,7 +104,7 @@ def test_cell_count_guard_warns_and_skips():
 def test_webengine_cell_labels_are_annotations():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Heatmap(_T, x="x", y="y", z="z", cell_labels="auto")
+    el = qv.Heatmap(_T, x="x", y="y", z="z", annotate="auto")
     fig = _figure.build_figure(el, qv.Theme.light())
     notes = fig["layout"].get("annotations", [])
     assert len(notes) == 4
@@ -115,7 +115,7 @@ def test_webengine_cell_labels_are_annotations():
 @pytest.mark.tier2
 def test_mpl_draws_cell_label_texts(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Heatmap(_T, x="x", y="y", z="z", cell_labels="auto")
+    el = qv.Heatmap(_T, x="x", y="y", z="z", annotate="auto")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     texts = [t.get_text() for t in handle.axes[0].texts]
@@ -126,7 +126,7 @@ def test_mpl_draws_cell_label_texts(qtbot):
 def test_pg_draws_cell_label_texts(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Heatmap(_T, x="x", y="y", z="z", cell_labels="auto")
+    el = qv.Heatmap(_T, x="x", y="y", z="z", annotate="auto")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     texts = [it for it in handle.plots[0].items if isinstance(it, pg.TextItem)]

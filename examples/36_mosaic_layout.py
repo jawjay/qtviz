@@ -43,7 +43,7 @@ hx, hy = np.meshgrid(np.arange(10.0), np.arange(3.0))
 c = qv.Overlay(
     [qv.Heatmap({"hour": hx.ravel(), "desk": hy.ravel(),
                  "vol": (rng.random(30) * 90 + 10).round()},
-                x="hour", y="desk", z="vol", cell_labels=".0f")],
+                x="hour", y="desk", z="vol", annotate=".0f")],
     options=qv.OverlayOptions(title="Volume by desk"),
 )
 

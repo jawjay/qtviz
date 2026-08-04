@@ -1,6 +1,6 @@
 """Wave 1.5 — [D117] contour inline labels (`clabel`).
 
-`Contour(labels=True | "fmt")` writes each level's value on its longest
+`Contour(annotate=True | "fmt")` writes each level's value on its longest
 iso-line. Placement is computed once in core — marching-squares polylines,
 the longest path's arc-length midpoint, the local tangent angle normalized
 to ±90° (text never upside-down), and a short background-colored mask
@@ -35,10 +35,10 @@ def _backend(name):
 def test_validation():
     from qtviz.errors import ValidationError
 
-    qv.Contour(_FIELD, extent=_BOUNDS, labels=True)
-    qv.Contour(_FIELD, extent=_BOUNDS, labels=".2f")
+    qv.Contour(_FIELD, extent=_BOUNDS, annotate=True)
+    qv.Contour(_FIELD, extent=_BOUNDS, annotate=".2f")
     with pytest.raises(ValidationError):
-        qv.Contour(_FIELD, extent=_BOUNDS, labels="{bad}{spec}")
+        qv.Contour(_FIELD, extent=_BOUNDS, annotate="{bad}{spec}")
 
 
 @pytest.mark.tier1
@@ -102,7 +102,7 @@ def test_flat_field_yields_no_labels():
 def test_webengine_labels_are_rotated_annotations_with_mask():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.3, 0.6], labels=True)
+    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.3, 0.6], annotate=True)
     fig = _figure.build_figure(el, qv.Theme.light())
     notes = fig["layout"].get("annotations", [])
     assert len(notes) == 2
@@ -117,7 +117,7 @@ def test_webengine_labels_are_rotated_annotations_with_mask():
 @pytest.mark.tier2
 def test_mpl_draws_rotated_label_texts(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.3, 0.6], labels=True)
+    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.3, 0.6], annotate=True)
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     texts = handle.axes[0].texts
@@ -130,7 +130,7 @@ def test_mpl_draws_rotated_label_texts(qtbot):
 def test_pg_draws_rotated_label_texts(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.3, 0.6], labels=True)
+    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.3, 0.6], annotate=True)
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     texts = [it for it in handle.plots[0].items if isinstance(it, pg.TextItem)]
@@ -143,7 +143,7 @@ def test_backends_place_labels_identically(qtbot):
     pytest.importorskip("matplotlib")
     import pyqtgraph as pg
 
-    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.5], labels=True)
+    el = qv.Contour(_FIELD, extent=_BOUNDS, levels=[0.5], annotate=True)
     h1 = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(h1.widget)
     h2 = _backend("pyqtgraph").render(el, theme=qv.Theme.light())

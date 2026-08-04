@@ -238,11 +238,11 @@ def render_curve(element: Curve, ctx):
 
 def _bar_label_items(ctx, positions, values, tops, element, *, inside=False) -> None:
     """Value labels beside/inside bars ([D98]) — formatted via [D86]."""
-    if element.bar_labels is None:
+    if element.annotate is None:
         return
     from ...core._ticks import format_tick  # noqa: PLC0415
 
-    spec = element.bar_labels if element.bar_labels != "auto" else "g"
+    spec = element.annotate if element.annotate != "auto" else "g"
     horizontal = element.orient == "h"
     fg = ctx.theme.foreground.qt()
     for pos, val, top in zip(positions, values, tops, strict=True):
@@ -1179,12 +1179,12 @@ HONORED: dict[type, frozenset[str]] = {
     Curve: frozenset({"color", "color_by", "line_width", "line_style", "marker",
                       "marker_every", "step", "alpha", "label", "axis"}),
     Bars: frozenset({"color", "color_by", "by", "mode", "orient",
-                     "bar_labels", "label"}),
+                     "annotate", "label"}),
     Histogram: frozenset({"bins", "density", "color", "alpha", "label"}),
     # (Image "interpolation" unwired on pg)
     Image: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Heatmap: frozenset({"colormap", "aggregator", "norm", "vmin", "vmax", "gamma", "linthresh",
-                       "levels", "cell_labels"}),
+                       "levels", "annotate"}),
     ErrorBars: frozenset({"color", "direction", "label", "lo_limit", "hi_limit"}),
     Spread: frozenset({"color", "alpha", "label"}),
     HLine: frozenset({"color", "line_width", "line_style", "alpha", "label"}),
@@ -1199,7 +1199,7 @@ HONORED: dict[type, frozenset[str]] = {
     Violin: frozenset({"by", "color", "alpha", "label"}),
     Area: frozenset({"by", "mode", "color", "alpha", "label"}),
     Ecdf: frozenset({"color", "line_width", "alpha", "label"}),
-    Contour: frozenset({"levels", "colormap", "line_width", "label", "labels"}),  # not filled
+    Contour: frozenset({"levels", "colormap", "line_width", "label", "annotate"}),  # not filled
     Mesh: frozenset({"colormap", "norm", "vmin", "vmax", "gamma", "linthresh", "levels"}),
     Quiver: frozenset({"arrow_scale", "head_scale", "color", "line_width",
                        "alpha", "label", "key", "key_label"}),

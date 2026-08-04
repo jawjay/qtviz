@@ -31,7 +31,7 @@ _NON_DEFAULT = {
     "marker": "square", "alpha": 0.5, "line_style": "dashed", "line_width": 3.0,
     "step": "post", "hole": 0.4, "axis": "y2", "levels": 4, "filled": True,
     "head": "both", "fill": True, "rotation": 30.0, "anchor_v": "top", "frame": True,
-    "bar_labels": "auto", "marker_every": 3,
+    "annotate": ".1f", "marker_every": 3,
     "norm": "power", "vmin": 0.2, "vmax": 0.9,  # ("gamma" needs norm="power")
     "arrow_scale": 0.5, "head_scale": 2.0, "baseline": 0.5,
     # ("mode" is skipped: stacking requires by=)

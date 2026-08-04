@@ -21,7 +21,7 @@ class Bars(Element):
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("by", "mode", "color", "color_by", "orient",
-                           "bar_labels", "label")
+                           "annotate", "label")
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -34,8 +34,8 @@ class Bars(Element):
         mode: Literal["grouped", "stacked"] = "grouped",
         orient: Literal["v", "h"] = "v",
         color: ColorSpec | None = None,
-        color_by: str | None = None,
-        bar_labels: str | None = None,
+        color_by: Accessor | None = None,
+        annotate: str | None = None,
         label: str | None = None,
         backend_hint: str | None = None,
         id=None,
@@ -45,10 +45,10 @@ class Bars(Element):
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")
         if mode != "grouped" and by is None:
             raise ValidationError(f"Bars mode={mode!r} requires by= (it stacks the groups)")
-        if bar_labels is not None:  # value labels format via the [D86] vocabulary
+        if annotate is not None:  # value labels format via the [D86] vocabulary
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
-            validate_tick_format(bar_labels, who="Bars(bar_labels=)")
+            validate_tick_format(annotate, who="Bars(annotate=)")
         check_exclusive(color, by, names=("color", "by"), who="Bars")
         check_exclusive(color, color_by, names=("color", "color_by"), who="Bars")
         check_exclusive(by, color_by, names=("by", "color_by"), who="Bars")
@@ -59,7 +59,7 @@ class Bars(Element):
         self.orient = orient
         self.color = color
         self.color_by = color_by
-        self.bar_labels = bar_labels
+        self.annotate = annotate
         self.label = label
         self._validate_tabular()
         self._freeze()

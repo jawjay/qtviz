@@ -1,7 +1,7 @@
 """Roadmap wave 1, increment 2 — bar labels + the series polish pack
 ([D98]/[D99]).
 
-`Bars(bar_labels=)` via the [D86] format vocabulary; `Spread` grows the
+`Bars(annotate=)` via the [D86] format vocabulary; `Spread` grows the
 horizontal orientation (`y`/`x_lo`/`x_hi`); `RefLine(slope, intercept)`;
 dash tuples anywhere `line_style` is accepted; `marker_every`; five new
 marker shapes — and the pre-existing pg wart where "triangle" pointed down
@@ -35,7 +35,7 @@ def test_validation():
     qv.Curve(_T, x="x", y="y", line_style=(4.0, 2.0), marker="star", marker_every=5)
     qv.HLine(1.0, line_style=(6.0, 2.0))
     qv.RefLine(2.0, 1.0)
-    qv.Bars(_B, x="cat", y="v", bar_labels=".1f")
+    qv.Bars(_B, x="cat", y="v", annotate=".1f")
     qv.Spread(_T, y="y", x_lo="x", x_hi="x")
     with pytest.raises(ValidationError):
         qv.Curve(_T, x="x", y="y", line_style=(4.0,))         # odd-length dash
@@ -44,7 +44,7 @@ def test_validation():
     with pytest.raises(ValidationError):
         qv.Curve(_T, x="x", y="y", marker_every=0)
     with pytest.raises(ValidationError):
-        qv.Bars(_B, x="cat", y="v", bar_labels="nope}")
+        qv.Bars(_B, x="cat", y="v", annotate="nope}")
     with pytest.raises(ValidationError):
         qv.Spread(_T, x="x", y_lo="y", x_hi="x")              # mixed orientations
     with pytest.raises(ValidationError):
@@ -68,7 +68,7 @@ def test_webengine_polish_traces():
     assert trs[1]["marker"]["symbol"] == "cross"   # Plotly's plus shape
     # bar labels
     bar = _figure.build_figure(
-        qv.Bars(_B, x="cat", y="v", bar_labels="auto"), light)["data"][0]
+        qv.Bars(_B, x="cat", y="v", annotate="auto"), light)["data"][0]
     assert bar["text"] == ["3", "5", "2"] and bar["textposition"] == "outside"
     # horizontal spread
     spread = _figure.build_figure(
@@ -114,7 +114,7 @@ def test_mpl_polish(qtbot):
     assert line.get_marker() == "*" and line.get_markevery() == 10
     refline = handle.native(rl.id)
     assert refline is not None                     # an AxLine artist
-    bars = qv.Bars(_B, x="cat", y="v", bar_labels=".1f")
+    bars = qv.Bars(_B, x="cat", y="v", annotate=".1f")
     h2 = b.render(bars, theme=qv.Theme.light())
     qtbot.addWidget(h2.widget)
     texts = [t.get_text() for t in h2.axes[0].texts]
@@ -159,7 +159,7 @@ def test_pg_triangle_points_up_now(qtbot):
 def test_pg_bar_labels(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Bars(_B, x="cat", y="v", bar_labels="auto")
+    el = qv.Bars(_B, x="cat", y="v", annotate="auto")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     texts = [i for p in handle.plots for i in p.getViewBox().addedItems

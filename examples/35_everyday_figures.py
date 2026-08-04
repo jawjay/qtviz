@@ -130,7 +130,7 @@ hx_, hy_ = np.meshgrid(np.arange(5.0), np.arange(4.0))
 heat = {"col": hx_.ravel(), "row": hy_.ravel(),
         "score": (rng.random(20) * 100).round()}
 heat_panel = qv.Overlay(
-    [qv.Heatmap(heat, x="col", y="row", z="score", cell_labels=".0f")],
+    [qv.Heatmap(heat, x="col", y="row", z="score", annotate=".0f")],
     options=qv.OverlayOptions(title="Annotated heatmap"),
 )
 

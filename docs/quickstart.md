@@ -12,12 +12,12 @@ qv.Scatter(table, x="x", y="y", color_by="category")
 qv.Curve(table,   x="t", y="v", step="post", marker="circle")
 qv.Curve(table,   x="t", y="v", color_by="regime")            # per-segment coloring
 qv.Bars(table,    x="category", y="count", by="region", orient="h",
-        bar_labels="auto")                                    # value labels on bars
+        annotate="auto")                                    # value labels on bars
 qv.Area(table,    x="t", y="load", by="service", mode="stacked")
 qv.Histogram(table, value="value", bins="fd")
 qv.Ecdf(table, value="latency")
 qv.Stem(table, x="day", y="delta", baseline=0.0)              # lollipop series
-qv.Heatmap(table, x="x", y="y", z="z", cell_labels="auto")    # contrast-aware labels
+qv.Heatmap(table, x="x", y="y", z="z", annotate="auto")    # contrast-aware labels
 qv.Image(array2d, extent=(0, 0, 10, 10), norm="log")          # also "power",
 qv.Mesh(array2d,  x=xe, y=np.geomspace(1, 64, 13),  # "symlog",
         norm="boundary", levels=[0, 1, 2, 4, 8])                # "boundary"
