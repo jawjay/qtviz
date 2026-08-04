@@ -26,7 +26,7 @@ def build(theme: qv.Theme | None = None):
 
     scatter = qv.Scatter(data, x="t", y="noisy", size=4, color="#5fa8ff")
     curve = qv.Curve(data, x="t", y="signal", color="#ff7f0e", line_width=2.0)
-    hist = qv.Histogram(data, column="noisy", color="#7bd47b")
+    hist = qv.Histogram(data, value="noisy", color="#7bd47b")
 
     layout = qv.Layout([scatter, curve, hist], options=qv.LayoutOptions(cols=3, link_x=True))
     view = qv.View(layout, backend="pyqtgraph", theme=theme or qv.Theme.dark())

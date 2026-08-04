@@ -78,7 +78,7 @@ def make_elements(table, grid):
             "Scatter": qv.Scatter(table, x="x", y="y"),
             "Curve": qv.Curve(table, x="x", y="y"),
             "Bars": qv.Bars(table, x="cat", y="y"),
-            "Histogram": qv.Histogram(table, column="y"),
+            "Histogram": qv.Histogram(table, value="y"),
             "ErrorBars": qv.ErrorBars(table, x="x", y="y", err="err"),
             "Spread": qv.Spread(table, x="x", y_lo="y_lo", y_hi="y_hi"),
             "Image": qv.Image(values, bounds=bounds),
@@ -95,11 +95,11 @@ def make_elements(table, grid):
             "Polygon": qv.Polygon([(6.0, 0.0), (7.0, 0.6), (8.0, -0.2)]),
             "RefLine": qv.RefLine(0.1, -0.2),
             # statistical elements ([D67], 0.4)
-            "BoxPlot": qv.BoxPlot(table, column="y"),
-            "Violin": qv.Violin(table, column="y"),
+            "BoxPlot": qv.BoxPlot(table, value="y"),
+            "Violin": qv.Violin(table, value="y"),
             # composition vocabulary (parity increment 3, [D84b]/[D90]/[D91])
             "Area": qv.Area(table, x="x", y="y"),
-            "Ecdf": qv.Ecdf(table, column="y"),
+            "Ecdf": qv.Ecdf(table, value="y"),
             "Contour": qv.Contour(values, bounds=bounds),
             "Mesh": qv.Mesh(values, x_edges=np.linspace(0.0, 30.0, 31),
                             y_edges=np.geomspace(1.0, 20.0, 21)),

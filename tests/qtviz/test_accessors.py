@@ -108,3 +108,23 @@ def test_expression_bound_element_is_value_equal(t):
 
 def test_array_bound_element_is_hashable(t):
     hash(qv.Scatter(t, x=np.linspace(0, 1, 5), y="y"))  # must not raise
+
+
+# ── [D129] renamed channel keywords keep the full accessor union ─────────────
+# The 2.0 channel renames change keyword *names*, never accepted *types*: every
+# data binding stays `str | Expression | Callable | ArrayLike` — a rename that
+# narrowed one to plain column names would fail here.
+def test_value_keyword_accepts_the_full_accessor_union(t):
+    from qtviz.data import resolve_node
+
+    doubled = t["a"] * 2
+    for accessor in (qv.col("a") * 2, lambda d: d["a"] * 2, doubled):
+        h = resolve_node(qv.Histogram(t, value=accessor, bins=4))
+        np.testing.assert_array_equal(h.data.series("value"), doubled)
+
+
+def test_distribution_by_keyword_accepts_expressions(t):
+    from qtviz.data import resolve_node
+
+    b = resolve_node(qv.BoxPlot(t, value="y", by=qv.col("a") >= 2))
+    np.testing.assert_array_equal(b.data.series("by"), t["a"] >= 2)

@@ -334,7 +334,7 @@ def _colorscale(name: str) -> str:
 def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
     from ...core._stats import histogram  # noqa: PLC0415
 
-    counts, edges = histogram(element.data.series("column"), element.bins,
+    counts, edges = histogram(element.data.series("value"), element.bins,
                               density=element.density)  # shared binning ([D93]) —
     # a pre-binned bar trace, not a Plotly histogram: every backend draws the
     # same bars instead of Plotly re-binning client-side.
@@ -484,7 +484,7 @@ def _dist_groups(element, theme, idx: int):
     from ...core.encoding import category_swatches  # noqa: PLC0415
 
     d = element.data
-    cats, groups = split_by(d.series("column"),
+    cats, groups = split_by(d.series("value"),
                             d.series("by") if element.by is not None else None)
     if cats is not None:
         names = [str(c) for c in cats]
@@ -587,7 +587,7 @@ def _area_traces(element: Area, theme, idx: int) -> list[dict]:
 def _ecdf_trace(element: Ecdf, theme, idx: int) -> list[dict]:
     from ...core._stats import ecdf  # noqa: PLC0415
 
-    xs, fr = ecdf(element.data.series("column"))
+    xs, fr = ecdf(element.data.series("value"))
     return [{
         "type": "scatter", "mode": "lines", "x": _floats(xs), "y": _floats(fr),
         "line": {"color": _css(_element_color(element, theme, idx)),

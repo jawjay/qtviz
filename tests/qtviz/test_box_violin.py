@@ -53,15 +53,15 @@ def test_kde_is_a_density():
 @pytest.mark.tier1
 def test_box_violin_validation():
     with pytest.raises(ValidationError):
-        qv.BoxPlot(_BY, column="score", by="cohort", color="#ff0000")  # exclusive
+        qv.BoxPlot(_BY, value="score", by="cohort", color="#ff0000")  # exclusive
     with pytest.raises(ValidationError):
-        qv.Violin({"v": [1.0]}, column="v", alpha=7.0)
+        qv.Violin({"v": [1.0]}, value="v", alpha=7.0)
 
 
 # ── Tier-2: native rendering ─────────────────────────────────────────────────
 @pytest.mark.tier2
 def test_pyqtgraph_boxplot_draws_true_quartiles(qtbot):
-    el = qv.BoxPlot(_BY, column="score", by="cohort")
+    el = qv.BoxPlot(_BY, value="score", by="cohort")
     view = qv.View(el, backend="pyqtgraph")
     qtbot.addWidget(view)
     box_item = view.native(el.id)[0]                # [boxes, whisker-lines, outliers]
@@ -77,7 +77,7 @@ def test_pyqtgraph_boxplot_draws_true_quartiles(qtbot):
 def test_matplotlib_boxplot_uses_precomputed_stats(qtbot):
     if not _has("matplotlib"):
         pytest.skip("matplotlib not registered")
-    el = qv.BoxPlot(_BY, column="score", by="cohort")
+    el = qv.BoxPlot(_BY, value="score", by="cohort")
     view = qv.View(el, backend="matplotlib")
     qtbot.addWidget(view)
     ax = view.handle.axes[0]
@@ -92,7 +92,7 @@ def test_matplotlib_boxplot_uses_precomputed_stats(qtbot):
 def test_violin_renders(backend, qtbot):
     if not _has(backend):
         pytest.skip(f"{backend} not registered")
-    el = qv.Violin(_BY, column="score", by="cohort")
+    el = qv.Violin(_BY, value="score", by="cohort")
     view = qv.View(el, backend=backend)
     qtbot.addWidget(view)
     assert view.native(el.id) is not None
@@ -103,7 +103,7 @@ def test_violin_renders(backend, qtbot):
 def test_webengine_box_trace_is_precomputed():
     from qtviz.backends.webengine import _figure
 
-    el = qv.BoxPlot(_BY, column="score", by="cohort")
+    el = qv.BoxPlot(_BY, value="score", by="cohort")
     fig = _figure.build_figure(el, qv.Theme.light())
     boxes = [t for t in fig["data"] if t["type"] == "box"]
     assert len(boxes) == 2                          # one per cohort
@@ -118,7 +118,7 @@ def test_webengine_box_trace_is_precomputed():
 def test_webengine_violin_is_a_polygon_not_plotly_violin():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Violin({"v": _VALUES}, column="v")
+    el = qv.Violin({"v": _VALUES}, value="v")
     fig = _figure.build_figure(el, qv.Theme.light())
     trace = fig["data"][0]
     assert trace["type"] == "scatter" and trace["fill"] == "toself"

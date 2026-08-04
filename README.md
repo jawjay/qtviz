@@ -143,8 +143,8 @@ qv.Curve(table,   x="t", y="v", color_by="regime")   # per-segment category colo
 qv.Bars(table,    x="category", y="count", group="region", mode="stacked", orient="h")
 qv.Bars(table,    x="category", y="count", bar_labels="auto")   # value labels
 qv.Area(table,    x="t", y="load", group="service", mode="stacked")  # stacked bands
-qv.Histogram(table, column="value", bins="fd")   # int or numpy rule — one binning, all backends
-qv.Ecdf(table, column="latency")                 # empirical CDF, shared numbers
+qv.Histogram(table, value="value", bins="fd")   # int or numpy rule — one binning, all backends
+qv.Ecdf(table, value="latency")                 # empirical CDF, shared numbers
 qv.Stem(table, x="day", y="delta")               # lollipop series, pickable heads
 qv.Heatmap(table, x="x", y="y", z="z", aggregator="mean",   # real data coordinates
            cell_labels="auto")                   # contrast-aware value labels
@@ -156,8 +156,8 @@ qv.Streamlines(u2d, v2d, bounds=(0, 0, 10, 10), density=1.5)  # field-line flow
 qv.Pie(table, values="share", labels="browser", hole=0.4)   # donut (mpl/webengine)
 qv.ErrorBars(table, x="x", y="y", err="sigma", lo_limit="is_lo")  # "beyond" arrows
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
-qv.BoxPlot(table, column="score", by="cohort")   # shared stats core, all backends
-qv.Violin(table,  column="score", by="cohort")
+qv.BoxPlot(table, value="score", by="cohort")   # shared stats core, all backends
+qv.Violin(table,  value="score", by="cohort")
 qv.HLine(4.5, line_style="dashed", label="alarm")   # reference chrome:
 qv.VLine(0.0) ; qv.Span(2.0, 4.0) ; qv.Text(5, 2, "peak", rotation=30, frame=True)
 qv.Arrow(1, 0.2, 4, 0.8) ; qv.Rect(2, -0.5, 4, 0.5) ; qv.Ellipse(5, 0, 1.5, 0.4)

@@ -1,4 +1,4 @@
-"""Ecdf element — the empirical CDF of a column ([D91], parity increment 3)."""
+"""Ecdf element — the empirical CDF of a value column ([D91], parity increment 3)."""
 
 from __future__ import annotations
 
@@ -9,20 +9,20 @@ from ..data import Accessor, DataLike, as_data_ref
 
 
 class Ecdf(Element):
-    """The empirical cumulative distribution of a raw `column` — a step curve
+    """The empirical cumulative distribution of a raw `value` column — a step curve
     rising 0→1. The statistic is computed in core (`_stats.ecdf`, the [D67]
     rule: qtviz decides the numbers) and drawn through each backend's
     post-step curve path."""
 
-    REQUIRED_OPTIONS = ("column",)
+    REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("color", "line_width", "alpha", "label")
-    CHANNELS = ("column",)
+    CHANNELS = ("value",)
 
     def __init__(
         self,
         data: DataLike,
         *,
-        column: Accessor,
+        value: Accessor,
         color: ColorSpec | None = None,
         line_width: float = 1.5,
         alpha: float = 1.0,
@@ -33,7 +33,7 @@ class Ecdf(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Ecdf")
         self.data = as_data_ref(data)
-        self.column = column
+        self.value = value
         self.color = color
         self.line_width = line_width
         self.alpha = alpha

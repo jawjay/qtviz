@@ -24,7 +24,7 @@ def build():
 
     points = qv.Scatter(data, x="x", y="noisy", size=4, color="#5fa8ff")
     trend = qv.Curve(data, x="x", y="signal", color="#ff7f0e", line_width=2.0)
-    hist = qv.Histogram(data, column="noisy", color="#7bd47b")
+    hist = qv.Histogram(data, value="noisy", color="#7bd47b")
 
     figure = (points * trend) + hist          # overlay, then panel beside it
     return qv.View(figure, theme=qv.Theme.dark())

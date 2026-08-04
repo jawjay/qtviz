@@ -11,19 +11,19 @@ from ..errors import ValidationError
 
 
 class Histogram(Element):
-    """Binned frequency of a single raw `column`. `bins` is a count or one of
+    """Binned frequency of a single raw `value` column. `bins` is a count or one of
     numpy's rule names (`"auto"`, `"fd"`, `"sturges"`, …); the binning is
     computed once in core so every backend draws the same bars ([D93])."""
 
-    REQUIRED_OPTIONS = ("column",)
+    REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("bins", "density", "color", "alpha", "label")
-    CHANNELS = ("column",)
+    CHANNELS = ("value",)
 
     def __init__(
         self,
         data: DataLike,
         *,
-        column: Accessor,
+        value: Accessor,
         bins: int | str = "auto",
         density: bool = False,
         color: ColorSpec | None = None,
@@ -42,7 +42,7 @@ class Histogram(Element):
         elif not isinstance(bins, int) or isinstance(bins, bool) or bins < 1:
             raise ValidationError(f"Histogram bins must be a positive int, got {bins!r}")
         self.data = as_data_ref(data)
-        self.column = column
+        self.value = value
         self.bins = bins
         self.density = density
         self.color = color

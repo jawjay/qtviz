@@ -36,12 +36,12 @@ def _backend(name):
 def test_histogram_bins_validation():
     from qtviz.errors import ValidationError
 
-    qv.Histogram(_HTABLE, column="v", bins="fd")  # numpy rule: ok
-    qv.Histogram(_HTABLE, column="v", bins=12)
+    qv.Histogram(_HTABLE, value="v", bins="fd")  # numpy rule: ok
+    qv.Histogram(_HTABLE, value="v", bins=12)
     with pytest.raises(ValidationError):
-        qv.Histogram(_HTABLE, column="v", bins="banana")
+        qv.Histogram(_HTABLE, value="v", bins="banana")
     with pytest.raises(ValidationError):
-        qv.Histogram(_HTABLE, column="v", bins=0)
+        qv.Histogram(_HTABLE, value="v", bins=0)
 
 
 @pytest.mark.tier1
@@ -59,7 +59,7 @@ def test_webengine_histogram_is_prebinned():
     pre-binned bar built from the shared core binning."""
     from qtviz.backends.webengine import _figure
 
-    el = qv.Histogram(_HTABLE, column="v", bins="sturges")
+    el = qv.Histogram(_HTABLE, value="v", bins="sturges")
     trace = _figure.build_figure(el, qv.Theme.light())["data"][0]
     exp_counts, exp_edges = np.histogram(np.asarray(_VALS), bins="sturges")
     assert trace["type"] == "bar"
@@ -104,7 +104,7 @@ def test_webengine_unknown_colormap_warns_and_falls_back():
 @pytest.mark.tier2
 def test_mpl_histogram_honors_rule_strings(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Histogram(_HTABLE, column="v", bins="sturges")
+    el = qv.Histogram(_HTABLE, value="v", bins="sturges")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     exp_counts, _ = np.histogram(np.asarray(_VALS), bins="sturges")
@@ -138,7 +138,7 @@ def test_mpl_heatmap_categorical_ticks(qtbot):
 # ── tier 2: pyqtgraph ────────────────────────────────────────────────────────
 @pytest.mark.tier2
 def test_pg_histogram_honors_rule_strings(qtbot):
-    el = qv.Histogram(_HTABLE, column="v", bins="sturges")
+    el = qv.Histogram(_HTABLE, value="v", bins="sturges")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     exp_counts, _ = np.histogram(np.asarray(_VALS), bins="sturges")

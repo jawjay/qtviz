@@ -66,16 +66,16 @@ def test_mpl_brush_selector_datalim_clean_for_scatter(qtbot):
 def test_histogram_alpha_validates():
     from qtviz.errors import ValidationError
 
-    qv.Histogram({"v": [1.0, 2.0]}, column="v", alpha=0.5)
+    qv.Histogram({"v": [1.0, 2.0]}, value="v", alpha=0.5)
     with pytest.raises(ValidationError):
-        qv.Histogram({"v": [1.0, 2.0]}, column="v", alpha=1.5)
+        qv.Histogram({"v": [1.0, 2.0]}, value="v", alpha=1.5)
 
 
 @pytest.mark.tier2
 def test_mpl_histogram_honors_alpha(qtbot):
     pytest.importorskip("matplotlib")
     el = qv.Histogram({"v": list(np.random.default_rng(0).normal(0, 1, 100))},
-                      column="v", alpha=0.4)
+                      value="v", alpha=0.4)
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     assert handle.axes[0].patches[0].get_alpha() == 0.4
@@ -84,7 +84,7 @@ def test_mpl_histogram_honors_alpha(qtbot):
 @pytest.mark.tier2
 def test_pg_histogram_honors_alpha(qtbot):
     el = qv.Histogram({"v": list(np.random.default_rng(0).normal(0, 1, 100))},
-                      column="v", alpha=0.4)
+                      value="v", alpha=0.4)
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     opts = handle.native(el.id).opts
@@ -96,7 +96,7 @@ def test_pg_histogram_honors_alpha(qtbot):
 def test_webengine_histogram_honors_alpha():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Histogram({"v": [1.0, 2.0, 2.0, 3.0]}, column="v", alpha=0.4)
+    el = qv.Histogram({"v": [1.0, 2.0, 2.0, 3.0]}, value="v", alpha=0.4)
     trace = _figure.build_figure(el, qv.Theme.light())["data"][0]
     assert trace["opacity"] == 0.4
 

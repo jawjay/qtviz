@@ -369,7 +369,7 @@ def _render_group_bars(element: Bars, ctx):
 def render_histogram(element: Histogram, ctx):
     from ...core._stats import histogram  # noqa: PLC0415
 
-    counts, edges = histogram(_col(element.data, "column"), element.bins,
+    counts, edges = histogram(_col(element.data, "value"), element.bins,
                               density=element.density)  # shared binning ([D93])
     return ctx.parent_axes.bar(
         edges[:-1], counts, width=np.diff(edges), align="edge",
@@ -618,7 +618,7 @@ def render_area(element: Area, ctx):
 def render_ecdf(element: Ecdf, ctx):
     from ...core._stats import ecdf  # noqa: PLC0415
 
-    xs, fr = ecdf(_col(element.data, "column"))
+    xs, fr = ecdf(_col(element.data, "value"))
     (line,) = ctx.parent_axes.plot(
         xs, fr, color=_color(element.color, ctx.theme, ctx.series_index).mpl(),
         lw=element.line_width, alpha=element.alpha, drawstyle="steps-post",
@@ -892,7 +892,7 @@ def _dist_prep(element, ctx):
     from ...core.encoding import Legend, category_swatches  # noqa: PLC0415
 
     d = element.data
-    cats, groups = split_by(d.series("column"),
+    cats, groups = split_by(d.series("value"),
                             d.series("by") if element.by is not None else None)
     pos = np.arange(len(groups), dtype="float64")
     ax = ctx.parent_axes

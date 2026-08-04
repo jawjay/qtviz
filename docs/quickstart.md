@@ -14,8 +14,8 @@ qv.Curve(table,   x="t", y="v", color_by="regime")            # per-segment colo
 qv.Bars(table,    x="category", y="count", group="region", orient="h",
         bar_labels="auto")                                    # value labels on bars
 qv.Area(table,    x="t", y="load", group="service", mode="stacked")
-qv.Histogram(table, column="value", bins="fd")
-qv.Ecdf(table, column="latency")
+qv.Histogram(table, value="value", bins="fd")
+qv.Ecdf(table, value="latency")
 qv.Stem(table, x="day", y="delta", baseline=0.0)              # lollipop series
 qv.Heatmap(table, x="x", y="y", z="z", cell_labels="auto")    # contrast-aware labels
 qv.Image(array2d, bounds=(0, 0, 10, 10), norm="log")          # also "power",
@@ -28,8 +28,8 @@ qv.Pie(table, values="share", labels="browser", hole=0.4)
 qv.ErrorBars(table, x="x", y="y", err="sigma",
              lo_limit="is_lo", hi_limit="is_hi")              # "beyond" arrow caps
 qv.Spread(table, x="t", y_lo="lo", y_hi="hi")   # filled confidence band
-qv.BoxPlot(table, column="score", by="cohort")
-qv.Violin(table,  column="score", by="cohort")
+qv.BoxPlot(table, value="score", by="cohort")
+qv.Violin(table,  value="score", by="cohort")
 ```
 
 Annotations & references share the same tree — lines, spans, shapes, text,

@@ -29,7 +29,7 @@ def build():
         qv.Scatter({"x": rng.normal(size=600), "y": rng.normal(size=600)}, x="x", y="y", size=4),
         qv.Curve(line, x="x", y="y", line_width=2.0),
         qv.Bars({"cat": ["A", "B", "C", "D"], "v": [3.0, 7.0, 2.0, 5.0]}, x="cat", y="v"),
-        qv.Histogram({"v": rng.normal(size=2000)}, column="v"),
+        qv.Histogram({"v": rng.normal(size=2000)}, value="v"),
         qv.Image(image, bounds=(0, 0, 60, 40)),
         qv.Heatmap(grid, x="gx", y="gy", z="gz"),
         qv.ErrorBars(line, x="x", y="y", err="err"),

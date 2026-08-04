@@ -45,7 +45,7 @@ def build(backend: str = "pyqtgraph"):
 
     # Panel 2 — even a single element gets labels by wrapping it in an Overlay.
     residuals = qv.Overlay(
-        [qv.Histogram(data, column="resid", color="#7bd47b")],
+        [qv.Histogram(data, value="resid", color="#7bd47b")],
         options=qv.OverlayOptions(
             title="Residuals",
             x_label="error (mV)",

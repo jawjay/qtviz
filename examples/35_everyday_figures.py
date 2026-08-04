@@ -65,7 +65,7 @@ pie_panel = qv.Overlay(
 # 5 — ECDF ([D91])
 latencies = {"ms": rng.lognormal(3.0, 0.4, 500)}
 ecdf_panel = qv.Overlay(
-    [qv.Ecdf(latencies, column="ms", label="latency")],
+    [qv.Ecdf(latencies, value="ms", label="latency")],
     options=qv.OverlayOptions(title="ECDF",
                               y=qv.AxisSpec(tick_format=".0%")),  # ([D86])
 )

@@ -92,7 +92,7 @@ def test_milestone_0_4_acceptance(qtbot, tmp_path):
     for backend in ("pyqtgraph", "matplotlib"):
         v1 = qv.View(telemetry, backend=backend)
         qtbot.addWidget(v1)
-        v2 = qv.View(qv.BoxPlot(stats, column="v", by="g"), backend=backend)
+        v2 = qv.View(qv.BoxPlot(stats, value="v", by="g"), backend=backend)
         qtbot.addWidget(v2)
         v3 = qv.View(qv.Bars({"q": ["Q1", "Q1", "Q2"], "s": [1.0, 2.0, 3.0],
                               "r": ["e", "w", "e"]}, x="q", y="s", group="r"),

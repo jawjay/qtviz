@@ -94,7 +94,7 @@ def test_webengine_area_stacked_uses_stackgroup():
 def test_webengine_ecdf_is_post_step():
     from qtviz.backends.webengine import _figure
 
-    trace = _figure.build_figure(qv.Ecdf(_T, column="y"),
+    trace = _figure.build_figure(qv.Ecdf(_T, value="y"),
                                  qv.Theme.light())["data"][0]
     assert trace["line"]["shape"] == "hv"
     assert float(np.max(trace["y"])) == 1.0
@@ -128,7 +128,7 @@ def test_mpl_area_single_and_stacked(qtbot):
 @pytest.mark.tier2
 def test_mpl_ecdf_steps_to_one(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Ecdf(_T, column="y")
+    el = qv.Ecdf(_T, value="y")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     line = handle.native(el.id)
@@ -170,7 +170,7 @@ def test_pg_area_stacked_fill_between(qtbot):
 
 @pytest.mark.tier2
 def test_pg_ecdf_step_mode(qtbot):
-    el = qv.Ecdf(_T, column="y")
+    el = qv.Ecdf(_T, value="y")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     assert handle.native(el.id).opts["stepMode"] == "left"

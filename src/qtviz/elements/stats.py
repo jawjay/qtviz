@@ -1,6 +1,6 @@
 """Statistical elements — BoxPlot + Violin ([D67], milestone-0.4 §4).
 
-Both reduce a raw `column` through the shared `core/_stats` implementations
+Both reduce a raw `value` column through the shared `core/_stats` implementations
 (`box_stats`, `kde`) at render, so every backend draws the *same* numbers —
 the statistics definition is qtviz's, never the engine's. `by=` splits into
 one box/violin per category, palette-colored in `np.unique` order (the same
@@ -16,17 +16,17 @@ from ..data import Accessor, DataLike, as_data_ref
 
 
 class _Distribution(Element):
-    """Shared shape: a raw `column`, an optional `by` category split."""
+    """Shared shape: a raw `value` column, an optional `by` category split."""
 
-    REQUIRED_OPTIONS = ("column",)
+    REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("by", "color", "alpha", "label")
 
     def __init__(
         self,
         data: DataLike,
         *,
-        column: Accessor,
-        by: str | None = None,
+        value: Accessor,
+        by: Accessor | None = None,  # full accessor union — never just a column name
         color: ColorSpec | None = None,
         alpha: float = 1.0,
         label: str | None = None,
@@ -37,7 +37,7 @@ class _Distribution(Element):
         check_exclusive(color, by, names=("color", "by"), who=type(self).__name__)
         check_alpha(alpha, who=type(self).__name__)
         self.data = as_data_ref(data)
-        self.column = column
+        self.value = value
         self.by = by
         self.color = color
         self.alpha = alpha
@@ -46,7 +46,7 @@ class _Distribution(Element):
         self._freeze()
 
     def channels(self) -> dict:
-        ch = {"column": self.column}
+        ch = {"value": self.value}
         if self.by is not None:
             ch["by"] = self.by
         return ch
@@ -54,12 +54,26 @@ class _Distribution(Element):
 
 class BoxPlot(_Distribution):
     """A five-number-summary box (median, quartiles, 1.5·IQR whiskers clipped to
-    the data, outlier points) of `column` — one box, or one per `by` category."""
+    the data, outlier points) of `value` — one box, or one per `by` category."""
 
 
 class Violin(_Distribution):
-    """A kernel-density silhouette of `column` (Gaussian KDE, Scott's rule) —
+    """A kernel-density silhouette of `value` (Gaussian KDE, Scott's rule) —
     one violin, or one per `by` category."""
 
-    def __init__(self, *args, alpha: float = 0.6, **kw) -> None:
-        super().__init__(*args, alpha=alpha, **kw)
+    # [D129]: explicit signature — the `*args, **kw` opacity (nothing in
+    # `help()`/IDE completion) was a diagnosed 1.x wart.
+    def __init__(
+        self,
+        data: DataLike,
+        *,
+        value: Accessor,
+        by: Accessor | None = None,
+        color: ColorSpec | None = None,
+        alpha: float = 0.6,
+        label: str | None = None,
+        backend_hint: str | None = None,
+        id=None,
+    ) -> None:
+        super().__init__(data, value=value, by=by, color=color, alpha=alpha,
+                         label=label, backend_hint=backend_hint, id=id)

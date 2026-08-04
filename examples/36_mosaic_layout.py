@@ -34,7 +34,7 @@ a = qv.Overlay(
 # B — tall return distribution, spanning both rows
 returns = {"r": np.diff(np.log(price)) * 100}
 b = qv.Overlay(
-    [qv.Histogram(returns, column="r", bins="fd")],
+    [qv.Histogram(returns, value="r", bins="fd")],
     options=qv.OverlayOptions(title="Returns (%)"),
 )
 
