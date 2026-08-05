@@ -158,3 +158,58 @@ def test_webengine_figure_skips_inset_with_warning():
     with pytest.warns(qv.errors.QtvizWarning, match="inset axes are not supported"):
         fig, source_ids = build(node, qv.Theme.light())
     assert len(source_ids) == 1  # the parent scatter only; no inset traces
+
+
+# ── I3: insets are panes ─────────────────────────────────────────────────────
+def _inset_view(backend, qtbot):
+    view = qv.View(_s().opts(title="Overview")
+                   * qv.Inset(_zoom(), rect=(0.55, 0.55, 0.4, 0.4), label="zoom"),
+                   backend=backend)
+    qtbot.addWidget(view)
+    return view
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_inset_pane_full_surface(name, qtbot):
+    view = _inset_view(name, qtbot)
+    assert [p.label for p in view.panes] == ["0", "zoom"]
+    pane = view.pane("zoom")
+    pane.set_range(x=(1.0, 3.0))
+    assert pane.capture().x_range == pytest.approx((1.0, 3.0), rel=1e-3)
+    assert len(pane.elements) == 1  # the zoom curve, not the parent scatter
+    assert len(view.pane("0").elements) == 1  # the parent scatter, not the inset
+
+
+@pytest.mark.tier2
+def test_inset_window_survives_backend_switch(qtbot):
+    view = _inset_view("pyqtgraph", qtbot)
+    view.pane("zoom").set_range(x=(1.0, 3.0), y=(0.0, 9.0))
+    view.set_backend("matplotlib")
+    st = view.handle.capture_state()
+    assert st.get("zoom").x_range == pytest.approx((1.0, 3.0), rel=1e-3)
+    assert st.get("zoom").y_range == pytest.approx((0.0, 9.0), rel=1e-3)
+    view.set_backend("pyqtgraph")  # and back
+    assert view.pane("zoom").capture().x_range == pytest.approx(
+        (1.0, 3.0), rel=1e-3)
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_inset_events_carry_the_inset_pane(name, qtbot):
+    view = _inset_view(name, qtbot)
+    got: list = []
+    view.on(qv.RangeEvent, got.append, throttle_ms=0, pane="zoom")
+    view.pane("0").set_range(x=(0.0, 8.0))   # parent zoom — filtered out
+    view.pane("zoom").set_range(x=(2.0, 3.0))
+    assert got and all(e.pane == "zoom" for e in got)
+    assert got[-1].source_id == "zoom"       # surface event: label as source
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_inset_pane_export(name, qtbot, tmp_path):
+    view = _inset_view(name, qtbot)
+    view.resize(640, 480)
+    out = view.pane("zoom").export("png", tmp_path / "zoom.png")
+    assert out.exists() and out.stat().st_size > 0
