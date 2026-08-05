@@ -52,6 +52,11 @@ class Element(Immutable):
     # declares how it consumes data — the resolve pipeline dispatches on it.
     data: Any = None
     DATA_KIND: str = "tabular"  # "tabular" | "gridded" | "none"
+    # [D152] declared (never duck-typed) marker for a data-less *structural*
+    # element that carries a child NODE under this field name (Inset.child):
+    # the resolve pipeline recurses into it and negotiation intersects over
+    # its elements.
+    STRUCTURAL_CHILD: str | None = None
     REQUIRED_OPTIONS: tuple[str, ...] = ()
     RECOMMENDED_OPTIONS: tuple[str, ...] = ()
     # Fixed channel roles bound to accessors; default role == field name.

@@ -47,6 +47,8 @@ one-liner; `qv.View` is the plain QWidget for applications.
 
 ::: qtviz.Streamlines
 
+::: qtviz.Inset
+
 ::: qtviz.RawFigure
 
 ## Annotation & reference elements

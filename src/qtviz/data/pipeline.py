@@ -129,6 +129,10 @@ def resolve_node(node):
     Dispatch is the [D124] `DATA_KIND` declaration, not duck-typing."""
     kind = getattr(node, "DATA_KIND", None)
     if kind is not None:  # Element
+        child_field = node.STRUCTURAL_CHILD  # [D152]: Inset carries a child node
+        if child_field is not None:
+            return node.with_(
+                **{child_field: resolve_node(getattr(node, child_field))})
         if kind == "none" or getattr(node, "_resolved", False):
             return node  # data-less (annotations, RawFigure) pass through
         if _needs_rasterize(node):
@@ -161,6 +165,9 @@ def node_is_lazy(node) -> bool:
     or a datashader rasterization."""
     kind = getattr(node, "DATA_KIND", None)
     if kind is not None:
+        child_field = node.STRUCTURAL_CHILD  # [D152]
+        if child_field is not None:
+            return node_is_lazy(getattr(node, child_field))
         if kind == "none":
             return False
         return (bool(getattr(node.data, "is_lazy", False))

@@ -8,6 +8,21 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Inset axes ([D152]–[D154], `design/inset-axes.md`):** `qv.Inset(child,
+  rect=(x0, y0, w, h), label=…, indicate=…)` — a child surface floating on a
+  parent, composed like an annotation: `overview * qv.Inset(zoom,
+  rect=(0.55, 0.55, 0.4, 0.4), label="zoom")`. `rect` is axes-fraction of
+  the parent's plot area; the child is a full surface (own title, lims,
+  scales via `.opts()`). On `Inset`, `label=` is the **pane label** (an
+  inset has no legend entry — it is chrome, like annotations): a labeled
+  inset is a pane, so its zoom window survives rebuilds and backend
+  switches via `LayoutState`, `view.pane("zoom").set_range(…)` drives it,
+  events from inside it carry `pane="zoom"`, and `pane.export(…)` writes
+  just the inset. `indicate=True` draws the parent-side rectangle marking
+  the child's declared x/y window. Rendered natively on pyqtgraph and
+  matplotlib; the webengine backend warns and skips insets for now (the
+  parent renders normally).
+
 - **Structured axis sharing ([D146]):** `link_x`/`link_y` widen from bools to
   `bool | "col" | "row"` — `True` links all panes (unchanged), `"col"`/`"row"`
   link within each grid column/row, with spanning panes merging groups

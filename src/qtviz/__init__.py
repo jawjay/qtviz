@@ -69,6 +69,7 @@ from .elements import (
     Span,
     Spread,
     Stem,
+    Inset,
     Streamlines,
     Text,
     Violin,
@@ -90,6 +91,7 @@ __all__ = [
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     # waves 1.4/1.5 ([D115]/[D118])
     "Stem", "Streamlines",
+    "Inset",  # [D152] inset axes
     # the element base + node union — the downstream annotation vocabulary ([D140])
     "Element", "Node",
     # composition + view + the [D134] script one-liner

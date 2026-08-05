@@ -567,7 +567,9 @@ def series_index_map(children) -> list[int]:
     out: list[int] = []
     i = 0
     for el in children:
-        if isinstance(el, ANNOTATION_TYPES):
+        # chrome: annotations and structural elements (an Inset, [D152]) take
+        # no palette slot and don't shift the series that follow
+        if isinstance(el, ANNOTATION_TYPES) or getattr(el, "STRUCTURAL_CHILD", None):
             out.append(0)
         else:
             out.append(i)
@@ -578,6 +580,8 @@ def series_index_map(children) -> list[int]:
 def _elements_of(node: Node) -> Iterator[Element]:
     if isinstance(node, Element):
         yield node
+        if node.STRUCTURAL_CHILD is not None:  # [D152]: an Inset's contents
+            yield from _elements_of(getattr(node, node.STRUCTURAL_CHILD))
     elif isinstance(node, (Overlay, Layout)):
         for child in node.children:
             yield from _elements_of(child)

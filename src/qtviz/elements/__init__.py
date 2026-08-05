@@ -13,6 +13,7 @@ from .heatmap import Heatmap
 from .histogram import Histogram
 from .image import Image
 from .mesh import Mesh
+from .inset import Inset
 from .pie import Pie
 from .quiver import Quiver
 from .raw_figure import RawFigure
@@ -32,4 +33,5 @@ __all__ = [
     "BoxPlot", "Violin",
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     "Stem", "Streamlines",
+    "Inset",
 ]
