@@ -1471,7 +1471,7 @@ legends); full `Legend` element now (deferred — more than 0.3 needs).
 | D18 | datashader: backend-agnostic pipeline transform | Phase 4 | ✅ Scatter→Image in resolve_node (see milestone-phase4) |
 | D19 | datashader auto-route policy | Phase 4 | ✅ `set_raster_threshold`; lazy/unknown size routes |
 | D20 | raster output: RGBA shade vs aggregate+theme cmap | Phase 4 | ✅ RGBA shade now; aggregate+theme cmap future |
-| D21 | dynamic viewport re-aggregation seam | Phase 4b | ✅ RasterController + RasterTarget (pyqtgraph + matplotlib) |
+| D21 | dynamic viewport re-aggregation seam | Phase 4b | ✅ RasterController + RasterTarget (all three: pyqtgraph + matplotlib; webengine 2026-08-05 via `plotly.view` bridge feed + PNG-source restyle) |
 | D22 | datashader coverage (lines, categorical color) | Phase 4 | ✅ points + lines + value/categorical agg; deeper gaps → `capabilities-gaps.md` |
 | D23 | color/size encoding — shared mapping + legends | toward HoloViews | ✅ `core/encoding.py`; native `Scatter` `color_by`/`size_by` + auto legend (`milestone-color-encoding.md`) |
 | D24 | webengine default Element renderer (Plotly vs Bokeh) | webengine rehome | ✅ resolved — Plotly the only Element renderer; Bokeh a `RawFigure` host |

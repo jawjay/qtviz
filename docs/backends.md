@@ -56,6 +56,15 @@ already become role-keyed numpy arrays (`element.data.series("x")`), and
 datashaded elements have already become `Image`s. Your renderers read roles,
 never user accessors.
 
+**Dynamic datashading is one small optional seam** ([D21]). Rendering the
+resolved `Image` gives you a correct static raster for free; to make it
+re-aggregate on pan/zoom, implement the 4-method `RasterTarget` protocol
+(`qtviz.core.raster`) over your engine's viewport + image primitive and hand it
+to a `RasterController` — the controller owns the debounce, the off-thread
+aggregation, and stale-result dropping. All three built-in backends do exactly
+this (`backends/*/_raster.py`); the webengine one shows the pattern for an
+engine you can only reach asynchronously (a message feed in, restyles out).
+
 ## The three honesty contracts
 
 These are what the conformance suite (`tests/qtviz/test_backend_conformance.py`)
