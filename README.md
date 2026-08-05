@@ -3,23 +3,21 @@
 **Declarative, native-Qt plotting for data-intensive desktop apps.**
 
 Describe a plot once as immutable data, then render it through whichever engine
-fits the moment — **pyqtgraph** (fast, OpenGL, interactive), **matplotlib**
-(publication-quality, vector export), or **webengine** (interactive Plotly in an
-embedded browser view). The same `Element` draws identically on all three, swaps
-backends at runtime, and drops into any PySide6 application as a plain `QWidget`.
+fits the moment — **pyqtgraph** (fast, interactive), **matplotlib**
+(publication-quality), or **webengine** (interactive Plotly in an embedded
+browser view). The same plot draws identically on all three, swaps backends at
+runtime, and drops into any PySide6 application as a plain `QWidget`.
 
 [![PyPI](https://img.shields.io/pypi/v/qtviz)](https://pypi.org/project/qtviz/)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Qt](https://img.shields.io/badge/Qt-PySide6-41cd52)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/jawjay/qtviz/blob/main/LICENSE)
-![Status](https://img.shields.io/badge/status-2.0_stable-brightgreen)
 
 **Docs:** [jawjay.github.io/qtviz](https://jawjay.github.io/qtviz/) ·
 **Install:** `pip install qtviz` (or `uv add qtviz`)
 
 ```python
 import numpy as np
-
 import qtviz as qv
 
 x = np.linspace(0, 10, 500)
@@ -31,453 +29,230 @@ qv.show(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"), title="hello")
        alt="A scatter plot rendered by qtviz in a native Qt window">
 </p>
 
-That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan
-and zoom out of the box. Change one keyword — `backend="matplotlib"` or
-`backend="webengine"` — and the same line renders through a different engine.
+That's a complete program: a real Qt window, a hardware-accelerated scatter,
+pan and zoom out of the box. Change one keyword — `backend="matplotlib"` — and
+the same line renders through a different engine.
 
-> **Status — `2.0` stable.** The Mark IR release
-> ([`design/2.0-mark-ir-and-surface.md`](https://github.com/jawjay/qtviz/blob/main/design/2.0-mark-ir-and-surface.md),
-> [D121]–[D136]): **one channel vocabulary** across all 28 elements, one
-> `norm=`/`clim=` spec, `.opts()` surface configuration without leaving the
-> `*`/`+` algebra, `qv.show()` one-liners — and underneath, a typed Mark IR
-> where the geometry tail renders from **one core lowering per element**
-> with honesty proven by a perturbation guard, not maintained in triplicate.
-> The 71-name public surface is frozen and policy-backed
-> ([docs/stability.md](https://jawjay.github.io/qtviz/stability/)). First-class
-> axes (log/symlog/time, twin y, tick control), legends, honest raster norms,
-> screen-cost rendering for huge zarr/dask/xarray grids, live streaming with
-> in-place updates, brush-selection through datashaded views — **980+
-> passing tests**, mypy-clean, `py.typed`.
->
-> *Bracketed `[Dnn]` tags reference the project's decision log —
-> [`design/discussion-items.md`](https://github.com/jawjay/qtviz/blob/main/design/discussion-items.md).*
+## Why qtviz?
 
----
+Most Python plotting either targets the browser or bolts a single rendering
+engine into Qt. qtviz takes a different position:
+
+- **One immutable API, many backends** — an `Element` says *what* to plot,
+  never *how*; render it native, publication-grade, or web, and swap at runtime.
+- **Native Qt, not a web app in disguise** — real `QWidget`s, Qt signals,
+  strict GUI-thread discipline.
+- **Runs 100% offline** — no network at render time, ever; the webengine
+  backend bundles its JavaScript from your installed packages, never a CDN.
+- **Built for large data** — dict / NumPy / pandas / Arrow eagerly,
+  Dask / xarray / zarr out-of-core, and Datashader turns 10M+ points into a
+  density raster that re-aggregates as you zoom. All off the GUI thread.
+- **No dead ends** — anything qtviz doesn't model natively (a 3-D surface, a
+  Sankey) rides in through `RawFigure` in the same `View`, with the same events.
 
 ## In action
 
 | | |
 |---|---|
-| ![Sensor monitoring: baseline, tolerance band, flagged anomalies, linked residual panel](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/26_telemetry_monitoring.png) *Telemetry monitoring — rolling baseline, 3σ band, flagged anomalies, X-linked residual panel ([`examples/26`](https://github.com/jawjay/qtviz/blob/main/examples/26_telemetry_monitoring.py))* | ![Market analytics: price, moving averages, Bollinger band over a linked volume panel](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/27_market_analytics.png) *Market analytics — price + moving averages + Bollinger `Spread` over linked volume `Bars` ([`examples/27`](https://github.com/jawjay/qtviz/blob/main/examples/27_market_analytics.py))* |
-| ![2M events datashaded into a categorical density map with a legend](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/28_event_density_map.png) *2M events → a Datashaded categorical density map; hover reports the count under the cursor ([`examples/28`](https://github.com/jawjay/qtviz/blob/main/examples/28_event_density_map.py))* | ![A Plotly 3-D surface hosted through RawFigure in a Qt WebEngine view](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/18_webengine_raw_figure.png) *A Plotly 3-D surface hosted via `RawFigure` — events still arrive as typed qtviz events ([`examples/18`](https://github.com/jawjay/qtviz/blob/main/examples/18_webengine_raw_figure.py))* |
+| <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/26_telemetry_monitoring.png" alt="Telemetry monitoring: rolling baseline, tolerance band, flagged anomalies, linked residual panel"> *Telemetry — baseline, 3σ band, flagged anomalies, linked residual panel* | <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/27_market_analytics.png" alt="Market analytics: price, moving averages, Bollinger band over a linked volume panel"> *Market analytics — price, MAs, Bollinger band over linked volume* |
+| <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/28_event_density_map.png" alt="2M events datashaded into a categorical density map with a legend"> *2M events, datashaded — hover reports the count under the cursor* | <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/18_webengine_raw_figure.png" alt="A Plotly 3-D surface hosted through RawFigure in a Qt WebEngine view"> *A Plotly 3-D surface via `RawFigure` — still emitting typed qtviz events* |
 
-![The everyday figures: step curve, stacked area, horizontal bars, donut, ECDF, filled contour, SI ticks, dual axis, quiver key, boundary-level mesh, stem, annotated heatmap](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/35_everyday_figures.png)
-*The everyday figures of the popular libraries, declaratively — step + markers,
-stacked `Area`, horizontal grouped `Bars`, a `Pie` donut, `Ecdf`, filled
-`Contour`, SI tick formatting, a dual-axis pair, a `Quiver` field with a
-reference key, a `Mesh` with discrete boundary levels, a `Stem` series, and an
-annotated `Heatmap` with computed label contrast, with the native toolbar
-([`examples/35_everyday_figures.py`](https://github.com/jawjay/qtviz/blob/main/examples/35_everyday_figures.py))*
-
-All screenshots are captured straight from the runnable scripts in
-[`examples/`](https://github.com/jawjay/qtviz/tree/main/examples) — regenerate them with
-`uv run python tools/capture_screenshots.py`.
-
-## Why qtviz?
-
-Most Python plotting either targets the browser (Plotly, Bokeh, HoloViz) or gives
-you one rendering engine bolted into Qt (matplotlib's `FigureCanvas`, raw
-pyqtgraph). qtviz takes a different position:
-
-- **One immutable API, many backends.** An `Element` is pure, value-hashed data —
-  it says *what* to plot, never *how*. Write `Scatter(table, x="t", y="v")` once
-  and render it native, publication-grade, or web. Pick per view, swap at runtime,
-  or mix backends in a single window.
-- **Native Qt, not a web app in disguise.** The default backends are real
-  `QWidget`s with Qt signals/slots and strict GUI-thread discipline — no browser,
-  no JavaScript bridge, no server. They feel like the desktop because they are the
-  desktop.
-- **Runs 100% offline.** No network at render time, ever — a hard requirement, not a
-  default you can flip. The native backends draw in-process; the webengine backend
-  bundles its JavaScript locally (from the installed `plotly`/`bokeh` packages, never
-  a CDN). Built for air-gapped and firewalled environments.
-- **Engineered for large data.** The data layer is container-agnostic and
-  lazy-first — dict / NumPy / pandas / Arrow eagerly, **Dask / xarray / zarr**
-  out-of-core — and integrates **Datashader** so 10M+ points become a
-  screen-resolution density raster that re-aggregates to your viewport as you zoom.
-  All of it resolves off the GUI thread, so the UI never stalls.
-- **Functional data binding.** Channels bind to a column name, a serializable
-  **expression**, a callable, or a raw array — derive a channel without first
-  reshaping your data, and let expressions push down into the lazy container.
-- **No dead ends.** When you need something qtviz doesn't natively model — a 3-D
-  surface, a Sankey, a bespoke Plotly figure — wrap it in `RawFigure` and host it
-  in the same `View`. You are never blocked waiting on the library.
-- **A small surface you can hold in your head.** Five concepts — `Element`,
-  composition (`*` / `+`), `View`, `Theme`, typed events — cover the whole library.
-  Hello-world is six lines; a linked three-panel dashboard is under sixty.
-
----
+Every screenshot here is captured from a runnable script — the
+[gallery](https://jawjay.github.io/qtviz/gallery/) shows all 37.
 
 ## Installation
 
 ```bash
 pip install qtviz                      # or:  uv add qtviz
 pip install "qtviz[matplotlib]"        # + the matplotlib backend
-pip install "qtviz[webengine]"         # + Plotly/Bokeh/HoloViews in a WebEngine view
+pip install "qtviz[webengine]"         # + Plotly/Bokeh/HoloViews hosting
 pip install "qtviz[all]"               # everything
 ```
 
-The hard dependencies are `PySide6`, `pyqtgraph`, and `numpy`; everything else
-is an opt-in extra:
+Hard dependencies: `PySide6`, `pyqtgraph`, `numpy`. Extras: `matplotlib`,
+`webengine`, `datashader`, `dask`, `xarray`, `hvplot`, `all`.
 
-| Extra | Adds |
-|-------|------|
-| `matplotlib` | the matplotlib backend (vector PNG/SVG/PDF export) |
-| `webengine` | the webengine backend — Plotly, Bokeh, HoloViews in a Qt WebEngine view |
-| `datashader` | Datashader rasterization for 10M+ point/line plots |
-| `dask`, `xarray` | out-of-core lazy data sources |
-| `hvplot` | the `df.hvplot(...)` one-liner adapter |
-| `all` | every user-facing extra above |
+## Five concepts cover the library
 
-Working on qtviz itself? See
-[CONTRIBUTING.md](https://github.com/jawjay/qtviz/blob/main/CONTRIBUTING.md)
-for the `uv`-based development setup.
+### 1 · Elements are pure data
 
----
-
-## A tour of the API
-
-Everything below is real, runnable code. The point is how little of it there is.
-
-**Elements** — twenty-eight immutable plot types, each pure data:
+Twenty-eight immutable plot types share one channel vocabulary — data first,
+then keyword accessors (a column name, a lazy expression, a callable, or an
+array):
 
 ```python
-qv.Scatter(table, x="x", y="y")
-qv.Curve(table,   x="t", y="v", step="post", marker="circle")   # stepped, markered
-qv.Curve(table,   x="t", y="v", color_by="regime")   # per-segment category colors
-qv.Bars(table,    x="category", y="count", by="region", mode="stacked",
-        orient="horizontal")
-qv.Bars(table,    x="category", y="count", annotate="auto")   # value labels
-qv.Area(table,    x="t", y="load", by="service", mode="stacked")  # stacked bands
-qv.Histogram(table, value="value", bins="fd")   # int or numpy rule — one binning, all backends
-qv.Ecdf(table, value="latency")                 # empirical CDF, shared numbers
-qv.Stem(table, x="day", y="delta")               # lollipop series, pickable heads
-qv.Heatmap(table, x="x", y="y", z="z", aggregator="mean",   # real data coordinates
-           annotate="auto")                   # contrast-aware value labels
-qv.Image(array2d, extent=(0, 0, 10, 10), norm="log")        # also power/symlog/boundary
-qv.Mesh(spec2d, x=t_edges, y=np.geomspace(1, 64, 13))  # non-uniform cells
-qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, annotate=True)  # inline labels
-qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
-qv.Streamlines({"u": u2d, "v": v2d}, u="u", v="v",
-               extent=(0, 0, 10, 10), density=1.5)  # field-line flow
-qv.Pie(table, value="share", by="browser", hole=0.4)   # donut (mpl/webengine)
-qv.ErrorBars(table, x="x", y="y", err="sigma", lo_limit="is_lo")  # "beyond" arrows
-qv.Spread(table, x="t", lo="lo", hi="hi")   # filled confidence band
-qv.BoxPlot(table, value="score", by="cohort")   # shared stats core, all backends
-qv.Violin(table,  value="score", by="cohort")
-qv.HLine(4.5, line_style="dashed", label="alarm")   # reference chrome:
-qv.VLine(0.0) ; qv.Span(2.0, 4.0) ; qv.Text(5, 2, "peak", rotation=30, frame=True)
-qv.Arrow(1, 0.2, 4, 0.8) ; qv.Rect(2, -0.5, 4, 0.5) ; qv.Ellipse(5, 0, 1.5, 0.4)
-qv.Polygon([(6, 0), (7, 0.6), (8, -0.2)]) ; qv.RefLine(0.1, -0.2)  # slope guide
+qv.Scatter(df, x="time", y="temp", color_by="sensor")     # auto legend
+qv.Curve(df,   x="time", y=qv.col("raw") - qv.col("base"))  # derived channel
+qv.Bars(df,    x="region", y="sales", by="year", orient="horizontal")
+qv.Heatmap(df, x="day", y="hour", z="load", annotate="auto")
+qv.Histogram(df, value="latency", bins="fd")
+qv.HLine(4.5, label="alarm") * qv.Span(2, 4) * qv.Text(5, 2, "peak")
 ```
 
-![Eight element types rendered in one grid layout](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/08_gallery.png)
-*The element vocabulary in one `Layout` grid ([`examples/08_gallery.py`](https://github.com/jawjay/qtviz/blob/main/examples/08_gallery.py))*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/35_everyday_figures.png"
+       alt="The everyday figures: step curve, stacked area, horizontal bars, donut, ECDF, filled contour, SI ticks, dual axis, quiver key, mesh, stem, annotated heatmap">
+</p>
 
-**Axes & legends** — first-class, capability-gated, honest:
+*The everyday figures, declaratively — one grid, one vocabulary
+([`examples/35_everyday_figures.py`](https://github.com/jawjay/qtviz/blob/main/examples/35_everyday_figures.py)).*
+
+### 2 · Compose with two operators
+
+`*` overlays on shared axes; `+` lays out panels. Configure any node with
+`.opts()` — no wrapper construction:
 
 ```python
-qv.Overlay([a, b], options=qv.OverlayOptions(
-    title="Spectrum",
-    x=qv.AxisSpec(scale="log", lim=(1, 1e4)),   # events stay in DATA space (R1)
-    y=qv.AxisSpec(tick_format="eng"),           # SI ticks; ".0%", ",d", "%H:%M",
-    legend="right",                    # templates: "{:.0f} ms", "${:,.0f}"
-    grid=False,
-))
-
-# Explicit ticks, minor ticks, rotated labels ([D101]/[D103])
-qv.AxisSpec(ticks=[0, 5, 10], tick_labels=["lo", "mid", "hi"],
-            minor=True, tick_rotation=45)
-
-# Twin y axes: put a series on the right-hand axis
-qv.Overlay(
-    [qv.Curve(t, x="t", y="temp"),
-     qv.Curve(t, x="t", y="pressure", axis="y2")],
-    options=qv.OverlayOptions(y2=qv.AxisSpec(label="Pa", tick_format="eng")),
-)
-
-# Calendar time: datetime64 columns just work — calendar ticks on every
-# backend, and events/state stay epoch seconds (one data space, R1)
-qv.Curve({"t": timestamps_dt64, "v": values}, x="t", y="v")
+(price * bollinger_band).opts(title="AAPL", y="USD")    # layered, labeled
+price + volume                                          # side-by-side panels
+qv.Layout.mosaic("AAB\nCCB", A=a, B=b, C=c).opts(link_x=True)
 ```
 
-**Live data** — a thread-safe, append-able source; views update in place:
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/36_mosaic_layout.png" width="720"
+       alt="Mosaic layout with spanning panes and a suptitle">
+</p>
 
-```python
-feed = qv.stream({"t": float, "v": float}, window=100_000)   # rolling ring buffer
-view = qv.View(qv.Curve(feed, x="t", y="v"))                 # that's all the wiring
-feed.append(t=timestamps, v=values)                          # from any thread
-```
+*Spanning panes from an ASCII plan, track ratios, and a figure suptitle.*
 
-![A live rolling feed beside a datashaded 400k-point history and a brush-driven detail panel](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/34_streaming_telemetry.png)
-*A live rolling feed, its datashaded 400k-point history, and a brush-driven detail panel ([`examples/34_streaming_telemetry.py`](https://github.com/jawjay/qtviz/blob/main/examples/34_streaming_telemetry.py))*
+### 3 · A `View` is a `QWidget`
 
-**Composition** — build a figure tree with two operators:
-
-```python
-scatter * curve                 # Overlay: same axes, layered
-scatter + histogram             # Layout: side-by-side panels
-qv.Layout([a, b, c], kind="tabs")                 # or "grid" | "splitter" | "dock"
-qv.Layout([a, b], options=qv.LayoutOptions(cols=2, link_x=True))   # shared X axis
-qv.Layout.mosaic("AAB\nCCB", A=a, B=b, C=c,       # spanning panes from an ASCII
-    options=qv.LayoutOptions(width_ratios=[1, 1, 0.8],  # plan + track ratios
-                             title="Suptitle"))
-```
-
-![Mosaic layout with spanning panes and a suptitle](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/36_mosaic_layout.png)
-*Spanning panes from an ASCII plan, track ratios, and a figure suptitle
-([`examples/36_mosaic_layout.py`](https://github.com/jawjay/qtviz/blob/main/examples/36_mosaic_layout.py))*
-
-**Views & backends** — a `View` is a `QWidget`; choose an engine or let qtviz pick:
+Choose an engine, let qtviz pick, or mix engines in one window — pan/zoom and
+subscriptions survive a runtime swap:
 
 ```python
 view = qv.View(scatter * curve, backend="auto")   # "pyqtgraph" | "matplotlib" | "webengine"
-view.set_backend("matplotlib")                     # swap at runtime — keeps zoom + subscriptions
+view.set_backend("matplotlib")                    # swap live — keeps zoom + events
+layout.addWidget(view)                            # it's just a QWidget
 ```
 
-**Typed events** — subscribe with `view.on(...)`; payloads are plain dataclasses:
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/07_mixed_backends.png" width="720"
+       alt="A pyqtgraph pane and a matplotlib pane side by side in one layout">
+</p>
+
+*One `Layout`, two engines — pyqtgraph beside matplotlib, one event stream.*
+
+### 4 · Typed events
+
+Interactions arrive as plain dataclasses, identical on every backend:
 
 ```python
-view.on(qv.SelectEvent, lambda e: print(e.indices, e.bounds))  # brush → row indices
-view.on(qv.PickEvent,   lambda e: print(e.point_index, e.x, e.y))
-view.on(qv.RangeEvent,  lambda e: print(e.x, e.y))             # pan/zoom (throttled)
-view.on(qv.HoverEvent,  on_hover)
+view.on(qv.SelectEvent, lambda e: print(e.indices))   # brush → row indices
+view.on(qv.HoverEvent,  lambda e: print(e.value))     # aggregated value on rasters
+view.on(qv.RangeEvent,  on_zoom, throttle_ms=50)
 ```
 
-**Theming** — one `Theme` styles every backend:
+### 5 · One `Theme` styles every backend
 
 ```python
-qv.View(scatter, theme=qv.Theme.dark())
-qv.View(scatter, theme=qv.Theme.from_qt_app())     # match the host app's light/dark mode
+qv.View(plot, theme=qv.Theme.dark())
+qv.View(plot, theme=qv.Theme.from_qt_app())   # match the host app's mode
 ```
 
-![Three overlaid curves drawn from a registered custom palette on the dark theme](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/04_theming.png)
-*A registered custom palette on `Theme.dark()` ([`examples/04_theming.py`](https://github.com/jawjay/qtviz/blob/main/examples/04_theming.py))*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/04_theming.png" width="720"
+       alt="Three overlaid curves drawn from a registered custom palette on the dark theme">
+</p>
 
----
+## Scale: live data and millions of points
 
-## Working with data
-
-### Accessors — bind channels however you like
-
-A channel (`x`, `y`, `z`, …) binds to an **accessor**, resolved against your data
-at render time:
+A `qv.stream` is a thread-safe, append-able source — views update in place.
+Past the point where a scatter overplots, `raster="datashader"` aggregates to
+a screen-resolution density image that **re-aggregates to the viewport as you
+zoom**, out-of-core when the data is lazy:
 
 ```python
-qv.Scatter(df, x="time", y="temp")                          # a column name
-qv.Curve(df,   x="time", y=qv.col("raw") - qv.col("base"))  # an Expression (derived, lazy)
-qv.Curve(df,   x="time", y=lambda d: d["raw"].cumsum())     # a callable (arbitrary Python)
-qv.Scatter({}, x=np.linspace(0, 1, n), y=values)            # literal arrays
+feed = qv.stream({"t": float, "v": float}, window=100_000)
+qv.View(qv.Curve(feed, x="t", y="v"))              # that's all the wiring
+feed.append(t=ts, v=vs)                            # from any thread
+
+qv.Scatter(big, x="x", y="y", raster="datashader")  # 10M points → density raster
 ```
 
-A **column name** is the easy default. An **`Expression`** (`qv.col(...)` plus
-arithmetic and transforms) is serializable, introspectable, and lazy — the
-underlying container does the work, so it pushes down into Dask / Parquet rather
-than materializing first. A **callable** is the escape hatch for anything else. A
-**literal array** is just the values.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/34_streaming_telemetry.png" width="720"
+       alt="A live rolling feed beside a datashaded 400k-point history and a brush-driven detail panel">
+</p>
 
-### Color & size encoding — with automatic legends
-
-Bind `color_by` / `size_by` to a column and qtviz maps it to per-point color or
-size and adds the matching key automatically — a categorical column becomes a
-color legend, a numeric column a continuous ramp plus colorbar:
-
-```python
-qv.Scatter(df, x="x", y="y", color_by="category")    # categorical → key legend
-qv.Scatter(df, x="x", y="y", color_by="magnitude")   # numeric → ramp + colorbar
-qv.Scatter(df, x="x", y="y", size_by="magnitude")    # per-point size
-```
-
-It is the same data-to-color rule the Datashader path uses, so a column colors
-consistently however it is drawn, on any backend.
-
-![Categorical color legend on the left, continuous ramp with colorbar and per-point size on the right](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/12_color_mapping.png)
-*`color_by` a categorical column (key legend) and a numeric column (ramp + colorbar), with `size_by` ([`examples/12_color_mapping.py`](https://github.com/jawjay/qtviz/blob/main/examples/12_color_mapping.py))*
-
-### Big data — Datashader
-
-Past a few hundred thousand points a scatter overplots into a featureless blob.
-Set `raster="datashader"` and qtviz aggregates the points into a
-screen-resolution density raster off the GUI thread — and **re-aggregates to the
-visible viewport at your widget's pixel size as you pan and zoom**, so the image
-sharpens rather than pixelating:
-
-```python
-qv.Scatter(big, x="x", y="y", raster="datashader")                  # point density
-qv.Curve(series, x="t", y="v", raster="datashader")                 # line density (huge series)
-qv.Scatter(big, x="x", y="y", color_by="z",   raster="datashader")  # mean of z per pixel
-qv.Scatter(big, x="x", y="y", color_by="cat", raster="datashader")  # per-category blend
-qv.Scatter(big, x="x", y="y", raster="auto")                        # rasterize past a threshold
-qv.set_raster_threshold(2_000_000)                                 # tune the "auto" cutoff
-```
-
-Rasterization is a **backend-agnostic pipeline step**, so every backend draws a
-datashaded plot, and it is **out-of-core**: backed by a lazy Dask / xarray / zarr
-source, the data is aggregated partition-by-partition and the full table never
-lands in memory.
-
-| | |
-|---|---|
-| ![Millions of points aggregated to a density raster with an endpoint legend](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/09_datashader.png) *10M points as a density raster with honest endpoint keys ([`examples/09`](https://github.com/jawjay/qtviz/blob/main/examples/09_datashader.py))* | ![A themed categorical blend raster with a legend beside a max-aggregated raster with a colorbar](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/32_datashader_legends.png) *Category-blend raster with a legend beside an `agg="max"` raster with a colorbar ([`examples/32`](https://github.com/jawjay/qtviz/blob/main/examples/32_datashader_legends.py))* |
-
----
+*A live rolling feed, its datashaded 400k-point history, and a brush-driven
+detail panel — [`examples/34_streaming_telemetry.py`](https://github.com/jawjay/qtviz/blob/main/examples/34_streaming_telemetry.py).*
 
 ## Backends
 
 | Backend | Best for | Notes |
 |---------|----------|-------|
-| **pyqtgraph** | real-time, interactive, large data | default; OpenGL; no extra deps |
-| **matplotlib** | figures for print / papers | optional extra; PNG / SVG / PDF export |
-| **webengine** | rich interactive web charts, escape hatch | optional extra; Plotly traces in a Qt WebEngine view |
+| **pyqtgraph** | real-time, interactive, large data | default; no extra deps |
+| **matplotlib** | figures for print / papers | extra; PNG / SVG / PDF export |
+| **webengine** | rich web charts, escape hatch | extra; Plotly in a Qt WebEngine view |
 
-Backends are **registered, never imported by the core**, so adding one touches
-only its own directory and the rest of the library is none the wiser.
-`View(root, backend=...)` accepts a name, a `Backend`, or `"auto"`; negotiation
-resolves an engine per node from backend hints, capabilities, and data size.
-
-| | |
-|---|---|
-| ![A pyqtgraph pane and a matplotlib pane side by side in one layout](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/07_mixed_backends.png) *One `Layout`, two engines: pyqtgraph beside matplotlib, one event stream ([`examples/07`](https://github.com/jawjay/qtviz/blob/main/examples/07_mixed_backends.py))* | ![A native pyqtgraph scatter beside a webengine Plotly contour heatmap](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/20_mixed_native_web.png) *Native pyqtgraph beside a webengine Plotly pane in one splitter ([`examples/20`](https://github.com/jawjay/qtviz/blob/main/examples/20_mixed_native_web.py))* |
-
-### webengine + `RawFigure` — your existing figures, hosted
-
-The `webengine` backend renders the same Element vocabulary as interactive Plotly
-charts inside an embedded `QWebEngineView`, bridging Plotly's interactions back as
-the *same* typed qtviz events the native backends emit. And when you have a figure
-qtviz doesn't natively model, `RawFigure` hosts it unchanged:
+Backends are **registered, never imported by the core** — a third-party
+backend plugs in through an entry point with zero qtviz edits
+([writing a backend](https://jawjay.github.io/qtviz/backends/)). The webengine
+backend renders the same elements as interactive Plotly, and `RawFigure` hosts
+any existing Plotly / Bokeh / HoloViews figure with events bridged back:
 
 ```python
-import plotly.graph_objects as go
-
-fig = go.Figure(go.Surface(z=heights))            # a 3-D surface — beyond the 2-D vocabulary
-view = qv.View(qv.RawFigure(fig))                 # auto-routes to webengine
-view.on(qv.PickEvent, on_pick)                    # Plotly events still arrive as qtviz events
+fig = go.Figure(go.Surface(z=heights))    # beyond the 2-D vocabulary
+view = qv.View(qv.RawFigure(fig))         # auto-routes to webengine
+view.on(qv.PickEvent, on_pick)            # still typed qtviz events
 ```
 
-`RawFigure` auto-detects Plotly, Bokeh, or HoloViews and hosts each through the
-appropriate renderer — so the native HoloViews/Bokeh ecosystems remain one line
-away whenever you need them.
+## How it fits together
 
-![A qtviz Scatter rendered as an interactive Plotly figure with a density colorbar inside a Qt window](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/13_webengine.png)
-*The same `Scatter` Element as an interactive Plotly chart in a `QWebEngineView` — the button swaps it back to a native backend live ([`examples/13_webengine.py`](https://github.com/jawjay/qtviz/blob/main/examples/13_webengine.py))*
+```
+Element (pure data)
+    │   negotiation picks a Backend from hints + capabilities + data size
+    ▼
+resolve pipeline    turns channel accessors into arrays
+    │               (off the GUI thread for lazy / datashaded data)
+    ▼
+Backend renderers   build native primitives — pyqtgraph items,
+    │               matplotlib artists, Plotly traces
+    ▼
+RenderHandle        owns the QWidget + a typed EventBus;
+                    survives backend swaps
+```
 
-> The `webengine` backend needs the `webengine` extra and a real display (a
-> `QWebEngineView` is not usable under headless/offscreen Qt). The native
-> pyqtgraph and matplotlib backends have no such constraint.
-
----
+Backends *and* data adapters are registered, never imported by the core, so
+every new engine or container type is purely additive. The full design record
+— specification, architecture, decision log — lives in
+[`design/`](https://github.com/jawjay/qtviz/tree/main/design).
 
 ## Examples
 
-Self-contained, runnable scripts live in [`examples/`](https://github.com/jawjay/qtviz/tree/main/examples) — each exposes a
-`build()` (returns the widget) and a `main()` (shows a window):
+37 runnable scripts in
+[`examples/`](https://github.com/jawjay/qtviz/tree/main/examples), from
+hello-world to linked dashboards, reactive crossfilters, HoloViews/hvplot
+adapters, and out-of-core xarray cubes — every one screenshotted in the
+[gallery](https://jawjay.github.io/qtviz/gallery/):
 
 ```bash
 uv run python examples/01_hello.py
 ```
 
-![A three-panel dashboard with a shared X axis, brushing, and the dark theme](https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/dashboard_native.png)
-*The linked three-panel dashboard, under sixty lines ([`examples/dashboard_native.py`](https://github.com/jawjay/qtviz/blob/main/examples/dashboard_native.py))*
+<p align="center">
+  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/dashboard_native.png" width="720"
+       alt="A three-panel dashboard with a shared X axis, brushing, and the dark theme">
+</p>
 
-Every example has a screenshot in the [gallery](https://jawjay.github.io/qtviz/gallery/).
-
-**Native:** `01_hello` · `02_composition` · `03_backends` (switch live) ·
-`04_theming` · `05_interaction` · `06_data_binding` · `07_mixed_backends` ·
-`08_gallery` (the element vocabulary in one grid) · `09_datashader` (millions of points,
-re-aggregated on zoom) · `10_out_of_core` (lazy Dask) · `11_datashader_matplotlib`
-· `12_color_mapping` · `25_raster_inspect` (hover a datashaded plot for the count
-under the cursor) · `31_axis_labels` · `32_datashader_legends` ·
-`33_native_escape_hatch` (the live pyqtgraph item) · `34_streaming_telemetry`
-(live feed + datashaded history) · `35_everyday_figures` (the parity vocabulary:
-step/area/pie/ECDF/contour/dual-axis/tick formats in one grid) ·
-`dashboard_native` (3-panel linked dashboard).
-
-**Reactive & adapter:** `21_reactive_crossfilter` (brush one view → a `Signal`
-re-renders another) · `22_from_holoviews` (render a HoloViews tree natively) ·
-`23_from_holoviews_dynamicmap` (drive a `DynamicMap` with a Qt control) ·
-`24_from_hvplot` (a pandas `.hvplot` one-liner as a native widget).
-
-**Real-world scenarios:** `26_telemetry_monitoring` (rolling baseline, tolerance band,
-flagged anomalies, residual panel) · `27_market_analytics` (price + moving averages +
-Bollinger band over a linked volume panel) · `28_event_density_map` (2M categorized
-events, Datashaded, hover for counts) · `29_climate_field` (an `xarray` 2-D field as an
-`Image` map + a 1-D cross-section) · `30_xarray_sensor_lines` (a 3-D `xarray` cube →
-all instance lines for one sensor).
-
-**webengine:** `13_webengine` · `14_webengine_overlay` · `15_webengine_elements` ·
-`16_webengine_export` (PNG) · `17_webengine_heatmap` · `18_webengine_raw_figure`
-(host a Plotly 3-D surface) · `19_webengine_holoviews` · `20_mixed_native_web`.
-
-See [`examples/README.md`](https://github.com/jawjay/qtviz/blob/main/examples/README.md) for the full index.
-
----
-
-## What works today
-
-| Area | Support |
-|------|---------|
-| **Backends** | pyqtgraph (native, default) · matplotlib (extra) · webengine / Plotly (extra) — third-party backends via the registry ([writing a backend](https://jawjay.github.io/qtviz/backends/)) |
-| **Elements** | Scatter · Curve (step modes, markers, `color_by` segments) · Bars (grouped/stacked, horizontal, `annotate=`) · Area (stacked bands) · Histogram (one shared binning) · Ecdf · Stem (lollipops) · Image · Heatmap (real aggregation, data coordinates, `annotate=` with computed contrast) · Mesh (non-uniform cell edges) · Contour (shared levels, filled, core-placed inline labels) · Quiver (vector fields + reference key) · Streamlines (RK4 field lines, spacing mask) · Pie (donuts) · ErrorBars (x/y/both, `lo_limit`/`hi_limit` arrows) · Spread · BoxPlot · Violin · HLine/VLine/Span/Text/Arrow/Rect/Ellipse/Polygon/RefLine (annotations & reference chrome) · `RawFigure` (passthrough) |
-| **Composition** | Overlay (`*`) · Layout (`+`): grid / splitter / tabs / dock · `Layout.mosaic("AAB\nCCB", …)` spanning panes · `width_ratios`/`height_ratios` · figure suptitle · mixed-backend panes |
-| **Data binding** | accessors: column name · `Expression` (`col`, arithmetic, transforms) · callable · literal array |
-| **Encoding** | `color_by` (categorical key · continuous ramp) · `size_by` · **automatic legend / colorbar** |
-| **Data inputs** | dict · NumPy · pandas · Arrow (eager) · **Dask · xarray · zarr** (out-of-core, off-thread) · `qv.tabular()` / `qv.gridded()` shape overrides |
-| **Big data** | **Datashader** — `Scatter` / `Curve` with `raster="datashader" \| "auto"`: density · `color_by` mean · categorical blend; out-of-core, off-thread, re-aggregating to the viewport on zoom; **hover a raster for the aggregated value** (`HoverEvent.value`) |
-| **Axes & legends** | `AxisSpec`: log/symlog + **calendar-time** scales (data-space events everywhere, R1; datetime64 auto-detected, epoch-seconds canonical) · tick formatting (format specs, SI, strftime, one-field templates) · explicit `ticks`/`tick_labels` · minor ticks · label rotation · **twin y axes** (`axis="y2"`) · limits · invert · aspect · grid toggle · multi-series legends (`label` + aggregation, quiver reference key) · gradient colorbars · `norm="log"` color mapping with honest endpoint keys |
-| **Raster norms** | `norm="linear" \| "log" \| "power" \| "symlog" \| "boundary"` + `vmin`/`vmax`/`gamma`/`linthresh`/`levels` on Image/Heatmap/Mesh — normalized once in core (bit-identical grids per backend) with [D48]-honest colorbars (mpl denormalized/discrete ticks · pg endpoints key · Plotly hidden non-linear scale) |
-| **Interaction** | pan / zoom · brush-select — **including through datashaded views** (row indices when eager, bounds-predicate when lazy) · pick · hover · tap · linked axes · typed events via `View.on` · `View(toolbar=True)` native toolbar + rubber-band brush on matplotlib |
-| **Live / streaming** | `qv.stream(...)`: thread-safe appends, rolling windows, in-place item updates on pyqtgraph (one refresh per tick), honest fallbacks elsewhere |
-| **HoloViews / hvplot** | `from_holoviews(obj)` translates a HoloViews tree to native Elements (8 elements + containers; `RawFigure` fallback) · `DynamicMap` → `Signal[Node]` (kdim-driven re-render) · `from_hvplot(df, kind, …)` one-liner |
-| **Reactive** | `signal` / `derived` / `effect` / `batch` (S-style auto-tracking) · `View(Signal[Node])` re-renders on change · crossfilter / linked brushing |
-| **Theming** | `Theme.light()` / `dark()` / `from_qt_app()` · `Color` · `Palette` |
-| **Lifecycle** | runtime backend switching · auto backend selection · live theme/data updates · async render for lazy data |
-| **Big arrays** | zarr / dask / xarray grids render at **screen cost** — decimated reads, viewport regrid on zoom (the image sharpens), window-partial chunk I/O |
-| **Export** | PNG (pyqtgraph) · PNG / SVG / PDF (matplotlib, `dpi`/`transparent`) · PNG (webengine) · **one PNG from a mixed-backend layout** |
-
----
+*The linked three-panel dashboard, under sixty lines —
+[`examples/dashboard_native.py`](https://github.com/jawjay/qtviz/blob/main/examples/dashboard_native.py).*
 
 ## Stability
 
 **2.0 is the current stable release.** The 71-name public surface is frozen
-and policy-backed — semantic versioning, a documented deprecation window, and
-the test suite itself pins the API, the honor-or-warn contract, and the
-benchmark ceilings ([docs/stability.md](https://jawjay.github.io/qtviz/stability/)).
-The full design record — specification, architecture, decision log
-([D1]–[D144]), research notes — lives in
-[`design/`](https://github.com/jawjay/qtviz/tree/main/design).
-
-## Architecture
-
-```
-Element (pure data)
-    │  negotiation picks a Backend from hints + capabilities + data size
-    ▼
-resolve pipeline  ── turns channel accessors into role-keyed arrays
-    │                (off the GUI thread for lazy / datashaded data)
-    ▼
-Backend renderers ── build native primitives (pyqtgraph items, mpl artists,
-    │                Plotly traces)
-    ▼
-RenderHandle ── owns the QWidget and a typed EventBus; survives backend swaps
-```
-
-Both **backends and data adapters are registered, never imported by the core**, so
-every new engine or container type is purely additive. The design documents —
-specification, development plan, milestone notes, and the full decision log — live
-in [`design/`](https://github.com/jawjay/qtviz/tree/main/design).
-
----
+under a documented policy — semver, a deprecation window, and a test suite
+that pins the API, the honor-or-warn contract (an option is honored or warns,
+never silently dropped), and the performance ceilings
+([stability policy](https://jawjay.github.io/qtviz/stability/)). Fully typed
+(`py.typed`), 980+ tests, mypy-clean.
 
 ## Contributing
 
-Issues and pull requests are welcome — see
+Issues and PRs welcome — see
 [CONTRIBUTING.md](https://github.com/jawjay/qtviz/blob/main/CONTRIBUTING.md)
-for the development setup (uv-based), the quality gates CI runs on every PR
-(ruff, mypy, the offscreen test suite), and the conventions the codebase
-follows (the `[Dnn]` decision log, the API-freeze rule, conformance coverage
-for new elements).
-
----
+for the uv-based setup, the CI gates, and the project's conventions.
 
 ## License
 
