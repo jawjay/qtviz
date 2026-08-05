@@ -82,6 +82,16 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Fixed
 
+- **Constructing a `View` before any `QApplication` exists can no longer
+  abort the process** ([D141]): `View.__init__` now ensures an application
+  exists (creating and holding one on demand), so `qv.show(qv.View(...))` —
+  the exact call that used to die in a Qt `qFatal` with no traceback — just
+  works. The builder-callable form of `show()` remains as a convenience, no
+  longer a requirement; a subprocess test pins the app-less construction
+  path. `show()` also gains `toolbar=` (it could previously only be reached
+  by constructing the `View` yourself) and both `show()`/`View` accept
+  `backend` as a name or a `Backend` instance, now typed as such.
+
 - **`Palette.from_matplotlib` works again**: it used `matplotlib.cm.get_cmap`,
   removed in matplotlib 3.9, so the documented route to matplotlib colormaps
   raised `AttributeError` on every supported matplotlib. Now uses the

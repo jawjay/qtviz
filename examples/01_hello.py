@@ -22,7 +22,9 @@ def build():
 
 
 def main() -> None:
-    qv.show(build, title="qtviz — hello", size=(720, 520))  # [D134]: the Qt ceremony is gone
+    # [D134]: the Qt ceremony is gone — and [D141]: building the View first is
+    # safe; View ensures the QApplication exists.
+    qv.show(build(), title="qtviz — hello", size=(720, 520))
 
 
 if __name__ == "__main__":

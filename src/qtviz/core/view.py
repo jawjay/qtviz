@@ -14,15 +14,32 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal, Slot
-from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget
 
 from ..data import node_is_lazy, resolve_node
 from ._host import render_root
 from .disposable import Disposable
 from .theme import Theme
 from .threading import require_gui_thread
+
+if TYPE_CHECKING:
+    from .backend import Backend
+
+_app: QApplication | None = None
+
+
+def _ensure_app() -> None:
+    """[D141] a QWidget constructed before a QApplication exists is a hard Qt
+    abort (qFatal — no traceback), not a Python error. `View.__init__` calls
+    this first, so `qv.show(qv.View(...))` and bare `View(...)` in a script
+    can never crash the process; the created app is module-held so it outlives
+    the constructing scope."""
+    global _app
+    if QApplication.instance() is None:
+        _app = QApplication([])
 
 
 class _AsyncResolver(QObject):
@@ -149,8 +166,10 @@ class View(QWidget):
     # churns.
     _stream_notified = Signal()
 
-    def __init__(self, root, *, backend="auto", theme: Theme | None = None,
-                 toolbar: bool = False, parent=None) -> None:
+    def __init__(self, root, *, backend: str | Backend = "auto",
+                 theme: Theme | None = None, toolbar: bool = False,
+                 parent: QWidget | None = None) -> None:
+        _ensure_app()  # [D141]: widget construction is safe even app-less
         super().__init__(parent)
         from .theme import default_theme  # noqa: PLC0415
 
@@ -298,7 +317,7 @@ class View(QWidget):
         self._reactive_timer.start(0)
 
     @require_gui_thread
-    def set_backend(self, name_or_backend) -> None:
+    def set_backend(self, name_or_backend: str | Backend) -> None:
         self._backend_choice = name_or_backend
         self._rebuild()
 
@@ -308,7 +327,7 @@ class View(QWidget):
         self._rebuild()
 
     @require_gui_thread
-    def set_root(self, root) -> None:
+    def set_root(self, root: Any) -> None:
         self._root = root
         self._rebuild()
 
@@ -366,10 +385,12 @@ class View(QWidget):
         return Disposable(teardown)
 
     @property
-    def handle(self):
+    def handle(self) -> Any:
+        """The live backend `RenderHandle` for the current render (or `None`
+        while resolving) — the [D53] escape hatch to backend-native objects."""
         return self._handle
 
-    def native(self, element_id: str):
+    def native(self, element_id: str) -> Any:
         """The live backend primitive for an element (`handle.native`, [D53]) — the
         escape valve for backend-native work (ROIs, crosshairs, native signals) the
         typed events don't expose. `None` if not rendered. Non-portable by design."""
@@ -381,25 +402,28 @@ class View(QWidget):
 
 
 def show(root, *, title: str | None = None, size: tuple[int, int] = (960, 640),
-         backend: str = "auto", theme: Theme | None = None, block: bool = True) -> View:
+         backend: str | Backend = "auto", theme: Theme | None = None,
+         toolbar: bool = False, block: bool = True) -> View:
     """[D134] the one-liner for scripts: wrap `root` in a `View` (an existing
     `View` passes through), size/title/show it, and — with `block=True` — run
     the Qt event loop. Returns the View either way, so `block=False` hands
     back a live widget for embedding or tests. `View` itself stays a plain
     QWidget for real applications.
 
-    `root` may also be a **zero-argument callable** returning the node or a
-    ready `View` — it runs *after* the QApplication exists. Pass the builder
-    when it constructs widgets (`qv.show(build)`, not `qv.show(build())`):
-    Python evaluates arguments before `show` can create the app, and Qt
-    aborts on any QWidget built without one. Elements are Qt-free, so
-    `qv.show(qv.Scatter(...))` is always safe."""
-    from PySide6.QtWidgets import QApplication  # noqa: PLC0415
-
-    app = QApplication.instance() or QApplication([])
+    Constructing widgets before calling `show` is safe: `View` ensures a
+    QApplication exists ([D141]), so `qv.show(qv.View(...))` and
+    `qv.show(qv.Scatter(...))` both just work. `root` may also be a
+    zero-argument callable returning the node or a ready `View` — a
+    convenience for keeping `build()`-style examples importable, no longer a
+    requirement. `toolbar`/`backend`/`theme` apply when `show` constructs the
+    View; a passed-in `View` keeps its own settings."""
+    _ensure_app()
+    app = QApplication.instance()
+    assert app is not None
     if callable(root) and not isinstance(root, View):
-        root = root()  # deferred builder — widgets are safe now
-    view = root if isinstance(root, View) else View(root, backend=backend, theme=theme)
+        root = root()
+    view = (root if isinstance(root, View)
+            else View(root, backend=backend, theme=theme, toolbar=toolbar))
     view.resize(*size)
     if title is not None:
         view.setWindowTitle(title)
