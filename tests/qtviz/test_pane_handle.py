@@ -94,3 +94,34 @@ def test_composite_view_pane_by_label(qtbot):
     view.pane("right").set_range(x=(3.0, 5.0))
     assert view.handle.capture_state().get("right").x_range == pytest.approx(
         (3.0, 5.0), rel=1e-3)
+
+
+# ── per-pane export ([D150] S5) ──────────────────────────────────────────────
+def test_pg_pane_export_png(qtbot, tmp_path):
+    view = qv.View(_grid(), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    view.resize(640, 480)
+    out = view.pane("price").export("png", tmp_path / "price.png")
+    assert out.exists() and out.stat().st_size > 0
+    with pytest.raises(NotImplementedError, match="png only"):
+        view.pane("price").export("svg", tmp_path / "price.svg")
+
+
+def test_mpl_pane_export_png_and_svg(qtbot, tmp_path):
+    view = qv.View(_grid(), backend="matplotlib")
+    qtbot.addWidget(view)
+    full = view.handle.export("png", tmp_path / "full.png")
+    for fmt in ("png", "svg"):
+        out = view.pane("volume").export(fmt, tmp_path / f"volume.{fmt}")
+        assert out.exists() and out.stat().st_size > 0
+    # the crop is a strict subset of the figure raster
+    assert (tmp_path / "volume.png").stat().st_size < full.stat().st_size
+
+
+def test_export_on_dead_pane_raises(qtbot, tmp_path):
+    view = qv.View(_grid(), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    stale = view.pane("price")
+    view.set_theme(qv.Theme.dark())
+    with pytest.raises(DisposedError):
+        stale.export("png", tmp_path / "x.png")

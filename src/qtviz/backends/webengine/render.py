@@ -96,6 +96,11 @@ class _WebPane(PaneHandle):
     def elements(self) -> tuple[str, ...]:
         return tuple(self._h._traces)
 
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        self._assert_alive()  # one figure = one pane: the handle export IS it
+        return self._h.export(fmt, path, dpi=dpi, transparent=transparent)
+
 
 class WebEngineRenderHandle(RenderHandle):
     """Owns the `WebBridgeView`, the Plotly host, and the event bridge. Tracks

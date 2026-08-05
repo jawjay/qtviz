@@ -182,6 +182,14 @@ class PaneHandle:
         """Ids of the elements rendered on this surface (feed `View.on(source=…)`)."""
         return ()
 
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        """Write just this pane to `path` ([D150] — the per-pane answer to
+        [D72]'s whole-container raster). Formats follow the backend's own
+        export capabilities."""
+        raise NotImplementedError(
+            f"pane {self.label!r}: this backend has no per-pane export")
+
     def _unsupported(self, verb: str) -> None:
         import warnings  # noqa: PLC0415
 

@@ -104,6 +104,24 @@ class MplPane(PaneHandle):
     def elements(self) -> tuple[str, ...]:
         return tuple(self._surf.get("element_ids", ()))
 
+    @require_gui_thread
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        """One pane in any mpl format — the figure cropped to this axes' tight
+        bbox (spiked; [D150]). The crop is geometric: an artist overhanging
+        the axes region (a neighbor's wide legend) can intrude at the margin."""
+        self._assert_alive()
+        path = Path(path)
+        fig = self._fig
+        fig.canvas.draw()  # tightbbox needs a live renderer
+        bbox = (self._surf["ax"].get_tightbbox()
+                .transformed(fig.dpi_scale_trans.inverted()))
+        kw: dict = {"format": fmt, "transparent": transparent, "bbox_inches": bbox}
+        if dpi is not None:
+            kw["dpi"] = dpi
+        fig.savefig(str(path), **kw)
+        return path
+
 
 class MplRenderHandle(RenderHandle):
     def __init__(self, canvas, fig, bus, surfaces, root, backend, natives) -> None:

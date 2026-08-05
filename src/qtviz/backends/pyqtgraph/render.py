@@ -123,6 +123,35 @@ class PgPane(PaneHandle):
     def elements(self) -> tuple[str, ...]:
         return tuple(getattr(self._plot, "_qtviz_element_ids", ()))
 
+    @require_gui_thread
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        """One pane as png — `ImageExporter` on the `PlotItem` subtree, so a
+        grid's shared scene exports a single cell (spiked; [D150])."""
+        self._assert_alive()
+        if fmt != "png":
+            raise NotImplementedError(
+                "pyqtgraph exports png only (vector export is the matplotlib "
+                "backend's role)")
+        if dpi is not None:  # honor-or-warn ([D72]): exports at widget pixel size
+            import warnings  # noqa: PLC0415
+
+            from ...errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn("pyqtgraph: 'dpi' is not honored (raster exports at "
+                          "widget pixel size) and was ignored.",
+                          QtvizWarning, stacklevel=2)
+        from pyqtgraph.exporters import ImageExporter  # noqa: PLC0415
+
+        path = Path(path)
+        exporter = ImageExporter(self._plot)
+        if transparent:
+            from PySide6.QtGui import QColor  # noqa: PLC0415
+
+            exporter.parameters()["background"] = QColor(0, 0, 0, 0)
+        exporter.export(str(path))
+        return path
+
 
 class PgRenderHandle(RenderHandle):
     def __init__(self, widget, event_bus, plots, root, backend, natives) -> None:

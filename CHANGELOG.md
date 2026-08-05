@@ -8,6 +8,14 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Per-pane export ([D150] S5):** `view.pane("price").export("png", path)`
+  writes just that pane. pyqtgraph exports the `PlotItem` subtree (png, one
+  cell of a shared-scene grid); matplotlib crops the figure to the axes'
+  tight bbox (png/svg/pdf, dpi/transparent honored — the crop is geometric,
+  so a neighbor's overhanging artist can intrude at the margin); a webengine
+  pane delegates to its per-figure export. This closes [D72]'s "per-pane
+  vector export via `handle.children[i]`" gap with a named, uniform verb.
+
 - **Pane identity on events ([D149], `design/pane-handles.md` S4):** every
   event now carries `pane` — the label of the surface it came from (keyword-
   only, `None`-defaulted, so existing constructors/tests are untouched) — and
