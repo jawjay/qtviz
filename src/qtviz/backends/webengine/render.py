@@ -258,6 +258,11 @@ class WebEngineBackend:
             return True
         from ...core.element import Element  # noqa: PLC0415
 
+        if (issubclass(element_type, Element)
+                and getattr(element_type, "STRUCTURAL_CHILD", None)):
+            # Inset ([D152]): accepted so negotiation proceeds; the figure
+            # builder warns-and-skips it until I5 (design/inset-axes.md).
+            return True
         return (issubclass(element_type, Element)
                 and element_type.lower is not Element.lower)
 

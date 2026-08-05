@@ -12,6 +12,7 @@ from .errorbars import ErrorBars
 from .heatmap import Heatmap
 from .histogram import Histogram
 from .image import Image
+from .inset import Inset
 from .mesh import Mesh
 from .pie import Pie
 from .quiver import Quiver
@@ -32,4 +33,5 @@ __all__ = [
     "BoxPlot", "Violin",
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     "Stem", "Streamlines",
+    "Inset",
 ]

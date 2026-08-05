@@ -67,6 +67,7 @@ EXAMPLES: dict[str, dict] = {
     "35_everyday_figures": {"size": (1500, 1040)},
     "36_mosaic_layout": {"size": (1100, 620)},
     "37_named_panes": {"size": (1100, 620)},
+    "38_inset_zoom": {"size": (950, 560)},
     "dashboard_native": {"size": (1100, 700)},
 }
 

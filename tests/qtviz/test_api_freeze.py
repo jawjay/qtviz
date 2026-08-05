@@ -32,6 +32,7 @@ FROZEN_2_0 = frozenset({
     "Mesh", "Quiver",                             # wave 3 ([D106]/[D107])
     "Stem",                                       # wave 1.4 ([D115])
     "Streamlines",                                # wave 1.5 ([D118])
+    "Inset",                                      # inset axes ([D152])
     # the element base + node union ([D140])
     "Element", "Node",
     # composition + view

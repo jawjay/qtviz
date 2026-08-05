@@ -219,8 +219,12 @@ class MatplotlibBackend:
             self.renderers.register(element_type, fn)
 
     def supports(self, element_type: type) -> bool:
-        # native registration, or a [D122] lowering the mark adapter can draw
+        # native registration, a [D122] lowering the mark adapter can draw, or
+        # a structural element handled in the surface loop (Inset, [D152])
         if self.renderers.get(element_type) is not None:
+            return True
+        if (issubclass(element_type, Element)
+                and getattr(element_type, "STRUCTURAL_CHILD", None)):
             return True
         return (issubclass(element_type, Element)
                 and element_type.lower is not Element.lower)
@@ -232,6 +236,8 @@ class MatplotlibBackend:
             return frozenset()
         if self.renderers.get(element_type) is not None:
             return element_type.HONORED_NATIVE - HONORED_DELTAS.get(element_type, frozenset())
+        if getattr(element_type, "STRUCTURAL_CHILD", None):  # Inset ([D152])
+            return element_type.HONORED_NATIVE
         return element_type.HONORED_BY_LOWERING
 
     def can_host(self, kind: str) -> bool:
@@ -269,9 +275,14 @@ class MatplotlibBackend:
                                 "width_ratios", "height_ratios"})
 
     def _render_into(self, node, fig, theme, bus, surfaces, natives) -> None:
+        from collections import deque  # noqa: PLC0415
+
         from ...core.compose import flat_pane_labels  # noqa: PLC0415
 
-        labels = flat_pane_labels(node)  # [D145]/[D149]: pane identity at render
+        # [D145]/[D149]: pane identity at render — a deque consumed in
+        # traversal order, one per surface and one per inset ([D152]),
+        # matching flat_pane_labels' depth-first walk.
+        labels = deque(flat_pane_labels(node))
         if isinstance(node, Layout):
             from ...core.compose import grid_geometry  # noqa: PLC0415
 
@@ -291,23 +302,28 @@ class MatplotlibBackend:
                         for i in g[1:]}
             y_leader = {i: g[0] for g in link_groups(cells, n, opts.link_y)
                         for i in g[1:]}
-            for i, (child, label, (r, c, rs, cs)) in enumerate(
-                    zip(node.children, labels, cells, strict=True)):
+            leaders: list[int] = []  # surface index of each child's OWN ax:
+            for i, (child, (r, c, rs, cs)) in enumerate(
+                    zip(node.children, cells, strict=True)):
                 ax = fig.add_subplot(
                     gs[r:r + rs, c:c + cs],
-                    sharex=surfaces[x_leader[i]]["ax"] if i in x_leader else None,
-                    sharey=surfaces[y_leader[i]]["ax"] if i in y_leader else None,
+                    sharex=(surfaces[leaders[x_leader[i]]]["ax"]
+                            if i in x_leader else None),
+                    sharey=(surfaces[leaders[y_leader[i]]]["ax"]
+                            if i in y_leader else None),
                 )
-                self._render_cell(child, ax, theme, bus, surfaces, natives, label)
+                leaders.append(len(surfaces))  # insets shift surfaces ([D152])
+                self._render_cell(child, ax, theme, bus, surfaces, natives, labels)
             if opts.title:
                 fig.suptitle(opts.title, color=theme.foreground.mpl(),
                              fontsize=theme.title_size)
         else:
             self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces,
-                              natives, labels[0])
+                              natives, labels)
 
     def _render_cell(self, node, ax, theme, bus, surfaces, natives,
-                     label: str = "0") -> None:
+                     labels=None) -> None:
+        label = labels.popleft() if labels else "0"
         apply_theme_ax(ax, theme)
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=FULL_SURFACE)  # ([D109])
@@ -333,9 +349,12 @@ class MatplotlibBackend:
             apply_y2(ax2, y2_spec, theme, y2_scale)
         entry = {"ax": ax, "surface_id": surface_id,
                  "selectables": selectables, "y2_ax": ax2, "bus": bus,
-                 # pane → element map ([D147]): MplPane.elements reads this
-                 "element_ids": tuple(el.id for el in children
-                                      if isinstance(el, Element))}
+                 # pane → element map ([D147]): MplPane.elements reads this.
+                 # Insets are chrome here — their contents list on their OWN pane.
+                 "element_ids": tuple(
+                     el.id for el in children
+                     if isinstance(el, Element)
+                     and not getattr(el, "STRUCTURAL_CHILD", None))}
         surfaces.append(entry)
         _events.connect_range(ax, surface_id, bus)
         indices = series_index_map(children)  # palette slots; annotations excluded
@@ -344,6 +363,16 @@ class MatplotlibBackend:
                             show_legend=surf.legend_enabled,
                             legend_position=surf.legend_position)
         for element, si in zip(children, indices, strict=True):
+            if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
+                iax = ax.inset_axes(list(element.rect))  # native, mpl semantics
+                natives[element.id] = iax  # [D53]: the inset's live Axes
+                self._render_cell(element.child, iax, theme, bus, surfaces,
+                                  natives, labels)
+                marker = element.indicator()  # [D154] static zoom rectangle
+                if marker is not None:
+                    self._render_element(marker, replace(ctx, series_index=0),
+                                         selectables, natives)
+                continue
             on_y2 = getattr(element, "axis", "y") == "y2"
             el_ctx = replace(ctx, series_index=si,
                              parent_axes=ax2 if on_y2 else ax,
