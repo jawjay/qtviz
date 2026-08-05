@@ -30,6 +30,9 @@ htmlcov/
 .vscode/
 *.swp
 
+# Local agent/tooling state (machine-specific permission rules etc.)
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

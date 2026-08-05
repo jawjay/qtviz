@@ -33,7 +33,9 @@ real application, skip `show()` and drop `qv.View(...)` into your layout like an
 - **Native Qt, not a web app in disguise.** The default backends are real `QWidget`s
   with Qt signals/slots and strict GUI-thread discipline.
 - **Runs 100% offline.** No network at render time, ever — a hard requirement. The
-  webengine backend bundles its JavaScript locally, never a CDN.
+  webengine backend inlines its JavaScript at render time from your locally
+  installed `plotly`/`bokeh` packages (never a CDN; nothing is vendored —
+  plotly.js and BokehJS remain under their own MIT / BSD-3-Clause licenses).
 - **Engineered for large data.** Container-agnostic, lazy-first data layer (dict /
   NumPy / pandas / Arrow eager; Dask / xarray / zarr out-of-core) plus **Datashader**
   so 10M+ points become a screen-resolution raster that re-aggregates on zoom.

@@ -1,0 +1,26 @@
+name: Feature request
+description: A new element, option, or capability
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to plot or do that qtviz can't express today?
+    validations:
+      required: true
+  - type: textarea
+    id: sketch
+    attributes:
+      label: Proposed API sketch
+      description: >
+        What would the call look like? qtviz has one channel vocabulary and a
+        frozen surface, so a concrete sketch helps the discussion.
+      render: python
+  - type: textarea
+    id: backends
+    attributes:
+      label: Backends
+      description: >
+        Which backends matter for your use case? (Every honored option must be
+        genuinely honored per backend — that's the main cost of a new feature.)

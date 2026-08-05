@@ -1,6 +1,6 @@
 """WebEngine elements — several element types in one Plotly figure.
 
-W2 gives the webengine backend a renderer for all eight element types. An
+The webengine backend renders the core element vocabulary natively as Plotly traces. An
 `Overlay` of different elements becomes one Plotly figure with one trace per
 element (and two for a Spread band): here a confidence band (`Spread`) under a
 fit line (`Curve`) under the noisy samples (`Scatter`) — a classic

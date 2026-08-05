@@ -1,0 +1,48 @@
+name: Bug report
+description: Something renders wrong, crashes, or violates a documented contract
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: qtviz version
+      description: "`python -c \"import qtviz; print(qtviz.__version__)\"`"
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options:
+        - pyqtgraph
+        - matplotlib
+        - webengine
+        - auto / several
+        - not backend-specific
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, PySide6/Qt version
+      placeholder: "macOS 15, Python 3.12, PySide6 6.8"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: >
+        The smallest runnable script that shows the problem — ideally a few
+        lines building an Element and calling qv.show().
+      render: python
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected vs. what happened
+      description: Include the full traceback or a screenshot where relevant.
+    validations:
+      required: true

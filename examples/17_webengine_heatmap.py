@@ -1,6 +1,6 @@
 """WebEngine heatmap — a tabular x/y/z Heatmap rendered as a Plotly heatmap.
 
-W2 added renderers for all eight element types on the webengine backend. A
+The webengine backend renders the core element vocabulary as Plotly traces. A
 `Heatmap` (tabular x/y/z, pivoted to a grid) becomes a Plotly `heatmap` trace
 with a Viridis colorscale — a different element family from the scatter/line
 demos. Hover reads back the aggregated value at each cell.

@@ -1,6 +1,6 @@
 """RawFigure + HoloViews — host a HoloViews figure, get qtviz typed events.
 
-The webengine backend renders a HoloViews object through Bokeh, and (W3b) bridges
+The webengine backend renders a HoloViews object through Bokeh, and bridges
 Bokeh's tap / box-select / range interactions back as the *same* qtviz typed
 events the native backends emit. So a HoloViews figure dropped into a qtviz `View`
 via `RawFigure` participates in `view.on(...)` like any other element.

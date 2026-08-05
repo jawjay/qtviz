@@ -2,7 +2,7 @@
 
 A `Layout` whose panes resolve to different backends composes through qtviz's
 LayoutHost: each pane is its own widget, but they share one merged event stream,
-so a single `view.on(...)` hears events from either pane (W4). Here a fast native
+so a single `view.on(...)` hears events from either pane. Here a fast native
 pyqtgraph `Scatter` (OpenGL) sits beside the *same* points drawn as a Plotly
 density-contour chart — a chart type qtviz doesn't natively model — hosted on the
 webengine backend via `RawFigure`. `backend="auto"` resolves each pane on its own.

@@ -24,7 +24,7 @@ uv sync --extra matplotlib --extra dev
 | 5 | [`05_interaction.py`](05_interaction.py) | Typed events — brush-select, pick, range. | <a href="../docs/images/examples/05_interaction.png"><img src="../docs/images/examples/05_interaction.png" width="260" alt="05_interaction"></a> |
 | 6 | [`06_data_binding.py`](06_data_binding.py) | Bind channels to names, **Expressions**, callables, arrays. | <a href="../docs/images/examples/06_data_binding.png"><img src="../docs/images/examples/06_data_binding.png" width="260" alt="06_data_binding"></a> |
 | 7 | [`07_mixed_backends.py`](07_mixed_backends.py) | A pyqtgraph pane beside a matplotlib pane, one event stream. | <a href="../docs/images/examples/07_mixed_backends.png"><img src="../docs/images/examples/07_mixed_backends.png" width="260" alt="07_mixed_backends"></a> |
-| 8 | [`08_gallery.py`](08_gallery.py) | All eight element types in a grid. | <a href="../docs/images/examples/08_gallery.png"><img src="../docs/images/examples/08_gallery.png" width="260" alt="08_gallery"></a> |
+| 8 | [`08_gallery.py`](08_gallery.py) | The core element vocabulary in one grid. | <a href="../docs/images/examples/08_gallery.png"><img src="../docs/images/examples/08_gallery.png" width="260" alt="08_gallery"></a> |
 | 9 | [`09_datashader.py`](09_datashader.py) | Millions of points → a density raster that **re-aggregates to the viewport on zoom**. | <a href="../docs/images/examples/09_datashader.png"><img src="../docs/images/examples/09_datashader.png" width="260" alt="09_datashader"></a> |
 | 10 | [`10_out_of_core.py`](10_out_of_core.py) | A lazy **Dask** DataFrame datashaded out-of-core — never fully materialized. | <a href="../docs/images/examples/10_out_of_core.png"><img src="../docs/images/examples/10_out_of_core.png" width="260" alt="10_out_of_core"></a> |
 | 11 | [`11_datashader_matplotlib.py`](11_datashader_matplotlib.py) | The same datashaded scatter on **matplotlib** — backend-agnostic, zoom re-aggregates. | <a href="../docs/images/examples/11_datashader_matplotlib.png"><img src="../docs/images/examples/11_datashader_matplotlib.png" width="260" alt="11_datashader_matplotlib"></a> |
@@ -35,8 +35,8 @@ uv sync --extra matplotlib --extra dev
 | 16 | [`16_webengine_export.py`](16_webengine_export.py) | Export a webengine plot to **PNG** (`handle.export("png", path)`). | <a href="../docs/images/examples/16_webengine_export.png"><img src="../docs/images/examples/16_webengine_export.png" width="260" alt="16_webengine_export"></a> |
 | 17 | [`17_webengine_heatmap.py`](17_webengine_heatmap.py) | A tabular `Heatmap` (x/y/z) → a Plotly heatmap with a Viridis colorscale. | <a href="../docs/images/examples/17_webengine_heatmap.png"><img src="../docs/images/examples/17_webengine_heatmap.png" width="260" alt="17_webengine_heatmap"></a> |
 | 18 | [`18_webengine_raw_figure.py`](18_webengine_raw_figure.py) | **`RawFigure`** — host an existing Plotly figure (a 3-D surface) qtviz doesn't natively model; events still bridge back. | <a href="../docs/images/examples/18_webengine_raw_figure.png"><img src="../docs/images/examples/18_webengine_raw_figure.png" width="260" alt="18_webengine_raw_figure"></a> |
-| 19 | [`19_webengine_holoviews.py`](19_webengine_holoviews.py) | **`RawFigure` + HoloViews** — a HoloViews figure rendered via Bokeh, with tap / box-select / range arriving as qtviz typed events (W3b). | <a href="../docs/images/examples/19_webengine_holoviews.png"><img src="../docs/images/examples/19_webengine_holoviews.png" width="260" alt="19_webengine_holoviews"></a> |
-| 20 | [`20_mixed_native_web.py`](20_mixed_native_web.py) | **Mixed backends** — a native pyqtgraph pane beside a webengine Plotly pane in one window, sharing one event stream (W4). | <a href="../docs/images/examples/20_mixed_native_web.png"><img src="../docs/images/examples/20_mixed_native_web.png" width="260" alt="20_mixed_native_web"></a> |
+| 19 | [`19_webengine_holoviews.py`](19_webengine_holoviews.py) | **`RawFigure` + HoloViews** — a HoloViews figure rendered via Bokeh, with tap / box-select / range arriving as qtviz typed events. | <a href="../docs/images/examples/19_webengine_holoviews.png"><img src="../docs/images/examples/19_webengine_holoviews.png" width="260" alt="19_webengine_holoviews"></a> |
+| 20 | [`20_mixed_native_web.py`](20_mixed_native_web.py) | **Mixed backends** — a native pyqtgraph pane beside a webengine Plotly pane in one window, sharing one event stream. | <a href="../docs/images/examples/20_mixed_native_web.png"><img src="../docs/images/examples/20_mixed_native_web.png" width="260" alt="20_mixed_native_web"></a> |
 | 21 | [`21_reactive_crossfilter.py`](21_reactive_crossfilter.py) | **Reactive crossfilter** — brush one view, a `Signal` + `derived` re-renders another with the selected rows (spec §9). Native, offline. | <a href="../docs/images/examples/21_reactive_crossfilter.png"><img src="../docs/images/examples/21_reactive_crossfilter.png" width="260" alt="21_reactive_crossfilter"></a> |
 | 22 | [`22_from_holoviews.py`](22_from_holoviews.py) | **`from_holoviews`** — translate a HoloViews `scatter * curve + bars` tree into native qtviz Elements; no browser. | <a href="../docs/images/examples/22_from_holoviews.png"><img src="../docs/images/examples/22_from_holoviews.png" width="260" alt="22_from_holoviews"></a> |
 | 23 | [`23_from_holoviews_dynamicmap.py`](23_from_holoviews_dynamicmap.py) | **HoloViews `DynamicMap`** — drive a `freq` kdim with a Qt control; `from_holoviews_dmap` → `Signal[Node]` re-renders ([D44] L1). | <a href="../docs/images/examples/23_from_holoviews_dynamicmap.png"><img src="../docs/images/examples/23_from_holoviews_dynamicmap.png" width="260" alt="23_from_holoviews_dynamicmap"></a> |
@@ -78,16 +78,9 @@ uv sync --extra datashader --extra xarray --extra dev
 
 Examples 13–20 use the **`webengine` backend** (qtviz Elements → Plotly in a Qt
 WebEngine view, plus `RawFigure` passthrough for Plotly/Bokeh/HoloViews, and a
-mixed native+webengine layout; roadmap Phase 5, W1–W4). They need the webengine
-extra and a real display (a `QWebEngineView` segfaults at teardown under offscreen
-Qt):
+mixed native+webengine layout). They need the webengine extra and a real
+display (a `QWebEngineView` segfaults at teardown under offscreen Qt):
 
 ```bash
 uv sync --extra webengine --extra dev
 ```
-
-The [`webengine/`](webengine) folder holds the remaining **legacy** `qtwebplot`
-hello-world examples (`hello_plotly` / `hello_bokeh` / `hello_holoviews`), which
-drive the bridge directly through the old `PlotView` (reachable via the deprecation
-shim) rather than through a qtviz `View`. The legacy multi-pane / linked-plot demos
-were removed in W4 — `qv.Layout` (examples 02, 07, 20) supersedes them.

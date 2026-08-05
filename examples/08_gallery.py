@@ -1,4 +1,4 @@
-"""Element gallery — all eight Phase-1 element types in one grid.
+"""Element gallery — the core element types in one grid.
 
 Scatter · Curve · Bars · Histogram · Image · Heatmap · ErrorBars · Spread,
 each in its own panel of a `Layout` grid.
