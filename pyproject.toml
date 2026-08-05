@@ -8,9 +8,13 @@ version = "2.0.0"
 description = "Native-Qt declarative plotting — one immutable API across pyqtgraph, matplotlib, and webengine backends."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Mark Jajeh" }]
-keywords = ["pyside6", "qt", "pyqtgraph", "matplotlib", "plotting", "visualization", "qtviz"]
+keywords = [
+    "pyside6", "qt", "pyqtgraph", "matplotlib", "plotting", "visualization",
+    "declarative", "plotly", "bokeh", "holoviews", "datashader", "dask", "xarray",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -22,7 +26,6 @@ classifiers = [
     "Environment :: X11 Applications :: Qt",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Visualization",
-    "License :: OSI Approved :: MIT License",
 ]
 
 dependencies = [
@@ -92,7 +95,7 @@ datashader = [
 
 [project.urls]
 Homepage = "https://github.com/jawjay/qtviz"
-Documentation = "https://github.com/jawjay/qtviz#readme"
+Documentation = "https://jawjay.github.io/qtviz/"
 Repository = "https://github.com/jawjay/qtviz"
 Issues = "https://github.com/jawjay/qtviz/issues"
 Changelog = "https://github.com/jawjay/qtviz/blob/main/CHANGELOG.md"
@@ -104,6 +107,7 @@ packages = ["src/qtviz"]
 include = [
     "src/qtviz",
     "README.md",
+    "CHANGELOG.md",
     "pyproject.toml",
     "LICENSE",
 ]

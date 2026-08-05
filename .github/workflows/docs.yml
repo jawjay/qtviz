@@ -1,10 +1,17 @@
 name: Docs
 
-# Manual trigger only — this does NOT auto-fire on push. Deploying requires enabling
-# GitHub Pages (Settings → Pages → Source: GitHub Actions) once; that's a repo setting
-# the maintainer owns. Run this workflow from the Actions tab when ready to publish.
+# Deploys the mkdocs site to GitHub Pages. Requires Pages enabled once
+# (Settings → Pages → Source: GitHub Actions). Fires on pushes to main that
+# touch the docs (src/ included — mkdocstrings reads docstrings), or manually
+# from the Actions tab.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "mkdocs.yml"
+      - "src/qtviz/**"
 
 permissions:
   contents: read
