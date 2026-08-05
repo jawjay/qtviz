@@ -89,6 +89,15 @@ pane, `view.on(..., pane="price")` scopes events —
 
 [![Named panes: labeled mosaic, linked column, programmatic pane zoom](images/examples/37_named_panes.png)](images/examples/37_named_panes.png)
 
+Inset axes — `overview * qv.Inset(zoom, rect=…, label="zoom",
+indicate=True)`: a child surface floating on its parent with the zoom
+window marked on the parent; the labeled inset is a pane
+(`view.pane("zoom").set_range(…)`, pane-scoped events, per-pane export,
+state that survives backend switches) —
+[`38_inset_zoom.py`](https://github.com/jawjay/qtviz/blob/main/examples/38_inset_zoom.py)
+
+[![Inset axes: a zoom window floating on its parent, with the region marked](images/examples/38_inset_zoom.png)](images/examples/38_inset_zoom.png)
+
 ## Getting started
 
 <div class="grid cards" markdown>

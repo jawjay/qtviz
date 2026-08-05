@@ -161,6 +161,12 @@ holding for all-three parity; (3) `indicate` rectangle-only forever
 
 # Part II — concrete technical plan
 
+> **Status 2026-08-05: I1–I4 shipped** on `feat/inset-axes` (one commit per
+> step + an opacity fix; gallery example `38_inset_zoom.py`). I3 needed no
+> production changes beyond I2 — the pane machinery carried insets as
+> designed. **I5 (webengine domain axes) remains gated** behind the warn-skip
+> and awaits its own go.
+
 Written after the code-level walkthrough; adopts the §7 recommendations
 (element via `*`; webengine gated behind a warn-skip; rectangle-only
 indication) — flag before I1 lands if any should flip. Steps I1–I5 are
