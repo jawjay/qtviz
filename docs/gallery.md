@@ -80,6 +80,15 @@ ratios, and a figure suptitle —
 
 [![Mosaic layout with spanning panes and a suptitle](images/examples/36_mosaic_layout.png)](images/examples/36_mosaic_layout.png)
 
+Named panes — the mosaic's list form names every subplot (`"price"`,
+`"volume"`, `"depth"`), `link_x="col"` keeps a column time-aligned, and the
+same names address the live render: `view.pane("price").set_range(x=…)` zooms
+programmatically (the linked pane follows), `pane.export(...)` writes one
+pane, `view.on(..., pane="price")` scopes events —
+[`37_named_panes.py`](https://github.com/jawjay/qtviz/blob/main/examples/37_named_panes.py)
+
+[![Named panes: labeled mosaic, linked column, programmatic pane zoom](images/examples/37_named_panes.png)](images/examples/37_named_panes.png)
+
 ## Getting started
 
 <div class="grid cards" markdown>

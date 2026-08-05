@@ -37,6 +37,7 @@ print("MAIN-OK")
     "examples/02_composition.py",
     "examples/31_axis_labels.py",
     "examples/35_everyday_figures.py",
+    "examples/37_named_panes.py",
 ])
 def test_example_main_runs_without_a_preexisting_app(example):
     result = subprocess.run(

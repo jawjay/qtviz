@@ -66,6 +66,7 @@ EXAMPLES: dict[str, dict] = {
     "34_streaming_telemetry": {"settle": 1500, "size": (1200, 640), "splitter": (820, 380)},
     "35_everyday_figures": {"size": (1500, 1040)},
     "36_mosaic_layout": {"size": (1100, 620)},
+    "37_named_panes": {"size": (1100, 620)},
     "dashboard_native": {"size": (1100, 700)},
 }
 
