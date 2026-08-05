@@ -54,18 +54,41 @@ real application, skip `show()` and drop `qv.View(...)` into your layout like an
 ## Install
 
 ```bash
-git clone https://github.com/jawjay/qtviz && cd qtviz
-uv sync --extra matplotlib --extra dev        # add backends/data extras as needed
+pip install qtviz                      # or:  uv add qtviz
+pip install "qtviz[matplotlib]"        # + the matplotlib backend
+pip install "qtviz[all]"               # everything
 ```
 
-`pyqtgraph` and `numpy` are the only hard dependencies; everything else
-(`matplotlib`, `webengine`, `datashader`, `dask`, `xarray`, `holoviews`, `hvplot`) is
-an opt-in extra.
+The hard dependencies are `PySide6`, `pyqtgraph`, and `numpy`; everything else
+(`matplotlib`, `webengine`, `datashader`, `dask`, `xarray`, `hvplot`) is an
+opt-in extra.
 
 ![Three-panel linked dashboard with shared X axis, brushing, and the dark theme](images/examples/dashboard_native.png)
 
 *A linked three-panel dashboard in under sixty lines —
 [`examples/dashboard_native.py`](https://github.com/jawjay/qtviz/blob/main/examples/dashboard_native.py).*
 
-→ Continue to the [Quickstart](quickstart.md), browse the [Gallery](gallery.md)
-(a screenshot of every example), or read the [API reference](api.md).
+## Where next
+
+<div class="grid cards" markdown>
+
+-   **[Quickstart](quickstart.md)**
+
+    Install → first plot → first dashboard, then the whole surface at a
+    glance.
+
+-   **[Gallery](gallery.md)**
+
+    A screenshot of every runnable example — dashboards, big data,
+    WebEngine, adapters.
+
+-   **[API reference](api.md)**
+
+    All 71 public names, auto-documented from the frozen surface.
+
+-   **[Writing a backend](backends.md)**
+
+    The extension contract: ~8 mark drawers and a conformance suite to
+    make green.
+
+</div>

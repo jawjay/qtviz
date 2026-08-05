@@ -1,0 +1,40 @@
+/* qtviz docs polish
+   Screenshots read as framed figures; gallery cards get uniform thumbnails. */
+
+/* Every content screenshot: soft corners + a subtle frame */
+.md-typeset img {
+  border-radius: 0.25rem;
+  box-shadow: var(--md-shadow-z1);
+}
+
+/* Gallery cards: uniform, top-aligned thumbnails that crop instead of
+   stretching, so every card in a row has the same height */
+.md-typeset .grid.cards img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top;
+  margin: 0 0 0.4rem 0;
+}
+
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.35rem;
+  transition: box-shadow 125ms, transform 125ms;
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  box-shadow: var(--md-shadow-z2);
+  transform: translateY(-2px);
+}
+
+/* Card titles sit tight over their one-line description */
+.md-typeset .grid.cards > ul > li > p {
+  margin: 0.3rem 0;
+}
+
+/* Full-width showcase figures get a caption style */
+.md-typeset figure > figcaption,
+.md-typeset .caption {
+  font-size: 0.72rem;
+  color: var(--md-default-fg-color--light);
+}

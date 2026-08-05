@@ -1,278 +1,296 @@
 # Gallery
 
-Every example is a self-contained, runnable script in the repo's
-[`examples/`](https://github.com/jawjay/qtviz/tree/main/examples) directory. Each
-exposes a `build()` (returns the widget, handy for embedding/testing) and a `main()`
-(shows a window):
+Every screenshot on this page is captured from a self-contained, runnable
+script in [`examples/`](https://github.com/jawjay/qtviz/tree/main/examples) —
+each exposes a `build()` (returns the widget) and a `main()` (shows a window):
 
 ```bash
 uv run python examples/01_hello.py
 ```
 
-The screenshots below are captured straight from these scripts
-(`uv run python tools/capture_screenshots.py` regenerates them).
+## Showcase
 
-## Real-world scenarios
+Larger scenarios that combine several features around a realistic dataset.
 
-Larger examples that combine several features around a realistic dataset and data type.
+### Sensor telemetry
 
-### `26_telemetry_monitoring` — sensor monitoring
+A rolling baseline, a 3σ tolerance `Spread`, flagged-anomaly `Scatter`, and an
+X-linked residual panel derived with an `Expression` —
+[`26_telemetry_monitoring.py`](https://github.com/jawjay/qtviz/blob/main/examples/26_telemetry_monitoring.py)
 
-Sensor time series: a rolling baseline, a 3σ tolerance `Spread`, flagged-anomaly
-`Scatter`, and an X-linked residual panel derived with an `Expression`.
+[![Telemetry monitoring dashboard](images/examples/26_telemetry_monitoring.png)](images/examples/26_telemetry_monitoring.png)
 
-![Telemetry monitoring dashboard](images/examples/26_telemetry_monitoring.png)
+### Market analytics
 
-### `27_market_analytics` — market analytics
+Price `Curve` + 20/50-day moving averages + a Bollinger `Spread`, over an
+X-linked volume `Bars` panel —
+[`27_market_analytics.py`](https://github.com/jawjay/qtviz/blob/main/examples/27_market_analytics.py)
 
-Equity price `Curve` + 20/50-day moving averages + a Bollinger `Spread`, over an
-X-linked volume `Bars` panel; brush a window of days.
+[![Market analytics dashboard](images/examples/27_market_analytics.png)](images/examples/27_market_analytics.png)
 
-![Market analytics dashboard](images/examples/27_market_analytics.png)
+### Streaming telemetry
 
-### `28_event_density_map` — big-data density map
+A live rolling feed (`qv.stream`), its 400k-point history datashaded, and a
+brush-driven detail panel wired through a `Signal` —
+[`34_streaming_telemetry.py`](https://github.com/jawjay/qtviz/blob/main/examples/34_streaming_telemetry.py)
 
-2M categorized events → a Datashaded categorical density map; hover anywhere for
-the event count under the cursor (stays correct as you zoom).
+[![Streaming telemetry with datashaded history](images/examples/34_streaming_telemetry.png)](images/examples/34_streaming_telemetry.png)
 
-![Categorical event density map](images/examples/28_event_density_map.png)
+### The everyday figures
 
-### `29_climate_field` — gridded science
+Step curve, stacked `Area`, horizontal `Bars`, `Pie` donut, `Ecdf`, filled
+`Contour`, SI ticks, a dual-axis pair, `Quiver` with a reference key, a
+boundary-level `Mesh`, `Stem`, and an annotated `Heatmap` — one grid, under the
+native toolbar —
+[`35_everyday_figures.py`](https://github.com/jawjay/qtviz/blob/main/examples/35_everyday_figures.py)
 
-An `xarray` 2-D field rendered as an `Image` map plus a 1-D `da.isel`
-cross-section `Curve` — one library, two data shapes, X-linked.
+[![The everyday figures in one grid](images/examples/35_everyday_figures.png)](images/examples/35_everyday_figures.png)
 
-![Climate field map and cross-section](images/examples/29_climate_field.png)
+### Linked dashboard
 
-### `30_xarray_sensor_lines` — xarray cube
+Three panels, shared X, brushing, dark theme — under sixty lines —
+[`dashboard_native.py`](https://github.com/jawjay/qtviz/blob/main/examples/dashboard_native.py)
 
-A 3-D `xarray` cube `10_000 × 4 × 250` `(time, sensor, instance)`: `.sel` one
-sensor, then overlay all 250 instances (~2.5M line points) as faint `Curve`s with
-a bold `.mean` envelope.
+[![Three-panel linked dashboard](images/examples/dashboard_native.png)](images/examples/dashboard_native.png)
 
-![250 overlaid instance lines with a mean envelope](images/examples/30_xarray_sensor_lines.png)
+### Big-data density map
 
-### `34_streaming_telemetry` — live + history + detail
+2M categorized events datashaded into a categorical density map; hover reports
+the count under the cursor —
+[`28_event_density_map.py`](https://github.com/jawjay/qtviz/blob/main/examples/28_event_density_map.py)
 
-A live rolling feed (`qv.stream`), the accumulated 400k-point history datashaded,
-and a brush-driven detail panel wired through a `Signal`.
+[![Categorical event density map](images/examples/28_event_density_map.png)](images/examples/28_event_density_map.png)
 
-![Streaming telemetry with datashaded history](images/examples/34_streaming_telemetry.png)
+### Gridded science
 
-### `35_everyday_figures` — the parity vocabulary
+An `xarray` 2-D field as an `Image` map plus a 1-D cross-section `Curve`, and a
+3-D cube overlaying 250 instance lines with a mean envelope —
+[`29_climate_field.py`](https://github.com/jawjay/qtviz/blob/main/examples/29_climate_field.py) ·
+[`30_xarray_sensor_lines.py`](https://github.com/jawjay/qtviz/blob/main/examples/30_xarray_sensor_lines.py)
 
-The everyday figures of the popular libraries in one grid: step curve with
-markers, stacked `Area`, horizontal grouped `Bars`, a `Pie` donut, `Ecdf` with
-percent ticks, filled `Contour`, SI tick formatting with the grid off, a
-dual-axis pair — plus a `Quiver` field with a reference key, a `Mesh` with
-discrete boundary levels, a `Stem` series, and an annotated `Heatmap` with
-computed label contrast — under the native toolbar (`View(toolbar=True)`).
+[![Climate field map and cross-section](images/examples/29_climate_field.png)](images/examples/29_climate_field.png)
 
-![Step, area, bars, donut, ECDF, contour, SI ticks, dual axis, quiver, mesh, stem, annotated heatmap in one grid](images/examples/35_everyday_figures.png)
+[![250 overlaid instance lines with a mean envelope](images/examples/30_xarray_sensor_lines.png)](images/examples/30_xarray_sensor_lines.png)
 
-### `36_mosaic_layout` — spanning panes from an ASCII plan
+### Mosaic layout
 
-`Layout.mosaic("AAB\nCCB", …)` — a wide price curve over a wide annotated
-heatmap, a tall distribution panel spanning both rows, `width_ratios` track
-sizing, and a figure-level suptitle ([D108]).
+`Layout.mosaic("AAB\nCCB", …)` — spanning panes from an ASCII plan, track
+ratios, and a figure suptitle —
+[`36_mosaic_layout.py`](https://github.com/jawjay/qtviz/blob/main/examples/36_mosaic_layout.py)
 
-![Mosaic layout with spanning panes and a suptitle](images/examples/36_mosaic_layout.png)
+[![Mosaic layout with spanning panes and a suptitle](images/examples/36_mosaic_layout.png)](images/examples/36_mosaic_layout.png)
 
-### `dashboard_native` — linked dashboard
+## Getting started
 
-3-panel linked dashboard (shared X, brushing, dark theme) in under sixty lines.
+<div class="grid cards" markdown>
 
-![Three-panel linked dashboard](images/examples/dashboard_native.png)
+-   [![Hello-world scatter](images/examples/01_hello.png)](images/examples/01_hello.png)
 
-## Native
+    **The smallest program** — a scatter in a `View`, six lines.
 
-### `01_hello` — the smallest program
+    [`01_hello.py`](https://github.com/jawjay/qtviz/blob/main/examples/01_hello.py)
 
-A scatter in a `View` — six lines.
+-   [![Overlay beside a histogram panel](images/examples/02_composition.png)](images/examples/02_composition.png)
 
-![Hello-world scatter](images/examples/01_hello.png)
+    **Composition** — overlay with `*`, lay out with `+`.
 
-### `02_composition` — Overlay and Layout
+    [`02_composition.py`](https://github.com/jawjay/qtviz/blob/main/examples/02_composition.py)
 
-Overlay with `*`, lay out with `+`.
+-   [![Backend switching demo](images/examples/03_backends.png)](images/examples/03_backends.png)
 
-![Overlay beside a histogram panel](images/examples/02_composition.png)
+    **Switch engines at runtime** — the same plot via pyqtgraph or matplotlib.
 
-### `03_backends` — switch engines at runtime
+    [`03_backends.py`](https://github.com/jawjay/qtviz/blob/main/examples/03_backends.py)
 
-The same plot via pyqtgraph / matplotlib; switch at runtime.
+-   [![Curves from a custom palette on the dark theme](images/examples/04_theming.png)](images/examples/04_theming.png)
 
-![Backend switching demo](images/examples/03_backends.png)
+    **Themes & palettes** — light/dark, colors, a registered custom palette.
 
-### `04_theming` — themes and palettes
+    [`04_theming.py`](https://github.com/jawjay/qtviz/blob/main/examples/04_theming.py)
 
-Light/dark themes, colors, and a registered custom palette.
+</div>
 
-![Three curves from a custom palette on the dark theme](images/examples/04_theming.png)
+## Core concepts
 
-### `05_interaction` — typed events
+<div class="grid cards" markdown>
 
-Typed events — brush-select, pick, range.
+-   [![Interaction demo](images/examples/05_interaction.png)](images/examples/05_interaction.png)
 
-![Interaction demo](images/examples/05_interaction.png)
+    **Typed events** — brush-select, pick, range.
 
-### `06_data_binding` — accessors
+    [`05_interaction.py`](https://github.com/jawjay/qtviz/blob/main/examples/05_interaction.py)
 
-Bind channels to column names, **Expressions**, callables, arrays.
+-   [![Curves derived via expressions and callables](images/examples/06_data_binding.png)](images/examples/06_data_binding.png)
 
-![Curves derived via expressions and callables](images/examples/06_data_binding.png)
+    **Accessors** — bind channels to names, `Expression`s, callables, arrays.
 
-### `07_mixed_backends` — two engines, one window
+    [`06_data_binding.py`](https://github.com/jawjay/qtviz/blob/main/examples/06_data_binding.py)
 
-A pyqtgraph pane beside a matplotlib pane, one event stream.
+-   [![Categorical legend and continuous colorbar](images/examples/12_color_mapping.png)](images/examples/12_color_mapping.png)
 
-![pyqtgraph beside matplotlib](images/examples/07_mixed_backends.png)
+    **Color & size encoding** — `color_by` / `size_by` with automatic legends.
 
-### `08_gallery` — the element vocabulary
+    [`12_color_mapping.py`](https://github.com/jawjay/qtviz/blob/main/examples/12_color_mapping.py)
 
-All eight core element types in a grid.
+-   [![Titled panes with axis labels](images/examples/31_axis_labels.png)](images/examples/31_axis_labels.png)
 
-![Eight element types in a grid](images/examples/08_gallery.png)
+    **Axis labels & titles** — `.opts(title=…, x=…, y=…)` on any surface.
 
-### `09_datashader` — millions of points
+    [`31_axis_labels.py`](https://github.com/jawjay/qtviz/blob/main/examples/31_axis_labels.py)
 
-Millions of points → a density raster that re-aggregates to the viewport on zoom.
+-   [![Eight element types in a grid](images/examples/08_gallery.png)](images/examples/08_gallery.png)
 
-![Datashaded density raster](images/examples/09_datashader.png)
+    **The element vocabulary** — the core element types in one grid.
 
-### `10_out_of_core` — lazy Dask
+    [`08_gallery.py`](https://github.com/jawjay/qtviz/blob/main/examples/08_gallery.py)
 
-A lazy Dask DataFrame datashaded out-of-core — never fully materialized.
+-   [![pyqtgraph beside matplotlib](images/examples/07_mixed_backends.png)](images/examples/07_mixed_backends.png)
 
-![Out-of-core datashaded scatter](images/examples/10_out_of_core.png)
+    **Two engines, one window** — pyqtgraph beside matplotlib, one event stream.
 
-### `11_datashader_matplotlib` — backend-agnostic rasters
+    [`07_mixed_backends.py`](https://github.com/jawjay/qtviz/blob/main/examples/07_mixed_backends.py)
 
-The same datashaded scatter on matplotlib — zoom still re-aggregates.
+-   [![Native escape hatch with crosshair](images/examples/33_native_escape_hatch.png)](images/examples/33_native_escape_hatch.png)
 
-![Datashaded scatter on the matplotlib backend](images/examples/11_datashader_matplotlib.png)
+    **The native escape hatch** — `view.native(id)` returns the live
+    pyqtgraph item.
 
-### `12_color_mapping` — color & size encoding
+    [`33_native_escape_hatch.py`](https://github.com/jawjay/qtviz/blob/main/examples/33_native_escape_hatch.py)
 
-`color_by` / `size_by` a column → per-point color/size + an automatic legend /
-colorbar.
+</div>
 
-![Categorical legend and continuous colorbar](images/examples/12_color_mapping.png)
+## Big data — Datashader
 
-### `25_raster_inspect` — hover a raster
+<div class="grid cards" markdown>
 
-Hover a 1M-point datashaded scatter; `HoverEvent.value` reports the `count`
-under the cursor.
+-   [![Datashaded density raster](images/examples/09_datashader.png)](images/examples/09_datashader.png)
 
-![Raster hover-inspect](images/examples/25_raster_inspect.png)
+    **Millions of points** — a density raster that re-aggregates to the
+    viewport on zoom.
 
-### `31_axis_labels` — axis labels & titles
+    [`09_datashader.py`](https://github.com/jawjay/qtviz/blob/main/examples/09_datashader.py)
 
-`.opts(title=…, x=…, y=…)` on each surface; per-pane labels in a
-`Layout`; renders identically on every backend.
+-   [![Out-of-core datashaded scatter](images/examples/10_out_of_core.png)](images/examples/10_out_of_core.png)
 
-![Titled panes with axis labels](images/examples/31_axis_labels.png)
+    **Out-of-core** — a lazy Dask DataFrame, never fully materialized.
 
-### `32_datashader_legends` — datashader legends & aggregation
+    [`10_out_of_core.py`](https://github.com/jawjay/qtviz/blob/main/examples/10_out_of_core.py)
 
-A themed category-blend raster with a legend beside an `agg="max"` raster with a
-colorbar; colors come from the `Theme`.
+-   [![Datashaded scatter on the matplotlib backend](images/examples/11_datashader_matplotlib.png)](images/examples/11_datashader_matplotlib.png)
 
-![Datashader legend and colorbar](images/examples/32_datashader_legends.png)
+    **Backend-agnostic rasters** — the same datashaded scatter on matplotlib.
 
-### `33_native_escape_hatch` — the live pyqtgraph item
+    [`11_datashader_matplotlib.py`](https://github.com/jawjay/qtviz/blob/main/examples/11_datashader_matplotlib.py)
 
-`view.native(element.id)` returns the live pyqtgraph `ScatterPlotItem`; wire a
-native crosshair the typed events don't model.
+-   [![Raster hover-inspect](images/examples/25_raster_inspect.png)](images/examples/25_raster_inspect.png)
 
-![Native escape hatch with crosshair](images/examples/33_native_escape_hatch.png)
+    **Hover a raster** — `HoverEvent.value` reports the count under the cursor.
 
-## Reactive & adapter
+    [`25_raster_inspect.py`](https://github.com/jawjay/qtviz/blob/main/examples/25_raster_inspect.py)
 
-### `21_reactive_crossfilter` — linked brushing
+-   [![Datashader legend and colorbar](images/examples/32_datashader_legends.png)](images/examples/32_datashader_legends.png)
 
-Brush one view → a `Signal` + `derived` re-renders another with the selected rows.
+    **Raster legends & aggregation** — a themed category blend with a legend,
+    an `agg="max"` raster with a colorbar.
 
-![Reactive crossfilter](images/examples/21_reactive_crossfilter.png)
+    [`32_datashader_legends.py`](https://github.com/jawjay/qtviz/blob/main/examples/32_datashader_legends.py)
 
-### `22_from_holoviews` — HoloViews, natively
+</div>
 
-Render a HoloViews `scatter * curve + bars` tree as native qtviz Elements — no
-browser.
+## Reactive & adapters
 
-![HoloViews tree rendered natively](images/examples/22_from_holoviews.png)
+<div class="grid cards" markdown>
 
-### `23_from_holoviews_dynamicmap` — DynamicMap
+-   [![Reactive crossfilter](images/examples/21_reactive_crossfilter.png)](images/examples/21_reactive_crossfilter.png)
 
-Drive a HoloViews `DynamicMap` kdim with a Qt slider; `from_holoviews_dmap` →
-`Signal[Node]` re-renders.
+    **Reactive crossfilter** — brush one view; a `Signal` re-renders another.
 
-![DynamicMap driven by a Qt slider](images/examples/23_from_holoviews_dynamicmap.png)
+    [`21_reactive_crossfilter.py`](https://github.com/jawjay/qtviz/blob/main/examples/21_reactive_crossfilter.py)
 
-### `24_from_hvplot` — hvplot one-liner
+-   [![HoloViews tree rendered natively](images/examples/22_from_holoviews.png)](images/examples/22_from_holoviews.png)
 
-A pandas `df.hvplot(kind="scatter")` one-liner rendered as a native Qt widget.
+    **HoloViews, natively** — a `scatter * curve + bars` tree, no browser.
 
-![hvplot scatter as a native widget](images/examples/24_from_hvplot.png)
+    [`22_from_holoviews.py`](https://github.com/jawjay/qtviz/blob/main/examples/22_from_holoviews.py)
 
-## webengine
+-   [![DynamicMap driven by a Qt slider](images/examples/23_from_holoviews_dynamicmap.png)](images/examples/23_from_holoviews_dynamicmap.png)
 
+    **DynamicMap** — drive a kdim with a Qt slider; a `Signal[Node]`
+    re-renders.
+
+    [`23_from_holoviews_dynamicmap.py`](https://github.com/jawjay/qtviz/blob/main/examples/23_from_holoviews_dynamicmap.py)
+
+-   [![hvplot scatter as a native widget](images/examples/24_from_hvplot.png)](images/examples/24_from_hvplot.png)
+
+    **hvplot one-liner** — `df.hvplot(kind="scatter")` as a native Qt widget.
+
+    [`24_from_hvplot.py`](https://github.com/jawjay/qtviz/blob/main/examples/24_from_hvplot.py)
+
+</div>
+
+## WebEngine
+
+The same elements rendered as interactive Plotly in a `QWebEngineView`, plus
+`RawFigure` passthrough for existing Plotly / Bokeh / HoloViews figures.
 These need the `webengine` extra and a real display.
 
-### `13_webengine` — Plotly in a Qt window
+<div class="grid cards" markdown>
 
-A `Scatter` through Plotly in a `QWebEngineView`; typed events bridge back; the
-button swaps the same Element to a native backend.
+-   [![Plotly scatter in a QWebEngineView](images/examples/13_webengine.png)](images/examples/13_webengine.png)
 
-![Plotly scatter in a QWebEngineView](images/examples/13_webengine.png)
+    **Plotly in a Qt window** — typed events bridge back; swap to a native
+    backend live.
 
-### `14_webengine_overlay` — multi-trace figures
+    [`13_webengine.py`](https://github.com/jawjay/qtviz/blob/main/examples/13_webengine.py)
 
-An `Overlay` → multiple Plotly traces; a `PickEvent` carries the originating
-series id.
+-   [![Overlay as multiple Plotly traces](images/examples/14_webengine_overlay.png)](images/examples/14_webengine_overlay.png)
 
-![Overlay as multiple Plotly traces](images/examples/14_webengine_overlay.png)
+    **Multi-trace figures** — an `Overlay` as Plotly traces; picks carry the
+    series id.
 
-### `15_webengine_elements` — mixed elements, one figure
+    [`14_webengine_overlay.py`](https://github.com/jawjay/qtviz/blob/main/examples/14_webengine_overlay.py)
 
-Spread + Curve + Scatter in one webengine Plotly figure.
+-   [![Spread, curve, and scatter in one Plotly figure](images/examples/15_webengine_elements.png)](images/examples/15_webengine_elements.png)
 
-![Spread, curve, and scatter in one Plotly figure](images/examples/15_webengine_elements.png)
+    **Mixed elements, one figure** — Spread + Curve + Scatter together.
 
-### `16_webengine_export` — PNG export
+    [`15_webengine_elements.py`](https://github.com/jawjay/qtviz/blob/main/examples/15_webengine_elements.py)
 
-Export a webengine plot to PNG (`view.handle.export("png", path)`).
+-   [![Webengine PNG export](images/examples/16_webengine_export.png)](images/examples/16_webengine_export.png)
 
-![Webengine PNG export](images/examples/16_webengine_export.png)
+    **PNG export** — `view.handle.export("png", path)`.
 
-### `17_webengine_heatmap` — Plotly heatmap
+    [`16_webengine_export.py`](https://github.com/jawjay/qtviz/blob/main/examples/16_webengine_export.py)
 
-A tabular `Heatmap` (x/y/z) → a Plotly heatmap with a Viridis colorscale.
+-   [![Plotly heatmap with hover tooltip](images/examples/17_webengine_heatmap.png)](images/examples/17_webengine_heatmap.png)
 
-![Plotly heatmap with hover tooltip](images/examples/17_webengine_heatmap.png)
+    **Plotly heatmap** — a tabular `Heatmap` with a Viridis colorscale.
 
-### `18_webengine_raw_figure` — RawFigure passthrough
+    [`17_webengine_heatmap.py`](https://github.com/jawjay/qtviz/blob/main/examples/17_webengine_heatmap.py)
 
-Host an existing Plotly figure (a 3-D surface) qtviz doesn't natively model;
-events still bridge back.
+-   [![Plotly 3-D surface hosted via RawFigure](images/examples/18_webengine_raw_figure.png)](images/examples/18_webengine_raw_figure.png)
 
-![Plotly 3-D surface hosted via RawFigure](images/examples/18_webengine_raw_figure.png)
+    **RawFigure passthrough** — host a Plotly 3-D surface; events still
+    bridge back.
 
-### `19_webengine_holoviews` — HoloViews via Bokeh
+    [`18_webengine_raw_figure.py`](https://github.com/jawjay/qtviz/blob/main/examples/18_webengine_raw_figure.py)
 
-`RawFigure` + HoloViews rendered via Bokeh, with tap / box-select / range
-arriving as qtviz typed events.
+-   [![HoloViews figure via Bokeh in a Qt window](images/examples/19_webengine_holoviews.png)](images/examples/19_webengine_holoviews.png)
 
-![HoloViews figure via Bokeh in a Qt window](images/examples/19_webengine_holoviews.png)
+    **HoloViews via Bokeh** — tap / box-select / range as typed qtviz events.
 
-### `20_mixed_native_web` — native beside web
+    [`19_webengine_holoviews.py`](https://github.com/jawjay/qtviz/blob/main/examples/19_webengine_holoviews.py)
 
-A native pyqtgraph pane beside a webengine Plotly pane in one window, sharing one
-event stream.
+-   [![Native pane beside a webengine pane](images/examples/20_mixed_native_web.png)](images/examples/20_mixed_native_web.png)
 
-![Native pane beside a webengine pane](images/examples/20_mixed_native_web.png)
+    **Native beside web** — one window, one event stream, two engines.
+
+    [`20_mixed_native_web.py`](https://github.com/jawjay/qtviz/blob/main/examples/20_mixed_native_web.py)
+
+</div>
 
 ---
 
 The full index with per-example notes and required extras lives in
-[`examples/README.md`](https://github.com/jawjay/qtviz/blob/main/examples/README.md).
+[`examples/README.md`](https://github.com/jawjay/qtviz/blob/main/examples/README.md);
+regenerate every screenshot with `uv run python tools/capture_screenshots.py`.

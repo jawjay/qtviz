@@ -1,36 +1,68 @@
 site_name: qtviz
 site_description: Native-Qt declarative plotting — one immutable API across pyqtgraph, matplotlib, and webengine.
+site_url: https://jawjay.github.io/qtviz/
 repo_url: https://github.com/jawjay/qtviz
 repo_name: jawjay/qtviz
 docs_dir: docs
 
 theme:
   name: material
+  icon:
+    logo: material/chart-scatter-plot
+    repo: fontawesome/brands/github
+  favicon: images/favicon.svg
   palette:
-    - scheme: default
-      primary: teal
+    # auto → light → dark, following the OS by default
+    - media: "(prefers-color-scheme)"
       toggle:
-        icon: material/weather-night
-        name: Dark mode
-    - scheme: slate
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: teal
+      accent: deep orange
       toggle:
-        icon: material/weather-sunny
-        name: Light mode
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
   features:
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
     - navigation.top
+    - navigation.footer
+    - navigation.instant
+    - toc.follow
+    - search.suggest
+    - search.highlight
     - content.code.copy
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jawjay/qtviz
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/qtviz/
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
   - Gallery: gallery.md
   - API reference: api.md
-  - Writing a backend: backends.md
-  - Stability policy: stability.md
-  - Design notes: design.md
-  - Contributing: contributing.md
+  - Guides:
+      - Writing a backend: backends.md
+      - Stability policy: stability.md
+      - Design notes: design.md
+      - Contributing: contributing.md
 
 plugins:
   - search
@@ -40,7 +72,7 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
-            # the `::: qtviz` blocks below would otherwise each repeat the
+            # the `::: qtviz` blocks would otherwise each repeat the
             # package docstring; the intro lives once in api.md prose
             show_docstring_modules: false
             heading_level: 3
@@ -50,6 +82,8 @@ plugins:
 
 markdown_extensions:
   - admonition
+  - attr_list
+  - md_in_html
   - pymdownx.superfences
   - pymdownx.highlight
   - toc:
