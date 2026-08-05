@@ -113,6 +113,7 @@ def _color_by_list(element, d, theme) -> list[str]:
         continuous_palette=palettes.get("viridis"),
         title=channel_title(element.color_by),
         norm=getattr(element, "norm", "linear"),
+        vmin=getattr(element, "vmin", None), vmax=getattr(element, "vmax", None),
     )
     return [
         f"rgb({int(round(r * 255))},{int(round(g * 255))},{int(round(b * 255))})"
@@ -254,7 +255,7 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
         marker = {"color": _css(_element_color(element, theme, idx))}
     trace = {"type": "bar", "marker": marker, "opacity": element.alpha,
              "name": element.label or element.id, "showlegend": element.label is not None}
-    if element.orient == "h":
+    if element.orient == "horizontal":
         trace["y"], trace["x"], trace["orientation"] = x, _floats(d.series("y")), "h"
     else:
         trace["x"], trace["y"] = x, _floats(d.series("y"))
@@ -287,7 +288,7 @@ def _group_bars_traces(element: Bars, theme) -> list[dict]:
     numeric = np.issubdtype(xs.dtype, np.number)
     cats = _floats(xs) if numeric else [str(c) for c in xs]
     swatches = category_swatches(gs, theme.palette)
-    horizontal = element.orient == "h"  # categories on y, lengths on x ([D85])
+    horizontal = element.orient == "horizontal"  # categories on y, lengths on x ([D85])
     traces = [{
         "type": "bar", "opacity": element.alpha,
         **({"x": mat[gi], "y": cats, "orientation": "h"} if horizontal

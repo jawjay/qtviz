@@ -31,7 +31,7 @@ An immutable plot vocabulary, each element pure data:
 qv.Scatter(table, x="x", y="y", color_by="category")
 qv.Curve(table,   x="t", y="v", step="post", marker="circle")
 qv.Curve(table,   x="t", y="v", color_by="regime")            # per-segment coloring
-qv.Bars(table,    x="category", y="count", by="region", orient="h",
+qv.Bars(table,    x="category", y="count", by="region", orient="horizontal",
         annotate="auto")                                    # value labels on bars
 qv.Area(table,    x="t", y="load", by="service", mode="stacked")
 qv.Histogram(table, value="value", bins="fd")
@@ -43,7 +43,7 @@ qv.Mesh(array2d,  x=xe, y=np.geomspace(1, 64, 13),
         norm=qv.Norm("boundary", levels=[0, 1, 2, 4, 8]))     # one norm spec ([D130])
 qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, annotate=True)
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
-qv.Streamlines({"u": u2d, "v": v2d}, extent=(0, 0, 10, 10), density=1.5)
+qv.Streamlines({"u": u2d, "v": v2d}, u="u", v="v", extent=(0, 0, 10, 10), density=1.5)
 qv.Pie(table, value="share", by="browser", hole=0.4)
 qv.ErrorBars(table, x="x", y="y", err="sigma",
              lo_limit="is_lo", hi_limit="is_hi")              # "beyond" arrow caps

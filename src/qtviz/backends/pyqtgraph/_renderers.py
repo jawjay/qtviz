@@ -103,6 +103,7 @@ def _color_mapping(element, d, theme):
         np.asarray(d.series("color")), palette=theme.palette,
         continuous_palette=palettes.get("viridis"), title=channel_title(element.color_by),
         norm=getattr(element, "norm", "linear"),
+        vmin=getattr(element, "vmin", None), vmax=getattr(element, "vmax", None),
     )
 
 
@@ -237,7 +238,7 @@ def _bar_label_items(ctx, positions, values, tops, element, *, inside=False) -> 
     from ...core._ticks import format_tick  # noqa: PLC0415
 
     spec = element.annotate if element.annotate != "auto" else "g"
-    horizontal = element.orient == "h"
+    horizontal = element.orient == "horizontal"
     fg = ctx.theme.foreground.qt()
     for pos, val, top in zip(positions, values, tops, strict=True):
         item = pg.TextItem(format_tick(float(val), spec), color=fg,
@@ -274,13 +275,13 @@ def render_bars(element: Bars, ctx):
 
             add_legend(ctx.parent_axes, legend, ctx.theme, ctx.legend_position)
     geo = ({"y": logify(x, y_log), "x0": 0.0, "x1": logify(height, x_log),
-            "height": 0.6} if element.orient == "h"
+            "height": 0.6} if element.orient == "horizontal"
            else {"x": logify(x, x_log), "height": logify(height, y_log),
                  "width": 0.6})
     item = pg.BarGraphItem(**geo, **({"brushes": brushes} if brushes is not None
                                      else {"brush": brush}))
     item.setOpacity(element.alpha)
-    if element.orient == "h":
+    if element.orient == "horizontal":
         _bar_label_items(ctx, logify(x, y_log), height, logify(height, x_log), element)
     else:
         _bar_label_items(ctx, logify(x, x_log), height, logify(height, y_log), element)
@@ -318,7 +319,7 @@ def _render_group_bars(element: Bars, ctx):
     xs, gs, mat = group_bars(np.asarray(d.series("x")), _col(d, "y"),
                              np.asarray(d.series("by")))
     pos, numeric = _bar_positions(xs)
-    horizontal = element.orient == "h"  # positions on y, lengths on x ([D85])
+    horizontal = element.orient == "horizontal"  # positions on y, lengths on x ([D85])
     if not numeric:
         ctx.parent_axes.getAxis("left" if horizontal else "bottom").setTicks(
             [[(float(i), str(c)) for i, c in enumerate(xs)]]

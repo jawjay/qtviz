@@ -18,6 +18,12 @@ explicitly waived (there is no one to deprecate for). The freeze test, docs,
 and CHANGELOG move in lockstep per wave. After the wave, the frozen surface is
 final and the stability policy applies with full force.
 
+**Deferred out of the wave.** `Contour` gets no `norm=`/`clim=` yet: honoring
+them means re-mapping level→color across three native renderers (an mpl norm
+object, a re-baked Plotly colorscale, a re-indexed pyqtgraph LUT), and the
+honesty rule ([D51]) forbids shipping the keywords un-honored. Scatter's
+norm/clim landed (wave C); Contour's is a post-release follow-up.
+
 **Status.** ✅ in progress — waves land as `fix(release)`/`feat(release)` commits.
 
 ## [D138] Orientation vocabulary — `orient=` spelled out; `direction` stays

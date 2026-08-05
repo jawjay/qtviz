@@ -1,7 +1,7 @@
 """Roadmap wave 1, increment 1 — the annotation vocabulary ([D96]/[D97]).
 
 `Arrow` (the pointing half of `annotate`), `Text` growing `rotation` /
-`anchor_v` / `frame`, and the shape annotations `Rect` / `Ellipse` /
+`valign` / `frame`, and the shape annotations `Rect` / `Ellipse` /
 `Polygon` — all [D70]-class: pure data, theme-foreground default, drawn as
 layout chrome on webengine, palette-slot-free in overlays.
 """
@@ -33,7 +33,7 @@ def test_validation():
     qv.Rect(0, 0, 1, 1, fill=True)
     qv.Ellipse(0, 0, 2, 1, angle=30)
     qv.Polygon([(0, 0), (1, 0), (0.5, 1)])
-    qv.Text(0, 0, "t", rotation=45, anchor_v="top", frame=True)
+    qv.Text(0, 0, "t", rotation=45, valign="top", frame=True)
     with pytest.raises(ValidationError):
         qv.Arrow(0, 0, 1, 1, head="start")
     with pytest.raises(ValidationError):
@@ -43,7 +43,7 @@ def test_validation():
     with pytest.raises(ValidationError):
         qv.Polygon([(0, 0), (1, 1)])  # < 3 points
     with pytest.raises(ValidationError):
-        qv.Text(0, 0, "t", anchor_v="above")
+        qv.Text(0, 0, "t", valign="above")
 
 
 @pytest.mark.tier1
@@ -107,7 +107,7 @@ def test_webengine_text_rotation_frame():
     from qtviz.backends.webengine import _figure
 
     node = qv.Curve(_T, x="x", y="y") * qv.Text(
-        1.0, 1.0, "note", rotation=30.0, anchor_v="top", frame=True)
+        1.0, 1.0, "note", rotation=30.0, valign="top", frame=True)
     (note,) = _figure.build_figure(node, qv.Theme.light())["layout"]["annotations"]
     assert note["textangle"] == -30.0             # Plotly rotates clockwise
     assert note["yanchor"] == "top"
@@ -139,7 +139,7 @@ def test_mpl_annotation_wave(qtbot):
     rect = qv.Rect(0.5, 0.0, 1.5, 1.0, fill=True, alpha=0.3)
     ell = qv.Ellipse(2.0, 0.5, 0.5, 0.25, angle=20.0)
     poly = qv.Polygon([(0, 0), (1, 0), (0.5, 1)])
-    text = qv.Text(1.0, 1.2, "note", rotation=45.0, anchor_v="bottom", frame=True)
+    text = qv.Text(1.0, 1.2, "note", rotation=45.0, valign="bottom", frame=True)
     node = qv.Curve(_T, x="x", y="y") * arrow * rect * ell * poly * text
     handle = _backend("matplotlib").render(node, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)

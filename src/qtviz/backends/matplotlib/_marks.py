@@ -106,7 +106,7 @@ _VA = {"center": "center", "top": "top", "bottom": "bottom"}
 
 def draw_text(m: TextMark, ctx):
     fg = m.color.mpl()
-    kwargs: dict = {"color": fg, "ha": m.anchor, "va": _VA[m.anchor_v],
+    kwargs: dict = {"color": fg, "ha": m.halign, "va": _VA[m.valign],
                     "rotation": m.rotation, "rotation_mode": "anchor"}
     if m.size is not None:
         kwargs["fontsize"] = m.size

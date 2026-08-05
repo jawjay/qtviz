@@ -86,15 +86,17 @@ def map_colors(
     vmin: float | None = None,
     vmax: float | None = None,
     title: str | None = None,
-    norm: Literal["linear", "log"] = "linear",
+    norm: str | Norm = "linear",
 ) -> tuple[np.ndarray, Legend]:
     """`values` → `(rgba, legend)` where rgba is `(N, 4)` float in [0, 1].
 
     `palette` colors categories; `continuous_palette` (default: `palette`) is the
-    ramp for numeric columns. `kind="auto"` picks by dtype. `norm="log"` ([D71])
-    normalizes through log10 — the emitted Legend is then `linear=False`
-    (endpoints-only key, [D48]) with data-space bounds; non-positive values warn
-    and map to the bottom of the ramp.
+    ramp for numeric columns. `kind="auto"` picks by dtype. `norm` is the shared
+    normalization vocabulary (a name or a `Norm` spec) run through
+    `normalize_values`, so a column colors exactly like a raster would; any
+    non-linear norm emits a `linear=False` legend (endpoints-only key, [D48])
+    with data-space bounds. Under `log`, non-positive values warn and map to
+    the bottom of the ramp.
     """
     arr = np.asarray(values)
     categorical = is_categorical(arr) if kind == "auto" else kind == "categorical"
@@ -128,24 +130,18 @@ def _categorical(arr, palette: Palette, title) -> tuple[np.ndarray, Legend]:
 
 
 def _continuous(arr, palette: Palette, vmin, vmax, title,
-                norm: str = "linear") -> tuple[np.ndarray, Legend]:
+                norm: str | Norm = "linear") -> tuple[np.ndarray, Legend]:
+    spec = norm if isinstance(norm, Norm) else Norm(norm)
     a = np.asarray(arr, dtype="float64")
-    if norm == "log":
-        from ._scales import logify  # noqa: PLC0415
-
-        a = logify(a, True)  # non-positive → NaN + warn ([D59] policy)
-    lo = float(np.nanmin(a)) if vmin is None else float(vmin)
-    hi = float(np.nanmax(a)) if vmax is None else float(vmax)
-    span = (hi - lo) or 1.0
-    normed = np.nan_to_num(np.clip((a - lo) / span, 0.0, 1.0), nan=0.0)
+    normed, lo, hi = normalize_values(
+        a, norm=spec.kind, vmin=vmin, vmax=vmax,
+        gamma=spec.gamma, linthresh=spec.linthresh, levels=spec.levels)
+    normed = np.nan_to_num(normed, nan=0.0)  # blanks sit at the bottom of the ramp
     lut = np.array([palette.at(t / (_LUT_N - 1)).rgba for t in range(_LUT_N)], dtype="float64")
     rgba = lut[(normed * (_LUT_N - 1)).astype("int64")]
-    if norm == "log":  # legend bounds back in data space; non-linear → endpoints-only
-        legend = Legend(kind="continuous", title=title, vmin=10.0**lo, vmax=10.0**hi,
-                        ramp=continuous_ramp(palette), linear=False)
-    else:
-        legend = Legend(kind="continuous", title=title, vmin=lo, vmax=hi,
-                        ramp=continuous_ramp(palette))
+    # lo/hi are data-space; a non-linear color↔value relation → endpoints-only key
+    legend = Legend(kind="continuous", title=title, vmin=lo, vmax=hi,
+                    ramp=continuous_ramp(palette), linear=spec.kind == "linear")
     return rgba, legend
 
 

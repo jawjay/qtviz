@@ -136,8 +136,8 @@ def text_ops(m: TextMark, theme, x_scale: str, y_scale: str, name: str) -> list[
     if m.size is not None:
         font["size"] = m.size
     note = {"x": x, "y": y, "text": m.text.replace("\n", "<br>"),
-            "showarrow": False, "font": font, "xanchor": m.anchor,
-            "yanchor": _YANCHOR[m.anchor_v],
+            "showarrow": False, "font": font, "xanchor": m.halign,
+            "yanchor": _YANCHOR[m.valign],
             "textangle": -m.rotation,  # Plotly rotates clockwise ([D96] flip)
             "xref": "x", "yref": "y"}
     if m.frame:

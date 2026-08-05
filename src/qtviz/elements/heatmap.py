@@ -43,7 +43,7 @@ class Heatmap(NormedRaster, Element):
         norm: str | Norm = "linear",
         clim: tuple[float | None, float | None] | None = None,
         alpha: float = 1.0,
-        annotate: bool | str | None = None,
+        annotate: bool | str = False,
         backend_hint: str | None = None,
         id=None,
     ) -> None:
@@ -59,19 +59,17 @@ class Heatmap(NormedRaster, Element):
         self.norm, self.clim = check_norm_clim(norm, clim, who="Heatmap")
         self.alpha = float(alpha)
         # [D131] union: True ≡ "auto", False ≡ off, a format spec picks the text
-        if annotate is True:
-            annotate = "auto"
-        elif annotate is False:
-            annotate = None
-        if annotate is not None and annotate != "auto":
+        annotate_spec: str | None = (
+            "auto" if annotate is True else None if annotate is False else annotate)
+        if annotate_spec is not None and annotate_spec != "auto":
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
-            validate_tick_format(annotate, who="Heatmap(annotate=)")
+            validate_tick_format(annotate_spec, who="Heatmap(annotate=)")
         self.data = as_data_ref(data)
         self.x, self.y, self.z = x, y, z
         self.colormap = colormap
         self.aggregator = aggregator
-        self.annotate = annotate
+        self.annotate = annotate_spec
         self._validate_tabular()
         self._freeze()
 

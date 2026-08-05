@@ -35,20 +35,20 @@ def _backend(name):
 def test_validation():
     from qtviz.errors import ValidationError
 
-    qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS)
-    qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS, density=2.0)
+    qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS)
+    qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS, density=2.0)
     # grid-contract violations surface at geometry time ([D129]: accessors
     # may be opaque callables, so the shape check runs on the resolved arrays)
     with pytest.raises(ValidationError):
-        qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V[:, :-1]},
+        qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V[:, :-1]}, u="u", v="v",
                        extent=_BOUNDS).resolved_paths()  # shape mismatch
     with pytest.raises(ValidationError):
-        qv.Streamlines({"u": _SWIRL_U.ravel(), "v": _SWIRL_V.ravel()},
+        qv.Streamlines({"u": _SWIRL_U.ravel(), "v": _SWIRL_V.ravel()}, u="u", v="v",
                        extent=_BOUNDS).resolved_paths()  # 1-D
     with pytest.raises(ValidationError):
-        qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS, density=0.0)
+        qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS, density=0.0)
     with pytest.raises(ValidationError):
-        qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS, density=50.0)
+        qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS, density=50.0)
 
 
 # ── core integrator properties ───────────────────────────────────────────────
@@ -125,7 +125,7 @@ def test_heads_sit_on_their_lines():
 def test_webengine_streamline_traces():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS, label="flow")
+    el = qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS, label="flow")
     traces = _figure.build_figure(el, qv.Theme.light())["data"]
     assert len(traces) == 2                      # lines + heads
     lines, heads = traces
@@ -138,7 +138,7 @@ def test_webengine_streamline_traces():
 def test_pg_two_polyline_items(qtbot):
     import pyqtgraph as pg
 
-    el = qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS)
+    el = qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS)
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     items = handle.native(el.id)
@@ -150,7 +150,7 @@ def test_pg_two_polyline_items(qtbot):
 def test_backends_draw_identical_lines(qtbot):
     """[D110] payoff: matplotlib and pyqtgraph plot the same polylines."""
     pytest.importorskip("matplotlib")
-    el = qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, extent=_BOUNDS)
+    el = qv.Streamlines({"u": _SWIRL_U, "v": _SWIRL_V}, u="u", v="v", extent=_BOUNDS)
     h1 = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(h1.widget)
     h2 = _backend("pyqtgraph").render(el, theme=qv.Theme.light())

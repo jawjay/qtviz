@@ -153,7 +153,7 @@ def draw_text(m: TextMark, ctx):
     fg = m.color.qt()
     kwargs: dict = {
         "color": fg,
-        "anchor": (_ANCHOR_H[m.anchor], _ANCHOR_V[m.anchor_v]),
+        "anchor": (_ANCHOR_H[m.halign], _ANCHOR_V[m.valign]),
         "angle": m.rotation,  # CCW degrees — pg matches [D96] directly
     }
     if m.frame:

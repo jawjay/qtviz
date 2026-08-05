@@ -30,14 +30,14 @@ _PICKING = {"native", "approximate", "none"}
 _NON_DEFAULT = {
     "marker": "square", "alpha": 0.5, "line_style": "dashed", "line_width": 3.0,
     "step": "post", "hole": 0.4, "axis": "y2", "levels": 4, "filled": True,
-    "head": "both", "fill": True, "rotation": 30.0, "anchor_v": "top", "frame": True,
+    "head": "both", "fill": True, "rotation": 30.0, "valign": "top", "frame": True,
     "annotate": ".1f", "marker_every": 3,
     "norm": "power", "clim": (0.2, 0.9),  # (gamma/linthresh/levels live inside Norm, [D130])
     "arrow_scale": 0.5, "head_scale": 2.0, "baseline": 0.5,
     # ("mode" is skipped: stacking requires by=)
     "interpolation": "nearest", "colormap": "plasma", "aggregator": "sum",
-    "by": "cat", "orient": "h", "direction": "x", "bins": 7, "density": True,
-    "color": "#ff0000", "size": 10.0, "label": "series-A", "anchor": "left",
+    "by": "cat", "orient": "horizontal", "direction": "x", "bins": 7, "density": True,
+    "color": "#ff0000", "size": 10.0, "label": "series-A", "halign": "left",
 }
 
 
@@ -119,9 +119,10 @@ def test_recommended_options_are_honored_or_warned(backend, make_elements, qtbot
         for opt in et.RECOMMENDED_OPTIONS:
             if opt not in _NON_DEFAULT:
                 continue  # column-valued (color_by/size_by) — honored everywhere
-            if opt == "norm" and et.__name__ == "Scatter":
-                # Scatter norm is linear|log and needs color_by — its honor
-                # path is covered by test_color_norm
+            if opt in ("norm", "clim") and et.__name__ == "Scatter":
+                # Scatter norm/clim ride the color_by mapping and require
+                # color_by (absent from the base fixture) — their honor path
+                # is covered by test_color_norm
                 continue
             variant = el.with_(**{opt: _NON_DEFAULT[opt]})
             _degrade.reset()  # re-arm the warn-once registry for this assertion

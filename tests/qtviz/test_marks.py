@@ -101,7 +101,9 @@ def test_resolve_color_explicit_wins_else_palette_slot():
 def test_element_default_does_not_lower(table):
     s = qv.Scatter(table, x="x", y="y")
     assert s.lower(CTX) is None
-    assert type(s).lower is qv.Scatter.__mro__[1].lower  # base impl → native-only
+    from qtviz.core.element import Element
+
+    assert type(s).lower is Element.lower  # base impl → native-only
     assert frozenset() == s.HONORED_BY_LOWERING
     # natives that brush declare their coordinates ([D124]) …
     x, y = s.select_xy()
@@ -213,7 +215,8 @@ _LOWERED_CTORS = {
     "Ecdf": lambda **kw: qv.Ecdf({"v": [1.0, 2.0, 2.5]}, value="v", **kw),
     "Spread": lambda **kw: qv.Spread({"t": [0.0, 1.0], "a": [0.0, 0.5], "b": [1.0, 2.0]},
                                      x="t", lo="a", hi="b", **kw),
-    "Streamlines": lambda **kw: qv.Streamlines({"u": _U2D, "v": -_U2D}, extent=(0, 1, 0, 1), **kw),
+    "Streamlines": lambda **kw: qv.Streamlines({"u": _U2D, "v": -_U2D}, u="u", v="v",
+                                               extent=(0, 1, 0, 1), **kw),
     "HLine": lambda **kw: qv.HLine(1.0, **kw),
     "VLine": lambda **kw: qv.VLine(2.0, **kw),
     "Span": lambda **kw: qv.Span(0.2, 0.8, **kw),
@@ -227,7 +230,7 @@ _LOWERED_CTORS = {
 
 _GUARD_NON_DEFAULT = {
     **_NON_DEFAULT,
-    "line_style": "dashed", "size": 14.0, "anchor": "left", "anchor_v": "top",
+    "line_style": "dashed", "size": 14.0, "halign": "left", "valign": "top",
     "rotation": 30.0, "frame": True, "head": "both", "fill": True,
     "baseline": 0.5, "marker": "square", "density": 2.0,
 }

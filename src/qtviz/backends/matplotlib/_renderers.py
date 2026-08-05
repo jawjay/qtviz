@@ -103,6 +103,7 @@ def _color_mapping(element, d, theme):
         np.asarray(d.series("color")), palette=theme.palette,
         continuous_palette=palettes.get("viridis"), title=channel_title(element.color_by),
         norm=getattr(element, "norm", "linear"),
+        vmin=getattr(element, "vmin", None), vmax=getattr(element, "vmax", None),
     )
 
 
@@ -280,7 +281,7 @@ def _bar_fns(ax, orient: str):
     """The axis-swapped trio for one bar orientation ([D85]): the draw call
     (`bar`/`barh` — both take (positions, lengths) positionally), the kwarg
     naming the bar *thickness*, and the categorical tick setter."""
-    if orient == "h":
+    if orient == "horizontal":
         return ax.barh, "height", ax.set_yticks
     return ax.bar, "width", ax.set_xticks
 
@@ -334,7 +335,7 @@ def _render_group_bars(element: Bars, ctx):
     pos = xs.astype("float64") if numeric else np.arange(len(xs), dtype="float64")
     ax = ctx.parent_axes
     bar, thick, set_ticks = _bar_fns(ax, element.orient)
-    base_kw = "left" if element.orient == "h" else "bottom"
+    base_kw = "left" if element.orient == "horizontal" else "bottom"
     if not numeric:
         set_ticks(pos, [str(c) for c in xs])
     swatches = category_swatches(gs, ctx.theme.palette)

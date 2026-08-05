@@ -35,10 +35,10 @@ class Bars(Element):
         y: Accessor,
         by: Accessor | None = None,  # full accessor union — never just a column name
         mode: Literal["grouped", "stacked"] = "grouped",
-        orient: Literal["v", "h"] = "v",
+        orient: Literal["vertical", "horizontal"] = "vertical",
         color: ColorSpec | None = None,
         color_by: Accessor | None = None,
-        annotate: bool | str | None = None,
+        annotate: bool | str = False,
         alpha: float = 1.0,
         label: str | None = None,
         axis: Literal["y", "y2"] = "y",
@@ -54,17 +54,18 @@ class Bars(Element):
         check_axis(axis, "native", who="Bars")
         if mode not in _MODES:
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")
+        from ..core._validate import check_choice  # noqa: PLC0415
+
+        check_choice(orient, ("vertical", "horizontal"), who="Bars", param="orient")
         if mode != "grouped" and by is None:
             raise ValidationError(f"Bars mode={mode!r} requires by= (it stacks the groups)")
         # [D131] union: True ≡ "auto", False ≡ off, a format spec picks the text
-        if annotate is True:
-            annotate = "auto"
-        elif annotate is False:
-            annotate = None
-        if annotate is not None:  # value labels format via the [D86] vocabulary
+        annotate_spec: str | None = (
+            "auto" if annotate is True else None if annotate is False else annotate)
+        if annotate_spec is not None:  # value labels format via the [D86] vocabulary
             from ..core._ticks import validate_tick_format  # noqa: PLC0415
 
-            validate_tick_format(annotate, who="Bars(annotate=)")
+            validate_tick_format(annotate_spec, who="Bars(annotate=)")
         check_exclusive(color, by, names=("color", "by"), who="Bars")
         check_exclusive(color, color_by, names=("color", "color_by"), who="Bars")
         check_exclusive(by, color_by, names=("by", "color_by"), who="Bars")
@@ -75,7 +76,7 @@ class Bars(Element):
         self.orient = orient
         self.color = color
         self.color_by = color_by
-        self.annotate = annotate
+        self.annotate = annotate_spec
         self.alpha = float(alpha)
         self.label = label
         self.axis = axis

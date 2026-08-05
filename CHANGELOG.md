@@ -31,6 +31,27 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Changed
 
+- **Breaking (pre-publication amendment, [D137]):** with zero external users
+  and no first publish yet, the 2.0 surface takes one final consistency pass —
+  these renames ship without deprecation shims, a one-time exception recorded
+  in [D137]:
+  - `Bars`/`Span` **`orient=` takes `"vertical"`/`"horizontal"`** (was
+    `"v"`/`"h"`) — values are spelled out everywhere else in the library;
+    `ErrorBars.direction` is unchanged (which axis carries error, including
+    `"both"`, is a different concept — [D138]).
+  - `Text(anchor=, anchor_v=)` → **`halign=`/`valign=`** — symmetric names,
+    same values (the internal `TextMark` fields renamed to match).
+  - `Streamlines` **requires `u=` and `v=`** — they were the only channel
+    accessors in the library with defaults, hiding the element's data
+    contract.
+  - `annotate=` defaults are now uniformly **`False`** (`Bars`/`Heatmap` said
+    `None`, `Contour` said `False`; behavior is identical — [D131] union).
+- **Scatter joins the one `norm=`/`clim=` surface** ([D130]): `norm` accepts
+  the full `str | Norm` vocabulary (`power`, `symlog`, `boundary`, gamma …)
+  and the new `clim=(lo, hi)` pins the `color_by` mapping bounds — wired
+  through the shared `map_colors` seam, so all three backends honor it
+  identically and any non-linear norm keeps the honest endpoints-only legend
+  key ([D48]). (`Contour` norm/clim is recorded as a follow-up — [D137].)
 - **`color=` accepts the full CSS4/X11 named-color set** ([D143]) — ~148 names
   (matplotlib's vocabulary) instead of 16, validated **eagerly at
   construction** in every element; an unknown name now fails at the call the

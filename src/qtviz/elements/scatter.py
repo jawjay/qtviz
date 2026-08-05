@@ -7,20 +7,24 @@ from typing import Literal
 from ..core._validate import check_agg, check_alpha, check_choice, check_color, check_exclusive
 from ..core.color import ColorSpec
 from ..core.element import Element
+from ..core.encoding import Norm
 from ..data import Accessor, DataLike, as_data_ref
 from ..errors import ValidationError
+from ._norm import NormedRaster, check_norm_clim
 
 
-class Scatter(Element):
-    """A point cloud — x/y positions with optional `color`/`size` encoding."""
+class Scatter(NormedRaster, Element):
+    """A point cloud — x/y positions with optional `color`/`size` encoding.
+    `norm`/`clim` engage the shared colormap-normalization surface on the
+    `color_by` mapping — the same vocabulary Image/Heatmap/Mesh use."""
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "size", "size_by", "alpha", "marker",
-                           "norm", "label", "axis")
+                           "norm", "clim", "label", "axis")
     # [D123] wave-4: the honored set shared by every native renderer;
     # backends subtract their declared deltas (HONORED_DELTAS).
-    HONORED_NATIVE = frozenset({"alpha", "axis", "color", "color_by", "label", "marker",
-                                "norm", "size", "size_by"})
+    HONORED_NATIVE = frozenset({"alpha", "axis", "clim", "color", "color_by", "label",
+                                "marker", "norm", "size", "size_by"})
     CHANNELS = ("x", "y")
 
     def __init__(
@@ -36,7 +40,8 @@ class Scatter(Element):
         marker: Literal["circle", "square", "triangle", "triangle_down", "diamond",
                         "cross", "plus", "star", "pentagon", "hexagon"] = "circle",
         alpha: float = 1.0,
-        norm: Literal["linear", "log"] = "linear",
+        norm: str | Norm = "linear",
+        clim: tuple[float | None, float | None] | None = None,
         label: str | None = None,
         axis: Literal["y", "y2"] = "y",
         raster: Literal["native", "auto", "datashader"] = "native",
@@ -54,16 +59,15 @@ class Scatter(Element):
         check_choice(marker, _MARKERS, who="Scatter", param="marker")
         check_agg(agg, color_by, raster, who="Scatter")
         check_axis(axis, raster, who="Scatter")
-        if norm not in ("linear", "log"):
-            raise ValidationError(f"Scatter norm must be 'linear' or 'log', got {norm!r}")
-        if norm != "linear" and color_by is None:
-            raise ValidationError("Scatter norm requires color_by (it norms the mapped column)")
+        self.norm, self.clim = check_norm_clim(norm, clim, who="Scatter")
+        if color_by is None and (self.norm_kind != "linear" or self.clim is not None):
+            raise ValidationError(
+                "Scatter norm/clim require color_by (they norm the mapped column)")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.color, self.color_by = color, color_by
         self.size, self.size_by = size, size_by
         self.marker, self.alpha = marker, alpha
-        self.norm = norm
         self.label = label
         self.axis = axis
         self.raster = raster

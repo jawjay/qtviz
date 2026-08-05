@@ -130,8 +130,9 @@ class VLine(_Reference):
 
 
 class Span(_Reference):
-    """A filled reference band from `lo` to `hi` — horizontal (`orient="h"`, a
-    y-range across the full width) or vertical (`orient="v"`, an x-range)."""
+    """A filled reference band from `lo` to `hi` — horizontal
+    (`orient="horizontal"`, a y-range across the full width) or vertical
+    (`orient="vertical"`, an x-range)."""
 
     REQUIRED_OPTIONS = ("lo", "hi")
     RECOMMENDED_OPTIONS = ("color", "alpha", "label")
@@ -141,7 +142,7 @@ class Span(_Reference):
         lo: float,
         hi: float,
         *,
-        orient: Literal["h", "v"] = "h",
+        orient: Literal["horizontal", "vertical"] = "horizontal",
         color: ColorSpec | None = None,
         alpha: float = 0.25,
         label: str | None = None,
@@ -149,8 +150,9 @@ class Span(_Reference):
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        if orient not in ("h", "v"):
-            raise ValidationError(f"Span orient must be 'h' or 'v', got {orient!r}")
+        if orient not in ("horizontal", "vertical"):
+            raise ValidationError(
+                f"Span orient must be 'horizontal' or 'vertical', got {orient!r}")
         if not float(lo) < float(hi):
             raise ValidationError(f"Span requires lo < hi, got ({lo!r}, {hi!r})")
         check_alpha(alpha, who="Span")
@@ -169,17 +171,18 @@ class Span(_Reference):
         from ..core.marks import Fill, SpanMark  # noqa: PLC0415
 
         fill = Fill(resolve_ref_color(self.color, ctx.theme), self.alpha)
-        return Lowered(marks=(SpanMark(self.orient, self.lo, self.hi, fill),),
+        code = "h" if self.orient == "horizontal" else "v"  # the mark IR keeps its short encoding
+        return Lowered(marks=(SpanMark(code, self.lo, self.hi, fill),),
                        legend=self.legend_entry(ctx.theme, ctx.series_index))
 
 
 class Text(_Reference):
     """A text note anchored at data coordinates `(x, y)`; `rotation` is
-    counter-clockwise degrees, `anchor`/`anchor_v` place the box relative to
+    counter-clockwise degrees, `halign`/`valign` place the box relative to
     the point, and `frame=True` draws a theme-styled box behind it ([D96])."""
 
     REQUIRED_OPTIONS = ("x", "y", "text")
-    RECOMMENDED_OPTIONS = ("color", "size", "anchor", "anchor_v", "rotation", "frame")
+    RECOMMENDED_OPTIONS = ("color", "size", "halign", "valign", "rotation", "frame")
 
     def __init__(
         self,
@@ -189,8 +192,8 @@ class Text(_Reference):
         *,
         color: ColorSpec | None = None,
         size: float | None = None,
-        anchor: Literal["center", "left", "right"] = "center",
-        anchor_v: Literal["center", "top", "bottom"] = "center",
+        halign: Literal["center", "left", "right"] = "center",
+        valign: Literal["center", "top", "bottom"] = "center",
         rotation: float = 0.0,
         frame: bool = False,
         backend_hint: str | None = None,
@@ -198,18 +201,18 @@ class Text(_Reference):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_color(color, who="Text")
-        if anchor not in ("center", "left", "right"):
-            raise ValidationError(f"Text anchor must be center|left|right, got {anchor!r}")
-        if anchor_v not in ("center", "top", "bottom"):
+        if halign not in ("center", "left", "right"):
+            raise ValidationError(f"Text halign must be center|left|right, got {halign!r}")
+        if valign not in ("center", "top", "bottom"):
             raise ValidationError(
-                f"Text anchor_v must be center|top|bottom, got {anchor_v!r}"
+                f"Text valign must be center|top|bottom, got {valign!r}"
             )
         self.x, self.y = float(x), float(y)
         self.text = str(text)
         self.color = color
         self.size = size
-        self.anchor = anchor
-        self.anchor_v = anchor_v
+        self.halign = halign
+        self.valign = valign
         self.rotation = float(rotation)
         self.frame = bool(frame)
         self._freeze()
@@ -222,7 +225,7 @@ class Text(_Reference):
 
         mark = TextMark(self.x, self.y, self.text,
                         color=resolve_ref_color(self.color, ctx.theme),
-                        size=self.size, anchor=self.anchor, anchor_v=self.anchor_v,
+                        size=self.size, halign=self.halign, valign=self.valign,
                         rotation=self.rotation, frame=self.frame)
         return Lowered(marks=(mark,))
 

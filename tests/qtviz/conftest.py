@@ -105,7 +105,7 @@ def make_elements(table, grid):
                             y=np.geomspace(1.0, 20.0, 21)),
             "Quiver": qv.Quiver(table, x="x", y="y", u="z", v="y"),
             "Stem": qv.Stem(table, x="x", y="y"),
-            "Streamlines": qv.Streamlines({"u": values, "v": -values}, extent=bounds),
+            "Streamlines": qv.Streamlines({"u": values, "v": -values}, u="u", v="v", extent=bounds),
             "Pie": qv.Pie({"v": [3.0, 2.0, 1.0], "l": ["a", "b", "c"],
                            "cat": ["p", "q", "p"]},  # the honor-matrix by= column
                           value="v", by="l"),

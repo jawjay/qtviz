@@ -117,8 +117,8 @@ class TextMark:
     text: str
     color: Color
     size: float | None = None  # None = the engine's default font size
-    anchor: Literal["left", "center", "right"] = "center"
-    anchor_v: Literal["top", "center", "bottom"] = "center"
+    halign: Literal["left", "center", "right"] = "center"
+    valign: Literal["top", "center", "bottom"] = "center"
     rotation: float = 0.0  # CCW degrees ([D96]); adapters own engine sign flips
     frame: bool = False
     space: Space = "data"

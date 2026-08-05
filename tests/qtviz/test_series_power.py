@@ -1,7 +1,7 @@
 """Parity program increment 1 — series power ([D84]/[D85]/[D87]).
 
 `Curve.step` (pre/mid/post) + `Curve.marker` on all three backends,
-`Bars.orient="h"` actually wired (it warned-and-degraded on the native
+`Bars.orient="horizontal"` actually wired (it warned-and-degraded on the native
 backends, and grouped bars ignored it on webengine), and the surface
 `grid=` toggle. Tier-1 covers validation + the pure Plotly figure spec;
 tier-2 asserts the option reached the native primitive.
@@ -80,7 +80,7 @@ def test_webengine_curve_marker_trace():
 def test_webengine_grouped_bars_horizontal():
     from qtviz.backends.webengine import _figure
 
-    el = qv.Bars(_TABLE, x="cat", y="y", by="cat", orient="h")
+    el = qv.Bars(_TABLE, x="cat", y="y", by="cat", orient="horizontal")
     traces = _figure.build_figure(el, qv.Theme.light())["data"]
     assert all(tr["orientation"] == "h" for tr in traces)
     assert all(isinstance(tr["y"][0], str) for tr in traces)  # categories on y
@@ -115,7 +115,7 @@ def test_mpl_curve_step_and_marker(qtbot):
 def test_mpl_bars_horizontal(qtbot):
     pytest.importorskip("matplotlib")
     handle = _backend("matplotlib").render(
-        qv.Bars({"x": [0.0, 1.0], "y": [3.0, 1.0]}, x="x", y="y", orient="h"),
+        qv.Bars({"x": [0.0, 1.0], "y": [3.0, 1.0]}, x="x", y="y", orient="horizontal"),
         theme=qv.Theme.light(),
     )
     qtbot.addWidget(handle.widget)
@@ -128,7 +128,7 @@ def test_mpl_bars_horizontal(qtbot):
 @pytest.mark.tier2
 def test_mpl_grouped_bars_horizontal(qtbot):
     pytest.importorskip("matplotlib")
-    el = qv.Bars(_TABLE, x="cat", y="y", by="cat", orient="h")
+    el = qv.Bars(_TABLE, x="cat", y="y", by="cat", orient="horizontal")
     handle = _backend("matplotlib").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     ax = handle.axes[0]
@@ -182,7 +182,7 @@ def test_pg_curve_marker(qtbot):
 
 @pytest.mark.tier2
 def test_pg_bars_horizontal(qtbot):
-    el = qv.Bars({"x": [0.0, 1.0], "y": [3.0, 1.0]}, x="x", y="y", orient="h")
+    el = qv.Bars({"x": [0.0, 1.0], "y": [3.0, 1.0]}, x="x", y="y", orient="horizontal")
     handle = _backend("pyqtgraph").render(el, theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
     item = handle.native(el.id)

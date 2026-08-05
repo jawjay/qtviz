@@ -71,7 +71,7 @@ def test_webengine_annotations_route_to_layout():
     from qtviz.backends.webengine import _figure
 
     node = (qv.Scatter(_DATA, x="x", y="y") * qv.HLine(3.0, color="#112233")
-            * qv.Span(2.0, 4.0, orient="v") * qv.Text(5.0, 2.5, "peak"))
+            * qv.Span(2.0, 4.0, orient="vertical") * qv.Text(5.0, 2.5, "peak"))
     fig, source_ids = _figure.build(node, qv.Theme.light())
     assert len(fig["data"]) == 1                   # only the scatter is a trace
     assert len(source_ids) == 1                    # annotations emit no events

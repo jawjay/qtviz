@@ -7,6 +7,7 @@ import numpy as np
 from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
 from ..core.element import Element
+from ..data import Accessor
 from ..errors import ValidationError
 
 
@@ -39,8 +40,8 @@ class Streamlines(Element):
         self,
         data,
         *,
-        u="u",
-        v="v",
+        u: Accessor,
+        v: Accessor,
         extent: tuple[float, float, float, float],
         density: float = 1.0,
         color: ColorSpec | None = None,

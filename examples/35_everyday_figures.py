@@ -44,7 +44,7 @@ area_panel = (qv.Area(area, x="t", y="load", by="svc", mode="stacked", alpha=0.8
 bars = {"region": ["north", "south", "east", "west"] * 2,
         "sales": [40.0, 65, 52, 30, 55, 45, 60, 42],
         "year": ["2025"] * 4 + ["2026"] * 4}
-bars_panel = (qv.Bars(bars, x="region", y="sales", by="year", orient="h")
+bars_panel = (qv.Bars(bars, x="region", y="sales", by="year", orient="horizontal")
     ).opts(title="Horizontal grouped bars")
 
 # 4 — donut ([D90]; matplotlib/webengine — negotiation routes around pyqtgraph)
