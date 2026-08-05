@@ -273,6 +273,12 @@ the omission is a decision, not an oversight.)
 
 ## 5. Next steps (sequenced; each independently shippable, TDD)
 
+> **Status 2026-08-05: S1–S5 all shipped** on `feat/pane-handles` (one commit
+> per step, d714377 → ab5a2d3), inside the 2.0 break per the owner call; the
+> §6 recommendations were adopted as decided. The sharing track ([D146]
+> `link_x="col"/"row"`, then the [D151] cross-backend gate) is the remaining
+> follow-on and awaits its own go.
+
 | Step | Contents | Depends on | Size |
 |---|---|---|---|
 | **S1 — fix wave** | §2.5 nested-grid routing; pane protocol internal-only (`panes()` on all handles, auto index labels); base-class `LayoutState` capture/restore; View threads `LayoutState`. Conformance tests 1–2, 7. | — | M — the pivotal one |
