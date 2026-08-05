@@ -102,12 +102,22 @@ def test_plotly_backend_nudges_after_a_qt_resize(qtbot):
 
     view = PlotView(PlotlyBackend({"data": [], "layout": {}}))
     qtbot.addWidget(view)
+    # Observe the send itself, not the pre-ready queue: whether the command
+    # lands in `_command_queue` or goes straight over the bridge depends on
+    # when Chromium's handshake completes — a race that flaked on CI both
+    # ways. The wiring under test is resize → debounce → send(...).
+    sent: list[str] = []
+    orig_send = view.send
+
+    def send(name, payload=None):
+        sent.append(name)
+        orig_send(name, payload)
+
+    view.send = send
     view.resize(300, 200)
     view.show()
     qtbot.wait(50)  # let Chromium construction/show settle before the resize
     view.resize(500, 400)
-    # 10 s: a cold CI runner spends seconds spinning up QtWebEngine on the GUI
-    # thread before the debounce timer can even be processed (2 s flaked there).
-    qtbot.waitUntil(
-        lambda: any(n == "plotly.resize" for n, _p in view._command_queue),
-        timeout=10000)
+    # generous: a cold CI runner spends seconds spinning up QtWebEngine on the
+    # GUI thread before the debounce timer can even be processed.
+    qtbot.waitUntil(lambda: "plotly.resize" in sent, timeout=10000)
