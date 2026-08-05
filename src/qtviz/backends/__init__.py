@@ -12,7 +12,19 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..core.capabilities import Capabilities
 from ..errors import BackendNotAvailableError
+
+__all__ = [
+    "Capabilities",
+    "get",
+    "list_available",
+    "register",
+    "registered",
+    "set_backend_priority",
+    "set_default_backend",
+    "unregister",
+]
 
 _REGISTRY: dict[str, Any] = {}
 _PRIORITY: list[str] = []

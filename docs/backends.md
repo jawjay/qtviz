@@ -120,7 +120,8 @@ import numpy as np
 from PySide6.QtWidgets import QLabel
 
 import qtviz.backends
-from qtviz import Capabilities, Scatter
+from qtviz import Scatter
+from qtviz.backends import Capabilities
 from qtviz.core._degrade import check_recommended
 from qtviz.core.backend import RendererRegistry, RenderHandle
 from qtviz.core.event import EventBus

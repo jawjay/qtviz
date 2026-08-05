@@ -80,7 +80,7 @@ def test_set_backend_priority_is_lenient_with_unknown_names():
 
     saved = list(B._PRIORITY)
     try:
-        qv.set_backend_priority(["pyqtgraph", "not-installed-yet"])
+        qv.backends.set_backend_priority(["pyqtgraph", "not-installed-yet"])
     finally:
         B._PRIORITY[:] = saved
 

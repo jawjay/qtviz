@@ -46,6 +46,15 @@ All notable changes to qtviz are documented here. The format follows
     contract.
   - `annotate=` defaults are now uniformly **`False`** (`Bars`/`Heatmap` said
     `None`, `Contour` said `False`; behavior is identical — [D131] union).
+- **The top-level namespace speaks the downstream vocabulary** ([D140],
+  70 → 71 frozen names): `qtviz.Element` (the base class of all 28 elements —
+  `def f(el: qv.Element)` finally works), `qtviz.Node` (the
+  `Element | Overlay | Layout` union `View`/`show` accept), and
+  `qtviz.QtvizError` (the one broad handler) are now importable.
+  `Capabilities` and `set_backend_priority` — backend-*author* contracts —
+  moved out of the end-user list to `qtviz.backends`, the [D125] extension
+  namespace. `show(node=)` is renamed **`show(root=)`**, matching
+  `View(root=)`/`View.set_root()`.
 - **Scatter joins the one `norm=`/`clim=` surface** ([D130]): `norm` accepts
   the full `str | Norm` vocabulary (`power`, `symlog`, `boundary`, gamma …)
   and the new `clim=(lo, hi)` pins the `color_by` mapping bounds — wired

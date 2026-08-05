@@ -14,10 +14,10 @@ except _PackageNotFoundError:  # source tree without installed metadata
 
 from . import backends, data, errors, threading  # data layer first, then backends auto-register
 from .adapter import from_holoviews, from_holoviews_dmap, from_hvplot
-from .backends import set_backend_priority, set_default_backend
-from .core.capabilities import Capabilities
+from .backends import set_default_backend
 from .core.color import Color
-from .core.compose import Layout, Overlay
+from .core.compose import Layout, Node, Overlay
+from .core.element import Element
 from .core.encoding import Norm
 from .core.event import (
     Event,
@@ -70,6 +70,7 @@ from .elements import (
     Violin,
     VLine,
 )
+from .errors import QtvizError
 from .reactive import Signal, batch, derived, effect, signal
 
 __all__ = [
@@ -85,6 +86,8 @@ __all__ = [
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     # waves 1.4/1.5 ([D115]/[D118])
     "Stem", "Streamlines",
+    # the element base + node union — the downstream annotation vocabulary ([D140])
+    "Element", "Node",
     # composition + view + the [D134] script one-liner
     "Overlay", "Layout", "View", "show",
     # adapters (Phase 3)
@@ -97,8 +100,11 @@ __all__ = [
     # styling
     "Color", "Norm", "Palette", "palettes", "Theme", "set_default_theme",
     "OverlayOptions", "LayoutOptions", "AxisSpec",
-    # backends + capabilities
-    "Capabilities", "set_default_backend", "set_backend_priority",
+    # backend selection (the author-facing contracts — Capabilities,
+    # set_backend_priority — live in `qtviz.backends`, [D140])
+    "set_default_backend",
+    # the one broad error handler ([D140])
+    "QtvizError",
     # events
     "Event", "RangeEvent", "PickEvent", "SelectEvent", "HoverEvent", "TapEvent",
     # reactive (Phase 4)

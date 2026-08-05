@@ -4,6 +4,11 @@
 EXACTLY: an accidental addition fails the same as an accidental removal.
 Changing the surface is allowed — deliberately: update `FROZEN_2_0`, the
 CHANGELOG, and (for removals) follow the deprecation path in the same commit.
+
+The [D137] pre-publication amendment (2026-08-05, zero external users, no
+first publish yet) revised the frozen set once with the deprecation path
+explicitly waived: +Element/Node/QtvizError, −Capabilities/set_backend_priority
+(moved to `qtviz.backends`). From first publish onward the waiver is dead.
 """
 
 from __future__ import annotations
@@ -27,6 +32,8 @@ FROZEN_2_0 = frozenset({
     "Mesh", "Quiver",                             # wave 3 ([D106]/[D107])
     "Stem",                                       # wave 1.4 ([D115])
     "Streamlines",                                # wave 1.5 ([D118])
+    # the element base + node union ([D140])
+    "Element", "Node",
     # composition + view
     "Overlay", "Layout", "View", "show",  # show: [D134]
     # adapters
@@ -39,8 +46,11 @@ FROZEN_2_0 = frozenset({
     "Color", "Norm", "Palette", "palettes", "Theme",  # Norm: [D130]
     "set_default_theme",  # [D134]
     "OverlayOptions", "LayoutOptions", "AxisSpec",
-    # backends + capabilities
-    "Capabilities", "set_default_backend", "set_backend_priority",
+    # backend selection ([D140]: Capabilities/set_backend_priority moved to
+    # qtviz.backends — the author-facing extension namespace)
+    "set_default_backend",
+    # the one broad handler ([D140])
+    "QtvizError",
     # events
     "Event", "RangeEvent", "PickEvent", "SelectEvent", "HoverEvent", "TapEvent",
     # reactive

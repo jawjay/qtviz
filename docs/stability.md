@@ -2,7 +2,8 @@
 
 As of 2.0, qtviz renews the 1.0 promise: **the surface you hold in your head
 stays put.** 2.0 was the one planned clean break (the Mark IR + uniform
-surface, [D121]–[D136]) — 70 names, one channel vocabulary, one norm spec,
+surface, [D121]–[D136], amended pre-publication by [D140]) — 71 names, one
+channel vocabulary, one norm spec,
 `.opts()`/`show()` — and the freeze now pins that surface
 (`FROZEN_2_0`). This page defines exactly what the promise covers and how it
 can change.

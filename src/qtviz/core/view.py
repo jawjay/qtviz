@@ -380,15 +380,15 @@ class View(QWidget):
         return self._placeholder is not None or self._superseded is not None
 
 
-def show(node, *, title: str | None = None, size: tuple[int, int] = (960, 640),
+def show(root, *, title: str | None = None, size: tuple[int, int] = (960, 640),
          backend: str = "auto", theme: Theme | None = None, block: bool = True) -> View:
-    """[D134] the one-liner for scripts: wrap `node` in a `View` (an existing
+    """[D134] the one-liner for scripts: wrap `root` in a `View` (an existing
     `View` passes through), size/title/show it, and — with `block=True` — run
     the Qt event loop. Returns the View either way, so `block=False` hands
     back a live widget for embedding or tests. `View` itself stays a plain
     QWidget for real applications.
 
-    `node` may also be a **zero-argument callable** returning the node or a
+    `root` may also be a **zero-argument callable** returning the node or a
     ready `View` — it runs *after* the QApplication exists. Pass the builder
     when it constructs widgets (`qv.show(build)`, not `qv.show(build())`):
     Python evaluates arguments before `show` can create the app, and Qt
@@ -397,9 +397,9 @@ def show(node, *, title: str | None = None, size: tuple[int, int] = (960, 640),
     from PySide6.QtWidgets import QApplication  # noqa: PLC0415
 
     app = QApplication.instance() or QApplication([])
-    if callable(node) and not isinstance(node, View):
-        node = node()  # deferred builder — widgets are safe now
-    view = node if isinstance(node, View) else View(node, backend=backend, theme=theme)
+    if callable(root) and not isinstance(root, View):
+        root = root()  # deferred builder — widgets are safe now
+    view = root if isinstance(root, View) else View(root, backend=backend, theme=theme)
     view.resize(*size)
     if title is not None:
         view.setWindowTitle(title)

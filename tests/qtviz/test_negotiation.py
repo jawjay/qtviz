@@ -38,7 +38,7 @@ def registry(make_stub_backend, table):
         B._PRIORITY.clear()
         for s in stubs:
             B.register(s)
-        qv.set_backend_priority(["alpha", "beta", "gamma"])
+        qv.backends.set_backend_priority(["alpha", "beta", "gamma"])
         qv.set_default_backend("alpha")
     except AttributeError as e:
         pytest.skip(f"registry API not available yet: {e}")
