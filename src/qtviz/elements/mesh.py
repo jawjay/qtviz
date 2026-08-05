@@ -22,7 +22,7 @@ def _check_edges(name: str, edges) -> tuple[float, ...]:
     if arr.ndim != 1:
         raise ValidationError(
             f"Mesh {name} must be 1-D (rectilinear); curvilinear meshes are not "
-            "supported — see design/roadmap-post-rerun.md §6"
+            "supported — see design/archive/roadmap-post-rerun.md §6"
         )
     if arr.size < 2 or np.any(np.diff(arr) <= 0):
         raise ValidationError(f"Mesh {name} must be ≥2 strictly increasing values")

@@ -6,12 +6,11 @@
 > capabilities, and strengths as a benchmark, and **(Part 2)** maps qtviz's
 > current surface against it to surface concrete weaknesses and gaps.
 >
-> This is an analysis document only — **no code changes** are implied by it. It is
-> a companion to [`capabilities-gaps.md`](capabilities-gaps.md) (qtviz's own
-> internal register) and [`../EVALUATION.md`](../EVALUATION.md) (the outside-evaluator
-> landscape assessment); where those look outward at the competitive field, this
-> one drills into a single incumbent to find where qtviz falls short of "table
-> stakes."
+> This is an analysis document only — **no code changes** are implied by it. It
+> was a companion to two internal registers (a capabilities-gap list and an
+> outside-evaluator landscape assessment, both since retired); where those
+> looked outward at the competitive field, this one drills into a single
+> incumbent to find where qtviz falls short of "table stakes."
 >
 > **Caveats.** matplotlib facts are current to **v3.11.0 (June 2026)**, drawn from
 > the official docs (Axes API reference, Plot-types gallery, release notes) and the

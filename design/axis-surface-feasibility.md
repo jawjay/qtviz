@@ -185,7 +185,7 @@ primitive per backend, or the degradation if not.
   uses d3 format strings). This *validates* keeping the public vocabulary tiny and
   semantic (`si | percent | datetime | fixed:N | auto`) and translating per backend
   — **never** passing a backend-native formatter through the seam (that would
-  re-introduce the leaky-abstraction risk `EVALUATION.md` flags).
+  re-introduce the leaky-abstraction risk the early project evaluations flagged).
 - **time scale is representable in the seam now**, but only *rendered* correctly
   once the data layer carries datetime dtype through resolve/accessors/events (the
   webengine translator already bails on datetime, `webengine/_translate.py:172`).

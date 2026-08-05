@@ -1,21 +1,16 @@
-# qtviz — discussion items
+# qtviz — the decision log ([D1]–[D60])
 
-> Open design tradeoffs and challenges surfaced while writing
-> `development-plan.md`. Each is something to **decide before or during the
-> milestone that needs it** — not a blocker on starting. Referenced from
-> the plan as **[D#]**.
+> **This is the project's decision log** — every `[Dnn]` tag in code,
+> commits, and tests resolves to an entry here or in the arc document that
+> introduced it (later decisions live with their arc: [D121]–[D136] in
+> `2.0-mark-ir-and-surface.md`, [D137]–[D144] in `public-release.md`; the
+> Index below maps the rest).
 >
-> Format: **Context** (why it exists) · **Options** · **Recommendation** ·
-> **Blocks** (which milestone) · **Status**. Update Status as we resolve;
-> resolved items graduate into `spec.md` §11.
->
-> Distinct from `spec.md` §11 "Currently open" (Q-O, Q-P), which are
-> narrower. The two cross-reference; don't duplicate.
->
-> **Disposition (this revision).** [D1] is **resolved** and folded into
-> spec §2.1/§6. [D2]–[D11] are **accepted as recommended** but parked —
-> each flagged to revisit at the milestone that needs it (see the Index).
-> Nothing in D2–D11 blocks starting M0–M2.
+> Entries were written *while deciding*, in the working format —
+> **Context** (why it exists) · **Options** · **Recommendation** ·
+> **Blocks** (which milestone) · **Status** — and are preserved as the
+> record. Statuses are point-in-time; the shipped state is what the code,
+> tests, and CHANGELOG say. Entries are never renumbered or deleted.
 
 ---
 

@@ -435,14 +435,14 @@ policy ([docs/stability.md](docs/stability.md)); the suite itself pins the API,
 the honor-or-warn contract, and the benchmark ceilings.
 
 **The parity program shipped on top** (additive, [D83]–[D95],
-[`design/parity-program.md`](design/parity-program.md)): the everyday figures of
+[`design/archive/parity-program.md`](design/archive/parity-program.md)): the everyday figures of
 the popular libraries — step/area/pie/ECDF/contour, horizontal bars, twin y
 axes, tick formatting, calendar-time axes — plus one shared statistics core so
 every backend draws the same numbers, and `View(toolbar=True)`.
 
 Post-1.0 exploration (unscheduled): qtviz Studio — a desktop app built on the
 library. The living plan and full decision log ([D1]–[D95]) are in
-[`design/`](design), starting from [`design/improvement-plan.md`](design/improvement-plan.md).
+[`design/`](design), starting from [`design/archive/improvement-plan.md`](design/archive/improvement-plan.md).
 
 ## Architecture
 

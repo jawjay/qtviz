@@ -1,5 +1,5 @@
 """Fixes for the defects the matplotlib-gallery audit surfaced
-(design/matplotlib-gallery-audit.md §2).
+(design/archive/matplotlib-gallery-audit.md §2).
 
 P1: the [D95] rubber-band selector parked a 0×0 rectangle at (0,0) on every
 brushable matplotlib surface, and the artist joined `Axes.dataLim` — so

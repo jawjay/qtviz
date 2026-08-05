@@ -324,7 +324,7 @@ Also:
 
 ## [Unreleased]
 
-Parity program ([`design/parity-program.md`](design/parity-program.md)) — the
+Parity program ([`design/archive/parity-program.md`](design/archive/parity-program.md)) — the
 post-1.0 arc growing the vocabulary and axes toward "the everyday figures of
 the popular libraries, declaratively" ([D83]).
 
@@ -541,7 +541,7 @@ the popular libraries, declaratively" ([D83]).
   and a "Slot not found" flake under rapid rebuilds.
 
 Defects surfaced by the matplotlib-gallery audit
-([`design/matplotlib-gallery-audit.md`](design/matplotlib-gallery-audit.md) §2):
+([`design/archive/matplotlib-gallery-audit.md`](design/archive/matplotlib-gallery-audit.md) §2):
 
 - **The interactive brush no longer corrupts matplotlib autoscale (P1).**
   The [D95] `RectangleSelector` parks a 0×0 rectangle at (0, 0) whose extent
@@ -575,7 +575,7 @@ Three silent-drop warts surfaced by the matplotlib support audit
 ## [1.0.0] — 2026-07-24
 
 The stability release. The 0.3–0.6 milestones below were developed against the
-staged post-0.1 program (`design/improvement-plan.md`) and were never tagged
+staged post-0.1 program (`design/archive/improvement-plan.md`) and were never tagged
 individually — 1.0.0 ships them together, under a frozen, policy-backed public
 surface.
 
@@ -599,7 +599,7 @@ surface.
 
 ### 0.6 — Live & linked
 
-Live & linked ([D63] — the differentiator; `design/milestone-0.6-live.md`,
+Live & linked ([D63] — the differentiator; `design/archive/milestone-0.6-live.md`,
 [D76]–[D78], resolves the long-open [D7]). Streaming + linked brushing through
 a datashaded view, as plain desktop widgets.
 
@@ -630,7 +630,7 @@ a datashaded view, as plain desktop widgets.
 ### 0.5 — The array data core
 
 The array data core (owner-directed scope: numpy / pandas / dask / zarr /
-xarray; `design/milestone-0.5-array-core.md`, [D73]–[D75]). Huge gridded
+xarray; `design/archive/milestone-0.5-array-core.md`, [D73]–[D75]). Huge gridded
 arrays now render at **screen cost, not array cost**.
 
 #### Added
@@ -657,7 +657,7 @@ arrays now render at **screen cost, not array cost**.
 ### 0.4 — Vocabulary, annotation & export
 
 Vocabulary, annotation & export (R2/R3 partial + R6;
-`design/milestone-0.4-vocabulary.md`, [D67]–[D72]). Everything additive; the
+`design/archive/milestone-0.4-vocabulary.md`, [D67]–[D72]). Everything additive; the
 vocabulary stays curated ([D54]).
 
 #### Added
@@ -698,7 +698,7 @@ vocabulary stays curated ([D54]).
 
 ### 0.3 — First-class axes & legends
 
-First-class axes + legends (root cause R5; `design/milestone-0.3-firstclass.md`,
+First-class axes + legends (root cause R5; `design/archive/milestone-0.3-firstclass.md`,
 [D59]/[D60]). The two afterthoughts promoted to real models.
 
 #### Added
@@ -729,9 +729,9 @@ First-class axes + legends (root cause R5; `design/milestone-0.3-firstclass.md`,
 
 ## [0.2.0] — 2026-06-18
 
-Hardening pass from the post-0.1 weakness investigation (root causes R1–R6;
-`design/weakness-root-causes.md`). No new chart types — the existing surface made
-**honest**, plus a native escape valve.
+Hardening pass from the post-0.1 weakness investigation (root causes R1–R6).
+No new chart types — the existing surface made **honest**, plus a native
+escape valve.
 
 ### Fixed
 

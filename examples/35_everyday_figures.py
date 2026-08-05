@@ -3,7 +3,7 @@
 Twelve panels, one Element tree: a step curve with markers, a stacked area,
 horizontal grouped bars, a donut, an ECDF, filled contours, a dual-axis
 telemetry pair, SI/percent tick formatting ([D83]–[D95],
-design/parity-program.md) — plus the wave 1.3/1.4 additions: a vector field
+design/archive/parity-program.md) — plus the wave 1.3/1.4 additions: a vector field
 with a reference key ([D107]/[D112]), a non-uniform mesh with discrete
 boundary levels ([D106]/[D114]), a stem series ([D115]), and an annotated
 heatmap with computed label contrast ([D113]). Everything here
