@@ -134,7 +134,12 @@ class PgRenderHandle(RenderHandle):
         return self._plots
 
     def panes(self) -> tuple[PgPane, ...]:
-        return tuple(PgPane(str(i), p) for i, p in enumerate(self._plots))
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
+
+        labels = flat_pane_labels(self._root)  # [D145] given labels, else indices
+        if len(labels) != len(self._plots):  # defensive: identity never crashes
+            labels = tuple(str(i) for i in range(len(self._plots)))
+        return tuple(PgPane(lb, p) for lb, p in zip(labels, self._plots, strict=True))
 
     def _dispose_rasters(self) -> None:
         for plot in self._plots:

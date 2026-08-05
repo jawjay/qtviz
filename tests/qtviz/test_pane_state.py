@@ -135,6 +135,57 @@ def test_composite_state_survives_rebuild(qtbot):
     assert st.get("2").x_range == pytest.approx((50.0, 60.0), rel=1e-3)
 
 
+# ── named panes end-to-end ([D145] × [D150]) ─────────────────────────────────
+@pytest.mark.parametrize("name", BACKENDS)
+def test_given_labels_key_the_panes(name, qtbot):
+    lay = qv.Layout.grid({"price": qv.Scatter(D, x="x", y="y"),
+                          "volume": qv.Curve(D, x="x", y="y")})
+    view = qv.View(lay, backend=name)
+    qtbot.addWidget(view)
+    h = view.handle
+    assert [p.label for p in h.panes()] == ["price", "volume"]
+    h.pane("volume").set_range(x=(100.0, 200.0))
+    assert h.capture_state().get("volume").x_range == pytest.approx(
+        (100.0, 200.0), rel=1e-3)
+
+
+def test_labeled_state_survives_backend_switch(qtbot):
+    lay = qv.Layout.grid({"price": qv.Scatter(D, x="x", y="y"),
+                          "volume": qv.Curve(D, x="x", y="y")})
+    view = qv.View(lay, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    view.handle.pane("volume").set_range(x=(100.0, 200.0))
+    view.set_backend("matplotlib")
+    assert view.handle.capture_state().get("volume").x_range == pytest.approx(
+        (100.0, 200.0), rel=1e-3)
+
+
+def test_mosaic_labels_key_composite_panes(qtbot):
+    lay = qv.Layout.mosaic([["price", "book"], ["volume", "book"]],
+                           price=qv.Scatter(D, x="x", y="y"),
+                           book=qv.Curve(D, x="x", y="y"),
+                           volume=qv.Curve(D, x="x", y="y"))
+    view = qv.View(lay, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    assert [p.label for p in view.handle.panes()] == ["price", "book", "volume"]
+    # a mosaic pane spans its rectangle in the rendered grid too
+    view.handle.pane("book").set_range(y=(0.0, 5.0))
+    assert view.handle.capture_state().get("book").y_range == pytest.approx(
+        (0.0, 5.0), rel=1e-3)
+
+
+def test_labels_survive_root_swap_with_pane(qtbot):
+    lay = qv.Layout.grid({"price": qv.Scatter(D, x="x", y="y"),
+                          "volume": qv.Curve(D, x="x", y="y")})
+    view = qv.View(lay, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    view.handle.pane("price").set_range(x=(3.0, 4.0))
+    view.set_root(lay.with_pane("volume", qv.Scatter(D, x="x", y="y")))
+    # untouched pane keeps its zoom across the declarative pane swap
+    assert view.handle.capture_state().get("price").x_range == pytest.approx(
+        (3.0, 4.0), rel=1e-3)
+
+
 @pytest.mark.parametrize("name", BACKENDS)
 def test_nested_grid_renders(name, qtbot):
     """Regression: a nested homogeneous grid crashed in the backend cell

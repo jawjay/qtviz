@@ -346,9 +346,11 @@ class CompositeRenderHandle(RenderHandle):
     is merged over the per-pane child handles. View holds exactly one root
     handle — a backend handle or one of these."""
 
-    def __init__(self, widget: Any, child_handles: list[RenderHandle]) -> None:
+    def __init__(self, widget: Any, child_handles: list[RenderHandle], *,
+                 pane_labels: tuple[str, ...] | None = None) -> None:
         super().__init__(widget, _MergedBus([h.event_bus for h in child_handles]), "composite")
         self._children = child_handles
+        self._pane_labels = pane_labels  # [D145]: flat labels from the Layout
 
     @property
     def children(self) -> list[RenderHandle]:
@@ -356,14 +358,18 @@ class CompositeRenderHandle(RenderHandle):
 
     def panes(self) -> tuple[PaneHandle, ...]:
         """The children's panes, flattened depth-first in child order and
-        relabeled with flat indices — so a composite's state capture/restore
-        ([D150]) covers every pane exactly like a single-backend grid.
-        Relabeling mutates only the fresh facades built by this call."""
+        relabeled with the Layout's flat labels ([D145]; flat indices when the
+        host gave none) — so a composite's state capture/restore ([D150])
+        covers every pane exactly like a single-backend grid. Relabeling
+        mutates only the fresh facades built by this call."""
         flat: list[PaneHandle] = []
         for h in self._children:
             flat.extend(h.panes())
-        for i, p in enumerate(flat):
-            p.label = str(i)
+        labels = self._pane_labels
+        if labels is None or len(labels) != len(flat):
+            labels = tuple(str(i) for i in range(len(flat)))
+        for p, lb in zip(flat, labels, strict=True):
+            p.label = lb
         return tuple(flat)
 
     def native(self, element_id: str) -> Any:

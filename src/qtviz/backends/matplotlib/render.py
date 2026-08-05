@@ -116,8 +116,13 @@ class MplRenderHandle(RenderHandle):
         return [s["ax"] for s in self._surfaces]
 
     def panes(self) -> tuple[MplPane, ...]:
-        return tuple(MplPane(str(i), self._fig, s, self.event_bus)
-                     for i, s in enumerate(self._surfaces))
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
+
+        labels = flat_pane_labels(self._root)  # [D145] given labels, else indices
+        if len(labels) != len(self._surfaces):  # defensive: identity never crashes
+            labels = tuple(str(i) for i in range(len(self._surfaces)))
+        return tuple(MplPane(lb, self._fig, s, self.event_bus)
+                     for lb, s in zip(labels, self._surfaces, strict=True))
 
     def select_bounds(self, ax_index: int, xmin, ymin, xmax, ymax) -> None:
         """Programmatic brush (approximate) — emits one SelectEvent per

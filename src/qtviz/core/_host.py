@@ -84,6 +84,8 @@ class LayoutHost:
 
         check_layout(layout.options, consumer="layout-host",
                      honored=_HOST_LAYOUT_HONORED)
+        from .compose import flat_pane_labels  # noqa: PLC0415
+
         child_handles = [
             render_root(child, view_backend=view_backend, theme=theme)
             for child in layout.children
@@ -94,7 +96,8 @@ class LayoutHost:
             container = _titled(container, layout.options.title, theme)
         if parent is not None:
             container.setParent(parent)
-        return CompositeRenderHandle(container, child_handles)
+        return CompositeRenderHandle(container, child_handles,
+                                     pane_labels=flat_pane_labels(layout))
 
 
 def _titled(inner: QWidget, title: str, theme) -> QWidget:
@@ -125,7 +128,10 @@ def _build_container(layout: Layout, widgets: list) -> QWidget:
         return splitter
     if kind == "tabs":
         tabs = QTabWidget()
-        labels = opts.tab_labels or [f"Panel {i + 1}" for i in range(len(widgets))]
+        # captions: explicit tab_labels win, then pane labels ([D145] — one
+        # spec names panes AND tabs: Layout.tabs({"Raw": a, "Fitted": b}))
+        labels = (opts.tab_labels or layout.labels
+                  or [f"Panel {i + 1}" for i in range(len(widgets))])
         for w, label in zip(widgets, labels, strict=False):
             tabs.addTab(w, label)
         return tabs

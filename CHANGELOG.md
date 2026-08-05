@@ -8,6 +8,22 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Named panes ([D145]/[D148], `design/pane-handles.md` S2):** `Layout`
+  children can be labeled — pass a mapping (`qv.Layout.grid({"price": p,
+  "volume": v})`, works on `tabs`/`splitter` too, where keys also caption the
+  tabs), a mosaic (labels are now **retained**), or explicit `labels=`.
+  `Layout.mosaic` additionally accepts the `subplot_mosaic` list form with
+  arbitrary string labels (`[["price", "book"], ["volume", "book"]]`, `None`
+  for holes) and a positional mapping for non-identifier labels.
+  `layout["price"]` looks a pane up (nested layouts included);
+  `layout.with_pane("price", node)` swaps one immutably — the declarative
+  per-pane update (`view.set_root(root.with_pane(...))`). `Layout.grid` also
+  takes explicit `cells=` — a label-keyed mapping or a sequence of
+  `(row, col, rowspan, colspan)` — validated for overlap like the mosaic
+  parser; the programmatic answer to GridSpec-style spans. Labels flow
+  downstream: they key `LayoutState` capture/restore (state now survives
+  root swaps that reorder panes) and the internal pane protocol.
+
 - **Whole-render view state ([D150], `design/pane-handles.md` S1):**
   `handle.capture_state()` now returns a `LayoutState` — ordered
   `(pane label, ViewState)` pairs covering **every** pane — and
