@@ -4,6 +4,20 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Webengine plots track the outer widget's size** in every case: Plotly's
+  `responsive` config covered live drags, but a resize landing while the
+  page was still loading (or the widget hidden) was missed. The bridge view
+  now emits `resized` on the Qt side and the Plotly host nudges
+  `Plots.resize`, debounced, with pre-handshake nudges queuing safely.
+  Native backends verified end-to-end (grow *and* hard shrink — no
+  oversized minimums) by the new `test_resize_tracking.py` suite. Bokeh
+  `RawFigure` passthroughs keep their own `sizing_mode` by design (pass
+  `"stretch_both"` to fill the widget — now documented on `RawFigure`).
+
 ## [2.0.0] — 2026-08-04
 
 The Mark IR + uniform-surface release

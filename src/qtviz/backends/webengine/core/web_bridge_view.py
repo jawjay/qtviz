@@ -139,9 +139,14 @@ class WebBridgeView(QWidget):
         Emitted when a Python->JS `send(name, payload)` could not be delivered
         (no JS handler registered for `name`). Useful for catching attach-order
         bugs and typos in handler names.
+    resized : Signal()
+        Emitted on every Qt-side resize — hosts that need to nudge their JS
+        library (Plotly's `Plots.resize`) listen here; resizes that land
+        before the bridge handshake are safe (commands queue until ready).
     """
 
     ready = Signal()
+    resized = Signal()
     received = Signal(str, object)
     load_finished = Signal(bool)
     log = Signal(str, str)
@@ -175,6 +180,10 @@ class WebBridgeView(QWidget):
         self._bridge.ready.connect(self._on_ready)
         self._bridge.log.connect(self.log)
         self._page.loadFinished.connect(self._on_load_finished)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 — Qt naming
+        super().resizeEvent(event)
+        self.resized.emit()
 
     # ── content ──────────────────────────────────────────────────────────
     def load_html(self, html: str, *, base_url: QUrl | None = None) -> None:

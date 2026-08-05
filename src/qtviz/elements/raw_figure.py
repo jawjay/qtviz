@@ -29,7 +29,13 @@ def _detect_kind(figure) -> str:
 
 
 class RawFigure(Element):
-    """Host an existing Plotly / Bokeh / HoloViews figure unchanged (webengine only)."""
+    """Host an existing Plotly / Bokeh / HoloViews figure unchanged (webengine only).
+
+    Sizing follows the figure's own configuration — a passthrough never
+    mutates your figure. Plotly figures track the widget automatically
+    (`responsive` config + a Qt-side resize nudge); a Bokeh figure keeps its
+    declared size, so pass `sizing_mode="stretch_both"` when you want it to
+    fill the widget."""
 
     DATA_KIND = "none"  # [D124]: the foreign figure is opaque, not a DataRef
 

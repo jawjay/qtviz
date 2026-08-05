@@ -85,8 +85,20 @@ class PlotlyBackend(PlotBackend):
         return prefix + PLOTLY_JS
 
     def on_attach(self, view: WebBridgeView) -> None:
+        from PySide6.QtCore import QTimer  # noqa: PLC0415
+
         self._view = view
         view.received.connect(self._on_message)
+        # The outer widget's size is authoritative: Plotly's `responsive`
+        # config covers live drags, but a resize that lands while the page is
+        # still loading (or the widget hidden) is missed — nudge
+        # `Plots.resize` after each Qt resize, debounced one per ~50 ms.
+        # A pre-handshake nudge just queues on the bridge; harmless.
+        self._resize_timer = QTimer(view)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setInterval(50)
+        self._resize_timer.timeout.connect(self.resize)
+        view.resized.connect(self._resize_timer.start)
 
     def on_detach(self) -> None:
         if self._view is not None:
