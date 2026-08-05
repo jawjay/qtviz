@@ -29,7 +29,7 @@ uv run mkdocs build --strict                    # docs must build clean
 uv run python tools/capture_screenshots.py      # regenerate docs/images/examples/*.png
 ```
 
-There is deliberately **no CI** — all gates run locally (see `RELEASING.md`). Qt runs headless automatically: `tests/conftest.py` sets `QT_QPA_PLATFORM=offscreen`, so GUI tests need no display (some webengine tests skip offscreen).
+CI runs ruff, mypy, and the offscreen suite on every PR and push to `main`; the **full** gate list (including benchmarks and coverage) is release-blocking and runs locally (see `RELEASING.md`). Qt runs headless automatically: `tests/conftest.py` sets `QT_QPA_PLATFORM=offscreen`, so GUI tests need no display (some webengine tests skip offscreen).
 
 Test markers: `tier1` (pure core, no QApplication), `tier2` (Qt event loop + backend), `conformance` (contract suite every backend/adapter must pass), `benchmark`, `gui`.
 
@@ -54,7 +54,7 @@ Cross-cutting rules worth knowing before editing:
 
 ## Conventions
 
-- Commit messages follow the existing style — `feat(2.0): [D122] short description` — and **never include AI/Claude attribution trailers**.
+- Commit messages follow the existing style — `feat(2.0): [D122] short description` — with no attribution trailers.
 - Ruff line length 100; `select = ["E", "F", "I", "UP", "B", "SIM"]`.
-- Not published to PyPI and the repo is private by design; a release is a git tag + GitHub Release with locally-run gates (`RELEASING.md`).
-- Workflow cadence for new work: spec → plan → discussion items → benchmarks → TDD, with owner review at each boundary; confirm direction at milestone/scope boundaries rather than marching ahead.
+- Published to PyPI; a release is a git tag + GitHub Release, with the tag triggering the PyPI publish workflow (`RELEASING.md`).
+- Workflow cadence for new work: spec → plan → discussion items → benchmarks → TDD; discuss direction at milestone/scope boundaries (an issue works well) before implementing.

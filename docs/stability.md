@@ -74,12 +74,30 @@ Non-fatal *behavioral* degradation (an option a backend can't honor) is a
 
 The 1.x ledger for the record: `qtviz.Options` (warned 0.2.0, removed 1.1)
 and the `qtwebplot` import shim (warned 0.1.0, removed 1.0). The 1.x→2.0
-renames themselves shipped **without** deprecation shims — a deliberate
-one-time exception for a private repo with no external users; the full
-rename table is in the 2.0.0 CHANGELOG entry.
+renames — and the [D137] pre-publication amendment — shipped **without**
+deprecation shims: a deliberate one-time exception made while the project was
+pre-public with no external users. From the first PyPI publish onward that
+exception is dead and the deprecation path above applies in full; the rename
+tables are in the 2.0.0 CHANGELOG entry.
+
+## The channel vocabulary and `by`/`color_by`
+
+Two documented rules the vocabulary test enforces
+(`tests/qtviz/test_channel_vocabulary.py`):
+
+- Every data binding is a keyword accessor from the fixed 10-role set
+  (`x y z u v value by lo hi err`) plus the two value→visual encodings
+  (`color_by`, `size_by`). A submodule is in `qtviz.__all__` iff it carries
+  public API not re-exported at top level ([D140]).
+- **`by=` groups rows into series** (palette-cycled, one legend entry per
+  category); **`color_by=` encodes a value per point into color** (a
+  continuous ramp or categorical mapping). Bars legitimately takes both
+  ([D139]).
 
 ## Release mechanics
 
-Private repo, by owner decision — release = version bump + dated CHANGELOG +
-git tag; no PyPI, no Pages. The release gates (suite, ruff, mypy, coverage,
-strict docs build) are local commands recorded in `RELEASING.md`.
+Releases ship to **PyPI** (`pip install qtviz`) via trusted publishing on a
+`vX.Y.Z` tag, with the docs deployed to GitHub Pages. CI runs ruff, mypy, and
+the offscreen suite on every PR; the full gate list (suite, benchmarks, ruff,
+mypy, coverage, strict docs build) is release-blocking and recorded in
+`RELEASING.md`.

@@ -446,8 +446,8 @@ adapter (Phase 3, 3a + 3b), the webengine rehome (W0–W5.1a + offline), and the
 matrix (macOS/Linux/Windows × 3.11–3.13).
 
 **✅ Released — `0.1` (Phase 6):** `v0.1.0` tag + GitHub prerelease; docs/CHANGELOG,
-mkdocs site, API docstrings, `qtwebplot` import shim. (No PyPI — not a goal. Pages docs
-deploy deferred: private repo / plan blocks Pages — `RELEASING.md`.)
+mkdocs site, API docstrings, `qtwebplot` import shim. (At the time, no PyPI and no
+Pages deploy — both reversed for the public 2.0 release, [D137]/`public-release.md`.)
 
 **Next — staged post-0.1 plan (root causes R1–R6).** From
 `developer-perspective-weaknesses.md` + `weakness-root-causes.md`; decisions

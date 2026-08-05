@@ -1,14 +1,15 @@
 # Releasing qtviz
 
-qtviz is **not published to PyPI** (by design — see `design/project_no_pypi`/roadmap),
-and the repo is **private permanently** (owner decision, 2026-07-24), so there is no
-Pages deploy either. A release is: a **git tag** + a **GitHub Release**; docs are
-built/read locally (`uv run mkdocs serve`).
-Install is `pip install git+<repo>` (for repo collaborators) or from source.
+A release is a **git tag** (`vX.Y.Z`) + a **GitHub Release**; pushing the tag
+triggers the publish workflow, which builds the sdist/wheel and uploads them
+to **PyPI** via trusted publishing (no stored credentials). The docs site
+deploys to GitHub Pages from `.github/workflows/docs.yml`.
 
-## Release gates (1.0+, run locally — CI was removed deliberately)
+## Release gates
 
-Every release runs these; all must pass ([D80]/[D81], `docs/stability.md`):
+CI runs ruff, mypy, and the offscreen test suite on every PR and push to
+`main`. The **full** gate list below is release-blocking and runs locally
+before tagging; all must pass ([D80]/[D81], `docs/stability.md`):
 
 ```bash
 uv run pytest -q                 # the suite (benchmarks excluded by default)
@@ -19,32 +20,32 @@ uv run pytest -q --cov           # coverage ≥ the recorded floor ([D81], fail_
 uv run mkdocs build --strict     # docs build clean
 ```
 
-Surface changes must have updated `tests/qtviz/test_api_freeze.py` + the
-CHANGELOG in the same commit ([D82]).
+Surface changes must have updated `tests/qtviz/test_api_freeze.py`,
+`docs/api.md`, and the CHANGELOG in the same commit ([D82]).
 
----
+## Release steps
 
-## 2.0.0 — current state (prepared 2026-08-04)
+1. **Finalize the CHANGELOG** — retitle `## [Unreleased]` to the version with
+   today's date; start a fresh empty `[Unreleased]`.
+2. **Bump the version** in `pyproject.toml`; `uv lock` if dependencies moved.
+3. **Run the full gate list** (above) on a clean `main`.
+4. **Tag and push**:
+   ```bash
+   git tag -a vX.Y.Z -m "qtviz X.Y.Z — <one-line summary>"
+   git push origin main vX.Y.Z
+   ```
+5. **GitHub Release** — create it from the tag with the CHANGELOG excerpt as
+   the body. The publish workflow fires on the tag and uploads to PyPI.
+6. **Verify**: the PyPI project page renders (README, images, metadata), and
+   `pip install qtviz==X.Y.Z` works in a clean venv
+   (`python -c "import qtviz; print(qtviz.__version__)"`).
 
-Everything is **done and local on `main`** — version bumped, docs rewritten,
-gates green; **the tag has not been created**. The owner runs:
+### Manual publish fallback
+
+If the workflow is unavailable:
 
 ```bash
-git tag -a v2.0.0 -m "qtviz 2.0.0 — the Mark IR + uniform surface"
-git push origin main v2.0.0
+uv build
+uvx twine check dist/*
+uv publish        # needs a PyPI token; trusted publishing is the normal path
 ```
-
-- ✅ `pyproject.toml` at `2.0.0`; `CHANGELOG.md` 2.0.0 dated `2026-08-04`
-  (full rename + behavior-change tables).
-- ✅ `docs/stability.md` rewritten for the `FROZEN_2_0` surface (70 names);
-  deprecation ledger cleared with the one-time-break note.
-- ✅ Design record: `design/2.0-mark-ir-and-surface.md` §8 reconciles the
-  proposal against what shipped ([D121]–[D136]).
-- ✅ Verified green before hand-off: `887 passed, 11 skipped` (webengine needs
-  a display; skipped offscreen), benchmarks pass, mypy zero, ruff clean,
-  `mkdocs build --strict` succeeds.
-
-### Historical: 0.1.0 (prepared 2026-06-18)
-
-The 0.1.0 prep notes (tag-placement gotcha included) are preserved in git
-history; `v0.1.0` was created on `release/0.1.0`.

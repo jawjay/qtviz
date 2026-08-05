@@ -322,7 +322,10 @@ Also:
   dpi=, transparent=)` widened on the base handle (composite export now
   warns instead of silently ignoring `dpi`/`transparent`).
 
-## [Unreleased]
+### The parity program (post-1.0, shipped inside 2.0.0)
+
+*(This arc landed between the `v1.0.0` tag and 2.0.0 — no intermediate
+version was tagged, so it ships as part of the 2.0.0 release.)*
 
 Parity program ([`design/archive/parity-program.md`](design/archive/parity-program.md)) — the
 post-1.0 arc growing the vocabulary and axes toward "the everyday figures of
