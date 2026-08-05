@@ -368,6 +368,10 @@ class MatplotlibBackend:
                 natives[element.id] = iax  # [D53]: the inset's live Axes
                 self._render_cell(element.child, iax, theme, bus, surfaces,
                                   natives, labels)
+                marker = element.indicator()  # [D154] static zoom rectangle
+                if marker is not None:
+                    self._render_element(marker, replace(ctx, series_index=0),
+                                         selectables, natives)
                 continue
             on_y2 = getattr(element, "axis", "y") == "y2"
             el_ctx = replace(ctx, series_index=si,

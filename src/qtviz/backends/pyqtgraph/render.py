@@ -403,6 +403,10 @@ class PyQtGraphBackend:
             if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
                 self._render_inset(element, plot, theme, raw_bus, plots,
                                    natives, labels)
+                marker = element.indicator()  # [D154] static zoom rectangle
+                if marker is not None:
+                    self._render_element(marker, replace(ctx, series_index=0),
+                                         natives)
                 continue
             on_y2 = getattr(element, "axis", "y") == "y2"
             el_ctx = replace(ctx, series_index=si,

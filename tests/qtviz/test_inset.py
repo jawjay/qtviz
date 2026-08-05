@@ -213,3 +213,36 @@ def test_inset_pane_export(name, qtbot, tmp_path):
     view.resize(640, 480)
     out = view.pane("zoom").export("png", tmp_path / "zoom.png")
     assert out.exists() and out.stat().st_size > 0
+
+
+# ── I4: the static zoom indicator ────────────────────────────────────────────
+def _item_count(view, backend):
+    if backend == "pyqtgraph":
+        return len(view.pane("0").native.items)
+    ax = view.pane("0").native
+    return len(ax.lines) + len(ax.patches) + len(ax.collections)
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_indicator_draws_a_parent_side_rect(name, qtbot):
+    def build(indicate):
+        v = qv.View(_s() * qv.Inset(_zoom(), rect=(0.55, 0.55, 0.4, 0.4),
+                                    label="zoom", indicate=indicate),
+                    backend=name)
+        qtbot.addWidget(v)
+        return v
+
+    plain = _item_count(build(False), name)
+    marked = _item_count(build(True), name)
+    assert marked > plain  # the synthesized Rect landed on the PARENT surface
+
+
+@pytest.mark.tier2
+def test_indicator_without_lims_warns_and_skips(qtbot):
+    undeclared = qv.Curve(D, x="x", y="y")  # no lims on the child surface
+    with pytest.warns(qv.errors.QtvizWarning, match="declared x AND y lims"):
+        view = qv.View(_s() * qv.Inset(undeclared, rect=(0.5, 0.5, 0.4, 0.4),
+                                       label="zoom", indicate=True),
+                       backend="pyqtgraph")
+    qtbot.addWidget(view)

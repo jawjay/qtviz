@@ -63,3 +63,29 @@ class Inset(Element):
 
     def legend_entry(self, theme, index: int = 0):
         return None  # chrome: an inset never contributes to the parent legend
+
+    def indicator(self):
+        """[D154] static v1: the parent-side `Rect` marking the child's
+        declared x/y window, or `None`. Requires both lims on the child's
+        surface (`.opts(x=AxisSpec(lim=…), y=AxisSpec(lim=…))`) — the
+        declared window IS the zoom region; a live indicator that follows
+        interactive pans inside the inset is a gated follow-on."""
+        if not self.indicate:
+            return None
+        from ..core.compose import surface_of  # noqa: PLC0415
+
+        surf = surface_of(self.child)
+        xl, yl = surf.x.lim, surf.y.lim
+        if xl is None or yl is None:
+            import warnings  # noqa: PLC0415
+
+            from ..errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn(
+                "Inset(indicate=True) needs declared x AND y lims on the "
+                "child's surface to place the zoom rectangle; indicator "
+                "skipped.", QtvizWarning, stacklevel=3)
+            return None
+        from .shapes import Rect  # noqa: PLC0415
+
+        return Rect(xl[0], yl[0], xl[1], yl[1], alpha=0.8)
