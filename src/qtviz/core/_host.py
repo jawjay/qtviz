@@ -98,7 +98,10 @@ class _LinkController:
         self._sub = handle.event_bus.subscribe(RangeEvent, self._on_range)
 
     def _on_range(self, ev) -> None:
-        if self._syncing or ev.pane is None:
+        # A throttled *trailing* delivery rides a QTimer that outlives the
+        # subscription — it can land after the render is disposed. Dead
+        # renders don't link.
+        if self._syncing or ev.pane is None or self._handle.widget is None:
             return
         self._syncing = True
         try:
@@ -118,16 +121,18 @@ class _LinkController:
             for label in group:
                 if label == origin:
                     continue
+                from ..errors import DisposedError  # noqa: PLC0415
+
                 try:
                     pane = self._handle.pane(label)
-                except KeyError:  # the render changed underneath — drop
-                    continue
-                cur = getattr(pane.capture(), f"{axis}_range")
-                if cur is not None and all(
-                        math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
-                        for a, b in zip(cur, rng, strict=True)):
-                    continue  # value guard: already there (async echo)
-                pane.set_range(**{axis: tuple(rng)})
+                    cur = getattr(pane.capture(), f"{axis}_range")
+                    if cur is not None and all(
+                            math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+                            for a, b in zip(cur, rng, strict=True)):
+                        continue  # value guard: already there (async echo)
+                    pane.set_range(**{axis: tuple(rng)})
+                except (KeyError, DisposedError):
+                    continue  # the render changed/died underneath — drop
             return  # a pane belongs to exactly one group per axis
 
     def dispose(self) -> None:
