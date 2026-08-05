@@ -1,12 +1,15 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-fancy-pypi-readme"]
 build-backend = "hatchling.build"
 
 [project]
 name = "qtviz"
 version = "2.0.0"
 description = "Native-Qt declarative plotting — one immutable API across pyqtgraph, matplotlib, and webengine backends."
-readme = "README.md"
+# readme is dynamic: README.md keeps repo-relative image/link paths (so it
+# renders on GitHub); the fancy-pypi-readme hook rewrites them to absolute
+# URLs in the built metadata (so it renders on PyPI).
+dynamic = ["readme"]
 requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -99,6 +102,37 @@ Documentation = "https://jawjay.github.io/qtviz/"
 Repository = "https://github.com/jawjay/qtviz"
 Issues = "https://github.com/jawjay/qtviz/issues"
 Changelog = "https://github.com/jawjay/qtviz/blob/main/CHANGELOG.md"
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/markdown"
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.fragments]]
+path = "README.md"
+
+# Repo-relative → absolute, for the PyPI render only. Patterns are regexes.
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = 'src="docs/images/'
+replacement = 'src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\(examples/'
+replacement = '](https://github.com/jawjay/qtviz/blob/main/examples/'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\(examples\)'
+replacement = '](https://github.com/jawjay/qtviz/tree/main/examples)'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\(design\)'
+replacement = '](https://github.com/jawjay/qtviz/tree/main/design)'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\(CONTRIBUTING\.md\)'
+replacement = '](https://github.com/jawjay/qtviz/blob/main/CONTRIBUTING.md)'
+
+[[tool.hatch.metadata.hooks.fancy-pypi-readme.substitutions]]
+pattern = '\]\(LICENSE\)'
+replacement = '](https://github.com/jawjay/qtviz/blob/main/LICENSE)'
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/qtviz"]

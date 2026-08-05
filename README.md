@@ -11,7 +11,7 @@ runtime, and drops into any PySide6 application as a plain `QWidget`.
 [![PyPI](https://img.shields.io/pypi/v/qtviz)](https://pypi.org/project/qtviz/)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Qt](https://img.shields.io/badge/Qt-PySide6-41cd52)
-[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/jawjay/qtviz/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **Docs:** [jawjay.github.io/qtviz](https://jawjay.github.io/qtviz/) ·
 **Install:** `pip install qtviz` (or `uv add qtviz`)
@@ -25,7 +25,7 @@ qv.show(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"), title="hello")
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/01_hello.png" width="720"
+  <img src="docs/images/examples/01_hello.png" width="720"
        alt="A scatter plot rendered by qtviz in a native Qt window">
 </p>
 
@@ -54,8 +54,8 @@ engine into Qt. qtviz takes a different position:
 
 | | |
 |---|---|
-| <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/26_telemetry_monitoring.png" alt="Telemetry monitoring: rolling baseline, tolerance band, flagged anomalies, linked residual panel"> *Telemetry — baseline, 3σ band, flagged anomalies, linked residual panel* | <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/27_market_analytics.png" alt="Market analytics: price, moving averages, Bollinger band over a linked volume panel"> *Market analytics — price, MAs, Bollinger band over linked volume* |
-| <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/28_event_density_map.png" alt="2M events datashaded into a categorical density map with a legend"> *2M events, datashaded — hover reports the count under the cursor* | <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/18_webengine_raw_figure.png" alt="A Plotly 3-D surface hosted through RawFigure in a Qt WebEngine view"> *A Plotly 3-D surface via `RawFigure` — still emitting typed qtviz events* |
+| <img src="docs/images/examples/26_telemetry_monitoring.png" alt="Telemetry monitoring: rolling baseline, tolerance band, flagged anomalies, linked residual panel"> *Telemetry — baseline, 3σ band, flagged anomalies, linked residual panel* | <img src="docs/images/examples/27_market_analytics.png" alt="Market analytics: price, moving averages, Bollinger band over a linked volume panel"> *Market analytics — price, MAs, Bollinger band over linked volume* |
+| <img src="docs/images/examples/28_event_density_map.png" alt="2M events datashaded into a categorical density map with a legend"> *2M events, datashaded — hover reports the count under the cursor* | <img src="docs/images/examples/18_webengine_raw_figure.png" alt="A Plotly 3-D surface hosted through RawFigure in a Qt WebEngine view"> *A Plotly 3-D surface via `RawFigure` — still emitting typed qtviz events* |
 
 Every screenshot here is captured from a runnable script — the
 [gallery](https://jawjay.github.io/qtviz/gallery/) shows all 37.
@@ -90,12 +90,12 @@ qv.HLine(4.5, label="alarm") * qv.Span(2, 4) * qv.Text(5, 2, "peak")
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/35_everyday_figures.png"
+  <img src="docs/images/examples/35_everyday_figures.png"
        alt="The everyday figures: step curve, stacked area, horizontal bars, donut, ECDF, filled contour, SI ticks, dual axis, quiver key, mesh, stem, annotated heatmap">
 </p>
 
 *The everyday figures, declaratively — one grid, one vocabulary
-([`examples/35_everyday_figures.py`](https://github.com/jawjay/qtviz/blob/main/examples/35_everyday_figures.py)).*
+([`examples/35_everyday_figures.py`](examples/35_everyday_figures.py)).*
 
 ### 2 · Compose with two operators
 
@@ -109,7 +109,7 @@ qv.Layout.mosaic("AAB\nCCB", A=a, B=b, C=c).opts(link_x=True)
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/36_mosaic_layout.png" width="720"
+  <img src="docs/images/examples/36_mosaic_layout.png" width="720"
        alt="Mosaic layout with spanning panes and a suptitle">
 </p>
 
@@ -127,7 +127,7 @@ layout.addWidget(view)                            # it's just a QWidget
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/07_mixed_backends.png" width="720"
+  <img src="docs/images/examples/07_mixed_backends.png" width="720"
        alt="A pyqtgraph pane and a matplotlib pane side by side in one layout">
 </p>
 
@@ -151,7 +151,7 @@ qv.View(plot, theme=qv.Theme.from_qt_app())   # match the host app's mode
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/04_theming.png" width="720"
+  <img src="docs/images/examples/04_theming.png" width="720"
        alt="Three overlaid curves drawn from a registered custom palette on the dark theme">
 </p>
 
@@ -171,12 +171,12 @@ qv.Scatter(big, x="x", y="y", raster="datashader")  # 10M points → density ras
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/34_streaming_telemetry.png" width="720"
+  <img src="docs/images/examples/34_streaming_telemetry.png" width="720"
        alt="A live rolling feed beside a datashaded 400k-point history and a brush-driven detail panel">
 </p>
 
 *A live rolling feed, its datashaded 400k-point history, and a brush-driven
-detail panel — [`examples/34_streaming_telemetry.py`](https://github.com/jawjay/qtviz/blob/main/examples/34_streaming_telemetry.py).*
+detail panel — [`examples/34_streaming_telemetry.py`](examples/34_streaming_telemetry.py).*
 
 ## Backends
 
@@ -217,12 +217,12 @@ RenderHandle        owns the QWidget + a typed EventBus;
 Backends *and* data adapters are registered, never imported by the core, so
 every new engine or container type is purely additive. The full design record
 — specification, architecture, decision log — lives in
-[`design/`](https://github.com/jawjay/qtviz/tree/main/design).
+[`design/`](design).
 
 ## Examples
 
 37 runnable scripts in
-[`examples/`](https://github.com/jawjay/qtviz/tree/main/examples), from
+[`examples/`](examples), from
 hello-world to linked dashboards, reactive crossfilters, HoloViews/hvplot
 adapters, and out-of-core xarray cubes — every one screenshotted in the
 [gallery](https://jawjay.github.io/qtviz/gallery/):
@@ -232,12 +232,12 @@ uv run python examples/01_hello.py
 ```
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jawjay/qtviz/main/docs/images/examples/dashboard_native.png" width="720"
+  <img src="docs/images/examples/dashboard_native.png" width="720"
        alt="A three-panel dashboard with a shared X axis, brushing, and the dark theme">
 </p>
 
 *The linked three-panel dashboard, under sixty lines —
-[`examples/dashboard_native.py`](https://github.com/jawjay/qtviz/blob/main/examples/dashboard_native.py).*
+[`examples/dashboard_native.py`](examples/dashboard_native.py).*
 
 ## Stability
 
@@ -251,9 +251,9 @@ never silently dropped), and the performance ceilings
 ## Contributing
 
 Issues and PRs welcome — see
-[CONTRIBUTING.md](https://github.com/jawjay/qtviz/blob/main/CONTRIBUTING.md)
+[CONTRIBUTING.md](CONTRIBUTING.md)
 for the uv-based setup, the CI gates, and the project's conventions.
 
 ## License
 
-[MIT](https://github.com/jawjay/qtviz/blob/main/LICENSE)
+[MIT](LICENSE)
