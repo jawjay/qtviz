@@ -11,7 +11,7 @@ backends at runtime, and drops into any PySide6 application as a plain `QWidget`
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Qt](https://img.shields.io/badge/Qt-PySide6-41cd52)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-1.0_stable-brightgreen)
+![Status](https://img.shields.io/badge/status-2.0_stable-brightgreen)
 
 ```python
 import numpy as np
@@ -31,19 +31,20 @@ That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan
 and zoom out of the box. Change one keyword — `backend="matplotlib"` or
 `backend="webengine"` — and the same line renders through a different engine.
 
-> **Status — `1.0` stable + the parity program.** The public surface is frozen
-> and policy-backed ([docs/stability.md](docs/stability.md)); everything since is
-> additive ([`design/parity-program.md`](design/parity-program.md), [D83]–[D95]):
-> **27 elements** across three backends, first-class axes (log/symlog,
-> **calendar-time axes**, **twin y axes**, tick formatting, explicit/minor
-> ticks — with data-space events everywhere), legends, raster norms
-> (log/power/symlog/boundary with honest colorbars),
-> statistical/annotation/composition vocabularies (meshes, vector fields,
-> stems, mosaic layouts), screen-cost rendering for huge zarr/dask/xarray
-> grids, live streaming sources with in-place updates, and brush-selection
-> through datashaded views — **760+ passing tests**, mypy-clean, 92%
-> coverage. Private by design; install
-> from source / `git+`.
+> **Status — `2.0` stable.** The Mark IR release
+> ([`design/2.0-mark-ir-and-surface.md`](design/2.0-mark-ir-and-surface.md),
+> [D121]–[D136]): **one channel vocabulary** across all 28 elements, one
+> `norm=`/`clim=` spec, `.opts()` surface configuration without leaving the
+> `*`/`+` algebra, `qv.show()` one-liners — and underneath, a typed Mark IR
+> where the geometry tail renders from **one core lowering per element**
+> with honesty proven by a perturbation guard, not maintained in triplicate.
+> The 70-name public surface is frozen and policy-backed
+> ([docs/stability.md](docs/stability.md)). First-class axes
+> (log/symlog/time, twin y, tick control), legends, honest raster norms,
+> screen-cost rendering for huge zarr/dask/xarray grids, live streaming with
+> in-place updates, brush-selection through datashaded views — **880+
+> passing tests**, mypy-clean. Private by design; install from source /
+> `git+`.
 
 ---
 

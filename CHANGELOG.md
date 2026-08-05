@@ -4,13 +4,15 @@ All notable changes to qtviz are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased — 2.0]
+## [2.0.0] — 2026-08-04
 
-The Mark IR + uniform-surface arc
+The Mark IR + uniform-surface release
 ([`design/2.0-mark-ir-and-surface.md`](design/2.0-mark-ir-and-surface.md),
-[D121]–[D136]) — a clean 2.0 break: internal waves land first (no public
-surface change until the wave-1 renames; the freeze list flips to
-`FROZEN_2_0` last).
+[D121]–[D136]) — a clean break, shipped as six waves in order: IR foundation →
+mechanical renames → the geometry tail lowers → stats + semantic surface →
+structural cleanup → surface ergonomics + the `FROZEN_2_0` flip. A private
+repo with no external users needs no deprecation shims — every example, test,
+and doc migrated in the wave that broke it.
 
 ### Changed (wave 1 — [D129]/[D131] mechanical channel renames, breaking)
 

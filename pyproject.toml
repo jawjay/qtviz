@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "qtviz"
-version = "1.0.0"
+version = "2.0.0"
 description = "Native-Qt declarative plotting — one immutable API across pyqtgraph, matplotlib, and webengine backends."
 readme = "README.md"
 requires-python = ">=3.11"
