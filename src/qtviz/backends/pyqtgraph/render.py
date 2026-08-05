@@ -10,7 +10,13 @@ import pyqtgraph as pg
 
 from ...core._degrade import FULL_SURFACE, check_layout, check_recommended, check_surface
 from ...core._scales import delog, log_lim, logify
-from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
+from ...core.backend import (
+    PaneHandle,
+    RenderContext,
+    RendererRegistry,
+    RenderHandle,
+    ViewState,
+)
 from ...core.capabilities import Capabilities
 from ...core.compose import (
     Layout,
@@ -50,6 +56,71 @@ _CAPS = Capabilities(
 )
 
 
+class PgPane(PaneHandle):
+    """One `PlotItem` of a render ([D147]). Portable state is **data space**
+    (R1): under log the ViewBox lives in exponent space — the de-log/log
+    happens here at the pane boundary, per plot, so a `ViewState` round-trips
+    across rebuilds and backend switches unchanged."""
+
+    def __init__(self, label: str, plot) -> None:
+        super().__init__(label)
+        self._plot = plot
+
+    def capture(self) -> ViewState:
+        vb = self._plot.getViewBox()
+        (x0, x1), (y0, y1) = vb.viewRange()
+        x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
+        y2_range = None
+        vb2 = getattr(self._plot, "_qtviz_vb2", None)
+        if vb2 is not None:  # twin axis ([D88])
+            (_, _), (b0, b1) = vb2.viewRange()
+            y2_log = getattr(vb2, "y_log", False)
+            y2_range = (delog(b0, y2_log), delog(b1, y2_log))
+        return ViewState(
+            x_range=(delog(x0, x_log), delog(x1, x_log)),
+            y_range=(delog(y0, y_log), delog(y1, y_log)),
+            y2_range=y2_range,
+        )
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        vb = self._plot.getViewBox()
+        x_rng, y_rng = state.x_range, state.y_range
+        if x_rng and getattr(vb, "x_log", False):
+            x_rng = log_lim(x_rng, axis="x", backend="pyqtgraph")
+        if y_rng and getattr(vb, "y_log", False):
+            y_rng = log_lim(y_rng, axis="y", backend="pyqtgraph")
+        if x_rng:
+            vb.setXRange(*x_rng, padding=0)
+        if y_rng:
+            vb.setYRange(*y_rng, padding=0)
+        vb2 = getattr(self._plot, "_qtviz_vb2", None)
+        if vb2 is not None and state.y2_range is not None:
+            y2_rng = (log_lim(state.y2_range, axis="y2", backend="pyqtgraph")
+                      if getattr(vb2, "y_log", False) else state.y2_range)
+            if y2_rng:
+                vb2.setYRange(*y2_rng, padding=0)
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        self._plot.getViewBox().autoRange()
+        vb2 = getattr(self._plot, "_qtviz_vb2", None)
+        if vb2 is not None:
+            vb2.autoRange()
+
+    @require_gui_thread
+    def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        self._plot.getViewBox().select_bounds(x0, y0, x1, y1)
+
+    @property
+    def native(self):
+        return self._plot
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(getattr(self._plot, "_qtviz_element_ids", ()))
+
+
 class PgRenderHandle(RenderHandle):
     def __init__(self, widget, event_bus, plots, root, backend, natives) -> None:
         super().__init__(widget, event_bus, "pyqtgraph")
@@ -62,49 +133,8 @@ class PgRenderHandle(RenderHandle):
     def plots(self):
         return self._plots
 
-    def _vb(self):
-        return self._plots[0].getViewBox() if self._plots else None
-
-    def capture_state(self) -> ViewState:
-        """Portable state is **data space** (R1): under log the ViewBox range is in
-        exponent space and is de-logged here, so a `ViewState` round-trips across
-        rebuilds and backend switches unchanged."""
-        vb = self._vb()
-        if vb is None:
-            return ViewState()
-        (x0, x1), (y0, y1) = vb.viewRange()
-        x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
-        y2_range = None
-        vb2 = getattr(self._plots[0], "_qtviz_vb2", None)
-        if vb2 is not None:  # twin axis ([D88])
-            (_, _), (b0, b1) = vb2.viewRange()
-            y2_log = getattr(vb2, "y_log", False)
-            y2_range = (delog(b0, y2_log), delog(b1, y2_log))
-        return ViewState(
-            x_range=(delog(x0, x_log), delog(x1, x_log)),
-            y_range=(delog(y0, y_log), delog(y1, y_log)),
-            y2_range=y2_range,
-        )
-
-    def restore_state(self, state: ViewState) -> None:
-        vb = self._vb()
-        if vb is None:
-            return
-        x_rng, y_rng = state.x_range, state.y_range
-        if x_rng and getattr(vb, "x_log", False):
-            x_rng = log_lim(x_rng, axis="x", backend="pyqtgraph")
-        if y_rng and getattr(vb, "y_log", False):
-            y_rng = log_lim(y_rng, axis="y", backend="pyqtgraph")
-        if x_rng:
-            vb.setXRange(*x_rng, padding=0)
-        if y_rng:
-            vb.setYRange(*y_rng, padding=0)
-        vb2 = getattr(self._plots[0], "_qtviz_vb2", None) if self._plots else None
-        if vb2 is not None and state.y2_range is not None:
-            y2_rng = (log_lim(state.y2_range, axis="y2", backend="pyqtgraph")
-                      if getattr(vb2, "y_log", False) else state.y2_range)
-            if y2_rng:
-                vb2.setYRange(*y2_rng, padding=0)
+    def panes(self) -> tuple[PgPane, ...]:
+        return tuple(PgPane(str(i), p) for i, p in enumerate(self._plots))
 
     def _dispose_rasters(self) -> None:
         for plot in self._plots:
@@ -307,6 +337,9 @@ class PyQtGraphBackend:
                              parent_axes=y2_host if on_y2 else plot,
                              y_scale=y2_scale if on_y2 else y_scale)
             self._render_element(element, el_ctx, natives)
+        # pane → element map ([D147]): PgPane.elements reads this off the item
+        plot._qtviz_element_ids = tuple(
+            el.id for el in children if isinstance(el, Element))
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:

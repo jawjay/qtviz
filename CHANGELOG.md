@@ -8,6 +8,27 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Whole-render view state ([D150], `design/pane-handles.md` S1):**
+  `handle.capture_state()` now returns a `LayoutState` — ordered
+  `(pane label, ViewState)` pairs covering **every** pane — and
+  `restore_state` matches panes **by label** (unknown labels drop silently).
+  Previously only the first pane's pan/zoom survived a rebuild, theme change,
+  or backend switch (and mixed-backend/tab/splitter/dock views preserved
+  nothing). `ViewState` is unchanged as the per-surface record;
+  single-surface reads keep working (`capture_state().x_range` reads the
+  first pane), and `restore_state(ViewState(...))` remains a first-pane
+  shorthand. Backends now implement a per-surface pane protocol
+  (`RenderHandle.panes()`, internal in this step) instead of handle-level
+  state methods.
+
+### Fixed
+
+- **Nested grids no longer crash.** A grid whose child is itself a `Layout`
+  (e.g. `Layout([Layout([a, b]), c])`) crashed inside the single-backend cell
+  renderer (`AttributeError: 'Layout' has no attribute 'lower'`); nested
+  grids now route through the Qt LayoutHost, composing per-pane renders —
+  with per-pane state included via the `LayoutState` work above.
+
 - **`py.typed` ships with the package** (PEP 561): downstream mypy/pyright now
   see qtviz's full annotations instead of treating the library as untyped. A
   hardening test asserts the marker is importable from the installed package.

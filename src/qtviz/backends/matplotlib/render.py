@@ -13,7 +13,13 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 from ...core._degrade import FULL_SURFACE, check_layout, check_recommended, check_surface
-from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
+from ...core.backend import (
+    PaneHandle,
+    RenderContext,
+    RendererRegistry,
+    RenderHandle,
+    ViewState,
+)
 from ...core.capabilities import Capabilities
 from ...core.compose import (
     Layout,
@@ -49,11 +55,58 @@ _CAPS = Capabilities(
 )
 
 
+class MplPane(PaneHandle):
+    """One `Axes` of the figure ([D147]). matplotlib keeps `get_xlim()` in data
+    space under any scale, so capture/restore need no R1 normalization."""
+
+    def __init__(self, label: str, fig, surf: dict, bus) -> None:
+        super().__init__(label)
+        self._fig = fig
+        self._surf = surf
+        self._bus = bus
+
+    def capture(self) -> ViewState:
+        ax, ax2 = self._surf["ax"], self._surf.get("y2_ax")
+        return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()),
+                         y2_range=tuple(ax2.get_ylim()) if ax2 is not None else None)
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        ax = self._surf["ax"]
+        if state.x_range:
+            ax.set_xlim(*state.x_range)
+        if state.y_range:
+            ax.set_ylim(*state.y_range)
+        if state.y2_range and self._surf.get("y2_ax") is not None:
+            self._surf["y2_ax"].set_ylim(*state.y2_range)
+        self._fig.canvas.draw_idle()
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        for a in (self._surf["ax"], self._surf.get("y2_ax")):
+            if a is not None:
+                a.relim()
+                a.autoscale()
+        self._fig.canvas.draw_idle()
+
+    @require_gui_thread
+    def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        _events.emit_bounds_select(self._surf["selectables"], self._bus, x0, y0, x1, y1)
+
+    @property
+    def native(self):
+        return self._surf["ax"]
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(self._surf.get("element_ids", ()))
+
+
 class MplRenderHandle(RenderHandle):
     def __init__(self, canvas, fig, bus, surfaces, root, backend, natives) -> None:
         super().__init__(canvas, bus, "matplotlib")
         self._fig = fig
-        self._surfaces = surfaces  # [{"ax", "surface_id", "selectables"}]
+        self._surfaces = surfaces  # [{"ax", "surface_id", "selectables", "y2_ax", "element_ids"}]
         self._root = root
         self._backend = backend
         self._natives = natives  # element id → mpl Artist ([D53])
@@ -62,26 +115,9 @@ class MplRenderHandle(RenderHandle):
     def axes(self):
         return [s["ax"] for s in self._surfaces]
 
-    def capture_state(self) -> ViewState:
-        if not self._surfaces:
-            return ViewState()
-        surf = self._surfaces[0]
-        ax, ax2 = surf["ax"], surf.get("y2_ax")
-        return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()),
-                         y2_range=tuple(ax2.get_ylim()) if ax2 is not None else None)
-
-    def restore_state(self, state: ViewState) -> None:
-        if not self._surfaces:
-            return
-        surf = self._surfaces[0]
-        ax = surf["ax"]
-        if state.x_range:
-            ax.set_xlim(*state.x_range)
-        if state.y_range:
-            ax.set_ylim(*state.y_range)
-        if state.y2_range and surf.get("y2_ax") is not None:
-            surf["y2_ax"].set_ylim(*state.y2_range)
-        self._fig.canvas.draw_idle()
+    def panes(self) -> tuple[MplPane, ...]:
+        return tuple(MplPane(str(i), self._fig, s, self.event_bus)
+                     for i, s in enumerate(self._surfaces))
 
     def select_bounds(self, ax_index: int, xmin, ymin, xmax, ymax) -> None:
         """Programmatic brush (approximate) — emits one SelectEvent per
@@ -249,8 +285,12 @@ class MatplotlibBackend:
                                      axis="y2", backend=self.name)
             ax2 = ax.twinx()
             apply_y2(ax2, y2_spec, theme, y2_scale)
-        surfaces.append({"ax": ax, "surface_id": surface_id,
-                         "selectables": selectables, "y2_ax": ax2})
+        entry = {"ax": ax, "surface_id": surface_id,
+                 "selectables": selectables, "y2_ax": ax2,
+                 # pane → element map ([D147]): MplPane.elements reads this
+                 "element_ids": tuple(el.id for el in children
+                                      if isinstance(el, Element))}
+        surfaces.append(entry)
         _events.connect_range(ax, surface_id, bus)
         indices = series_index_map(children)  # palette slots; annotations excluded
         ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self,

@@ -53,6 +53,11 @@ def _resolve_layout(layout: Layout, view_backend) -> tuple[bool, str | None]:
     otherwise a homogeneous grid renders through its single concrete backend."""
     if layout.kind in ("splitter", "tabs", "dock"):
         return True, None
+    if any(isinstance(child, Layout) for child in layout.children):
+        # nested grids host per-pane: a backend's `can_host("grid")` means a
+        # *flat* grid — its cell renderer takes an Element/Overlay, never a
+        # Layout (rendering one crashed before this routing).
+        return True, None
     child_backends = {negotiate(child, view_backend) for child in layout.children}
     if len(child_backends) > 1:
         return True, None

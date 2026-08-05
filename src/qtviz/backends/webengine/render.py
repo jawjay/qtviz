@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ...core._scales import delog, log_lim
-from ...core.backend import RendererRegistry, RenderHandle, ViewState
+from ...core.backend import PaneHandle, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.event import EventBus, RangeEvent
 from ...core.threading import require_gui_thread
@@ -48,9 +48,57 @@ _CAPS = Capabilities(
 )
 
 
+class _WebPane(PaneHandle):
+    """The one surface of a webengine figure ([D147]). Ranges come from the
+    handle's shadow state — Python-held, data space — so `capture` is
+    synchronous even though the live ranges live in JS; restores go out over
+    the bridge (queued until it is ready), log axes normalized on the wire
+    (R1)."""
+
+    def __init__(self, label: str, handle: WebEngineRenderHandle) -> None:
+        super().__init__(label)
+        self._h = handle
+
+    def capture(self) -> ViewState:
+        return ViewState(x_range=self._h._x_range, y_range=self._h._y_range)
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        h = self._h
+        update: dict = {}
+        if state.x_range:
+            h._x_range = state.x_range              # shadow state stays data space
+            sent = log_lim(state.x_range, axis="x", backend="webengine") \
+                if h._x_log else state.x_range      # …the wire wants log10 (R1)
+            if sent:
+                update["xaxis.range"] = list(sent)
+        if state.y_range:
+            h._y_range = state.y_range
+            sent = log_lim(state.y_range, axis="y", backend="webengine") \
+                if h._y_log else state.y_range
+            if sent:
+                update["yaxis.range"] = list(sent)
+        if update:
+            h._host.relayout(update)  # queued until the bridge is ready
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        self._h._x_range = None  # unknown until the relayout reports back
+        self._h._y_range = None
+        self._h._host.relayout({"xaxis.autorange": True, "yaxis.autorange": True})
+
+    @property
+    def native(self):
+        return self._h._host
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(self._h._traces)
+
+
 class WebEngineRenderHandle(RenderHandle):
     """Owns the `WebBridgeView`, the Plotly host, and the event bridge. Tracks
-    last-known axis ranges (shadow state) so `capture_state` is synchronous even
+    last-known axis ranges (shadow state) so state capture is synchronous even
     though the live ranges live in JS."""
 
     def __init__(self, widget: PlotView, event_bus, host, source_ids, surface_id, theme,
@@ -126,25 +174,9 @@ class WebEngineRenderHandle(RenderHandle):
         so the host is the reachable native object ([D53])."""
         return self._host if element_id in self._traces else None
 
-    def capture_state(self) -> ViewState:
-        return ViewState(x_range=self._x_range, y_range=self._y_range)
-
-    def restore_state(self, state: ViewState) -> None:
-        update: dict = {}
-        if state.x_range:
-            self._x_range = state.x_range           # shadow state stays data space
-            sent = log_lim(state.x_range, axis="x", backend="webengine") \
-                if self._x_log else state.x_range   # …the wire wants log10 (R1)
-            if sent:
-                update["xaxis.range"] = list(sent)
-        if state.y_range:
-            self._y_range = state.y_range
-            sent = log_lim(state.y_range, axis="y", backend="webengine") \
-                if self._y_log else state.y_range
-            if sent:
-                update["yaxis.range"] = list(sent)
-        if update:
-            self._host.relayout(update)  # queued until the bridge is ready
+    def panes(self) -> tuple[PaneHandle, ...]:
+        # one figure = one surface; grids compose per-pane handles via the host
+        return (_WebPane("0", self),)
 
     @require_gui_thread
     def update(self, new_root) -> None:

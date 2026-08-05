@@ -23,14 +23,59 @@ BackendPrimitive = Any
 
 @dataclass(frozen=True)
 class ViewState:
-    """Portable interaction state — preserved across rebuilds and backend
-    switches (dev-plan [D2]). Each backend maps it to/from native ranges.
-    `y2_range` is the twin axis ([D88]); `None` when the surface has none."""
+    """Portable interaction state for **one surface** — preserved across
+    rebuilds and backend switches (dev-plan [D2]). Each backend maps it to/from
+    native ranges. `y2_range` is the twin axis ([D88]); `None` when the surface
+    has none. A whole render's state is a `LayoutState` of these."""
 
     x_range: tuple[float, float] | None = None
     y_range: tuple[float, float] | None = None
     selection: tuple[int, ...] | None = None
     y2_range: tuple[float, float] | None = None
+
+
+@dataclass(frozen=True)
+class LayoutState:
+    """Portable interaction state for a whole render ([D150]): ordered
+    `(pane label, ViewState)` pairs, one per surface. Restore matches **by
+    label** — same label = same role, so state survives backend switches and
+    root swaps; labels the new render doesn't have drop silently (a changed
+    dashboard shape is not an error). Default pane labels are index strings
+    (`"0"`, `"1"`, …), so unlabeled layouts degrade to positional matching.
+
+    For the single-surface case (`x_range` & co.) the first pane's fields pass
+    through, so `handle.capture_state().x_range` keeps reading naturally."""
+
+    panes: tuple[tuple[str, ViewState], ...] = ()
+
+    def get(self, label: str) -> ViewState | None:
+        """The named pane's state, or `None`."""
+        for lb, vs in self.panes:
+            if lb == label:
+                return vs
+        return None
+
+    @property
+    def first(self) -> ViewState:
+        """The first pane's state — the whole state of a single-surface render."""
+        return self.panes[0][1] if self.panes else ViewState()
+
+    # single-surface conveniences: the first pane's fields
+    @property
+    def x_range(self) -> tuple[float, float] | None:
+        return self.first.x_range
+
+    @property
+    def y_range(self) -> tuple[float, float] | None:
+        return self.first.y_range
+
+    @property
+    def y2_range(self) -> tuple[float, float] | None:
+        return self.first.y2_range
+
+    @property
+    def selection(self) -> tuple[int, ...] | None:
+        return self.first.selection
 
 
 @dataclass
@@ -70,9 +115,71 @@ class RendererRegistry:
         return set(self._fns)
 
 
+class PaneHandle:
+    """One surface of a live render — the "Axes of qtviz" ([D147]). A thin
+    facade over the *current* render, scoped strictly to **interaction-side**
+    concerns: view ranges, programmatic brush, the native escape hatch.
+    Describe-side config (title, scale, …) never flows through here — that is
+    `.opts()` on the node; one-way data flow keeps rebuilds reasoned about.
+
+    Facades are built fresh by `RenderHandle.panes()` on every call and go
+    stale with the render they wrap — fetch fresh, never cache across a
+    rebuild. All widget-touching methods are GUI-thread-only. The base class
+    is an inert single pane, so any single-surface backend that predates the
+    protocol is compliant with zero changes ([D125])."""
+
+    def __init__(self, label: str) -> None:
+        self.label = label  # plain attr: the composite host relabels flattened panes
+
+    def capture(self) -> ViewState:
+        """This surface's current state, data space (R1)."""
+        return ViewState()
+
+    def restore(self, state: ViewState) -> None:
+        """Apply `state` — `None` fields leave the current range untouched."""
+
+    def set_range(self, *, x: tuple[float, float] | None = None,
+                  y: tuple[float, float] | None = None,
+                  y2: tuple[float, float] | None = None) -> None:
+        """Programmatic pan/zoom sugar — data-space `(lo, hi)` per axis; omitted
+        axes keep their current range. The same interaction-state class of
+        change as a user drag, so events/rasters react identically."""
+        self.restore(ViewState(x_range=x, y_range=y, y2_range=y2))
+
+    def autorange(self) -> None:
+        """Reset this surface to fit its data (the double-click/home verb)."""
+        self._unsupported("autorange")
+
+    def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        """Programmatic brush: emits the same per-element `SelectEvent`s a
+        Shift-drag over `(x0, y0)–(x1, y1)` (data space) would."""
+        self._unsupported("select")
+
+    @property
+    def native(self) -> Any:
+        """The live backend surface primitive — a pg `PlotItem`, an mpl `Axes`,
+        the webengine host ([D53]). Non-portable by design; `None` if unknown."""
+        return None
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        """Ids of the elements rendered on this surface (feed `View.on(source=…)`)."""
+        return ()
+
+    def _unsupported(self, verb: str) -> None:
+        import warnings  # noqa: PLC0415
+
+        from ..errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(f"pane {self.label!r}: {verb} is not supported by this "
+                      f"backend and was ignored.", QtvizWarning, stacklevel=3)
+
+
 class RenderHandle:
     """Owns a rendered widget tree — the bridge from immutable Elements to the
-    mutable Qt world. Backends subclass to wire update/dispose/export/state."""
+    mutable Qt world. Backends subclass to wire update/dispose/export/state.
+    State is pane-based ([D150]): backends implement `panes()`; the base class
+    derives whole-render capture/restore from it, written once here."""
 
     def __init__(self, widget: Any, event_bus: Any, backend_name: str) -> None:
         self.widget = widget
@@ -136,11 +243,49 @@ class RenderHandle:
         # formalized on the base instead of drifting per subclass.
         raise NotImplementedError
 
-    def capture_state(self) -> ViewState:
-        return ViewState()
+    def panes(self) -> tuple[PaneHandle, ...]:
+        """One `PaneHandle` per surface, in layout child order (nested layouts
+        flatten depth-first). Base: a single inert pane labeled `"0"` — a
+        single-surface backend that overrides `capture_state`/`restore_state`
+        wholesale (the pre-[D150] contract) still round-trips its own state."""
+        return (PaneHandle("0"),)
 
-    def restore_state(self, state: ViewState) -> None:
-        pass
+    def pane(self, key: str | int | None = None) -> PaneHandle:
+        """A pane by label, by index, or — `key=None` — the only pane."""
+        ps = self.panes()
+        if key is None:
+            if len(ps) != 1:
+                from ..errors import ValidationError  # noqa: PLC0415
+
+                raise ValidationError(
+                    f"pane() needs a label or index when the render has "
+                    f"{len(ps)} panes: {[p.label for p in ps]}")
+            return ps[0]
+        if isinstance(key, int):
+            return ps[key]
+        for p in ps:
+            if p.label == key:
+                return p
+        raise KeyError(f"no pane labeled {key!r}; panes: {[p.label for p in ps]}")
+
+    def capture_state(self) -> LayoutState:
+        """Every pane's state, data space, keyed by pane label ([D150])."""
+        return LayoutState(tuple((p.label, p.capture()) for p in self.panes()))
+
+    def restore_state(self, state: LayoutState | ViewState) -> None:
+        """Label-matched restore; unknown labels drop silently ([D150]). A bare
+        `ViewState` is the single-surface shorthand: it applies to the first
+        pane."""
+        ps = self.panes()
+        if isinstance(state, ViewState):
+            if ps:
+                ps[0].restore(state)
+            return
+        by_label = {p.label: p for p in ps}
+        for label, vs in state.panes:
+            target = by_label.get(label)
+            if target is not None:
+                target.restore(vs)
 
 
 @runtime_checkable
@@ -208,6 +353,18 @@ class CompositeRenderHandle(RenderHandle):
     @property
     def children(self) -> list[RenderHandle]:
         return self._children
+
+    def panes(self) -> tuple[PaneHandle, ...]:
+        """The children's panes, flattened depth-first in child order and
+        relabeled with flat indices — so a composite's state capture/restore
+        ([D150]) covers every pane exactly like a single-backend grid.
+        Relabeling mutates only the fresh facades built by this call."""
+        flat: list[PaneHandle] = []
+        for h in self._children:
+            flat.extend(h.panes())
+        for i, p in enumerate(flat):
+            p.label = str(i)
+        return tuple(flat)
 
     def native(self, element_id: str) -> Any:
         """Fan out to the per-pane child handles (ids are unique; first hit wins)."""
