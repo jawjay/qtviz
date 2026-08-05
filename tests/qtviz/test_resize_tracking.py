@@ -104,7 +104,10 @@ def test_plotly_backend_nudges_after_a_qt_resize(qtbot):
     qtbot.addWidget(view)
     view.resize(300, 200)
     view.show()
+    qtbot.wait(50)  # let Chromium construction/show settle before the resize
     view.resize(500, 400)
+    # 10 s: a cold CI runner spends seconds spinning up QtWebEngine on the GUI
+    # thread before the debounce timer can even be processed (2 s flaked there).
     qtbot.waitUntil(
         lambda: any(n == "plotly.resize" for n, _p in view._command_queue),
-        timeout=2000)
+        timeout=10000)
