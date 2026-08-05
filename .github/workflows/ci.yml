@@ -36,6 +36,12 @@ jobs:
       fail-fast: false
       matrix:
         python: ["3.11", "3.12", "3.13"]
+    env:
+      # .python-version pins 3.11 for local dev; without this, `uv run` in the
+      # 3.12/3.13 jobs re-resolves to 3.11 and rebuilds a bare venv without
+      # dev deps ("Failed to spawn: pytest"). Pin every uv invocation to the
+      # matrix interpreter instead.
+      UV_PYTHON: ${{ matrix.python }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
@@ -52,13 +58,13 @@ jobs:
             libfontconfig1 libnss3 libasound2t64 libxcomposite1 libxdamage1 \
             libxrandr2 libxtst6 libxkbfile1
       - name: Install (all extras)
-        run: uv sync --frozen --all-extras --python ${{ matrix.python }}
+        run: uv sync --frozen --all-extras
       - name: pytest (offscreen; coverage floor on 3.11)
         run: |
           if [ "${{ matrix.python }}" = "3.11" ]; then
-            uv run pytest -q --cov
+            uv run --no-sync pytest -q --cov
           else
-            uv run pytest -q
+            uv run --no-sync pytest -q
           fi
 
   docs:
