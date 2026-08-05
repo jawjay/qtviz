@@ -64,6 +64,7 @@ class _WebPane(PaneHandle):
 
     @require_gui_thread
     def restore(self, state: ViewState) -> None:
+        self._assert_alive()
         h = self._h
         update: dict = {}
         if state.x_range:
@@ -83,6 +84,7 @@ class _WebPane(PaneHandle):
 
     @require_gui_thread
     def autorange(self) -> None:
+        self._assert_alive()
         self._h._x_range = None  # unknown until the relayout reports back
         self._h._y_range = None
         self._h._host.relayout({"xaxis.autorange": True, "yaxis.autorange": True})
@@ -174,7 +176,7 @@ class WebEngineRenderHandle(RenderHandle):
         so the host is the reachable native object ([D53])."""
         return self._host if element_id in self._traces else None
 
-    def panes(self) -> tuple[PaneHandle, ...]:
+    def _panes(self) -> tuple[PaneHandle, ...]:
         # one figure = one surface; grids compose per-pane handles via the host
         return (_WebPane("0", self),)
 

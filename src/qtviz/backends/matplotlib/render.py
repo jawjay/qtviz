@@ -66,12 +66,14 @@ class MplPane(PaneHandle):
         self._bus = bus
 
     def capture(self) -> ViewState:
+        self._assert_alive()
         ax, ax2 = self._surf["ax"], self._surf.get("y2_ax")
         return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()),
                          y2_range=tuple(ax2.get_ylim()) if ax2 is not None else None)
 
     @require_gui_thread
     def restore(self, state: ViewState) -> None:
+        self._assert_alive()
         ax = self._surf["ax"]
         if state.x_range:
             ax.set_xlim(*state.x_range)
@@ -83,6 +85,7 @@ class MplPane(PaneHandle):
 
     @require_gui_thread
     def autorange(self) -> None:
+        self._assert_alive()
         for a in (self._surf["ax"], self._surf.get("y2_ax")):
             if a is not None:
                 a.relim()
@@ -91,6 +94,7 @@ class MplPane(PaneHandle):
 
     @require_gui_thread
     def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        self._assert_alive()
         _events.emit_bounds_select(self._surf["selectables"], self._bus, x0, y0, x1, y1)
 
     @property
@@ -115,7 +119,7 @@ class MplRenderHandle(RenderHandle):
     def axes(self):
         return [s["ax"] for s in self._surfaces]
 
-    def panes(self) -> tuple[MplPane, ...]:
+    def _panes(self) -> tuple[MplPane, ...]:
         from ...core.compose import flat_pane_labels  # noqa: PLC0415
 
         labels = flat_pane_labels(self._root)  # [D145] given labels, else indices

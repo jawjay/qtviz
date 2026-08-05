@@ -67,6 +67,7 @@ class PgPane(PaneHandle):
         self._plot = plot
 
     def capture(self) -> ViewState:
+        self._assert_alive()
         vb = self._plot.getViewBox()
         (x0, x1), (y0, y1) = vb.viewRange()
         x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
@@ -84,6 +85,7 @@ class PgPane(PaneHandle):
 
     @require_gui_thread
     def restore(self, state: ViewState) -> None:
+        self._assert_alive()
         vb = self._plot.getViewBox()
         x_rng, y_rng = state.x_range, state.y_range
         if x_rng and getattr(vb, "x_log", False):
@@ -103,6 +105,7 @@ class PgPane(PaneHandle):
 
     @require_gui_thread
     def autorange(self) -> None:
+        self._assert_alive()
         self._plot.getViewBox().autoRange()
         vb2 = getattr(self._plot, "_qtviz_vb2", None)
         if vb2 is not None:
@@ -110,6 +113,7 @@ class PgPane(PaneHandle):
 
     @require_gui_thread
     def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        self._assert_alive()
         self._plot.getViewBox().select_bounds(x0, y0, x1, y1)
 
     @property
@@ -133,7 +137,7 @@ class PgRenderHandle(RenderHandle):
     def plots(self):
         return self._plots
 
-    def panes(self) -> tuple[PgPane, ...]:
+    def _panes(self) -> tuple[PgPane, ...]:
         from ...core.compose import flat_pane_labels  # noqa: PLC0415
 
         labels = flat_pane_labels(self._root)  # [D145] given labels, else indices

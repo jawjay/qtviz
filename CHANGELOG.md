@@ -8,6 +8,20 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **`view.pane(...)` / `view.panes` — the pane handle ([D147],
+  `design/pane-handles.md` S3):** every surface of a render (grid cell, tab,
+  splitter pane, or the whole plot) is addressable downstream by label or
+  index. A `PaneHandle` carries the interaction-side verbs — `set_range(x=,
+  y=, y2=)` (programmatic pan/zoom), `autorange()`, `select(x0, y0, x1, y1)`
+  (programmatic brush emitting the usual `SelectEvent`s), `capture()`/
+  `restore()` (per-surface `ViewState`, data space), `.native` (the pg
+  `PlotItem` / mpl `Axes` / webengine host, the [D53] escape valve per pane)
+  and `.elements` (ids on that surface). Facades wrap the *current* render:
+  one kept across a rebuild goes dead (`pane.alive`) and raises the new
+  `qtviz.errors.DisposedError` instead of touching freed widgets.
+  Describe-side config deliberately stays on the node — `view.root` +
+  `Layout.with_pane` + `set_root` is the declarative per-pane update.
+
 - **Named panes ([D145]/[D148], `design/pane-handles.md` S2):** `Layout`
   children can be labeled — pass a mapping (`qv.Layout.grid({"price": p,
   "volume": v})`, works on `tabs`/`splitter` too, where keys also caption the

@@ -130,6 +130,22 @@ class PaneHandle:
 
     def __init__(self, label: str) -> None:
         self.label = label  # plain attr: the composite host relabels flattened panes
+        self._owner: RenderHandle | None = None  # set by RenderHandle.panes()
+
+    @property
+    def alive(self) -> bool:
+        """Whether the render this pane wraps is still the live one. A pane
+        kept across a rebuild/backend switch goes dead — its widgets are
+        Qt-disposed — and every state-touching call raises `DisposedError`."""
+        return self._owner is None or self._owner.widget is not None
+
+    def _assert_alive(self) -> None:
+        if not self.alive:
+            from ..errors import DisposedError  # noqa: PLC0415
+
+            raise DisposedError(
+                f"pane {self.label!r} belongs to a disposed render — fetch a "
+                f"fresh handle from the current one (view.pane(...))")
 
     def capture(self) -> ViewState:
         """This surface's current state, data space (R1)."""
@@ -245,9 +261,17 @@ class RenderHandle:
 
     def panes(self) -> tuple[PaneHandle, ...]:
         """One `PaneHandle` per surface, in layout child order (nested layouts
-        flatten depth-first). Base: a single inert pane labeled `"0"` — a
-        single-surface backend that overrides `capture_state`/`restore_state`
-        wholesale (the pre-[D150] contract) still round-trips its own state."""
+        flatten depth-first). Facades are built fresh per call and owned by
+        this handle (dispose ⇒ they go dead). Backends implement `_panes()`;
+        the base builds a single inert pane labeled `"0"` — a single-surface
+        backend that overrides `capture_state`/`restore_state` wholesale (the
+        pre-[D150] contract) still round-trips its own state."""
+        ps = self._panes()
+        for p in ps:
+            p._owner = self
+        return ps
+
+    def _panes(self) -> tuple[PaneHandle, ...]:
         return (PaneHandle("0"),)
 
     def pane(self, key: str | int | None = None) -> PaneHandle:
