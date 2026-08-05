@@ -163,12 +163,13 @@ def _symlog_inv(s: float, linthresh: float) -> float:
 
 
 class Norm:
-    """[D130] the one colormap-normalization spec, replacing the per-element
-    `norm/vmin/vmax/gamma/linthresh/levels` cluster. The string shorthand
-    (`norm="log"`) covers the 90% case; `Norm` carries only the transform's
-    own parameters — the value range clamp is the separate `clim=` ([D130]).
-    A parameter set for a kind that ignores it raises: accept-then-ignore is
-    the one sin this library refuses ([D51])."""
+    """The one colormap-normalization spec, shared by every element that maps
+    values to color (`Image`, `Heatmap`, `Mesh`, `Scatter.color_by`). The
+    string shorthand (`norm="log"`) covers the 90% case; `Norm` carries only
+    the transform's own parameters (`gamma` for `power`, `linthresh` for
+    `symlog`, `levels` for `boundary`) — the value-range clamp is the
+    separate `clim=`. A parameter set for a kind that ignores it raises:
+    accept-then-ignore is the one sin this library refuses."""
 
     kind: str
     gamma: float
@@ -342,10 +343,8 @@ def _label_ramp(name: str) -> Palette:
     color* rides on this — a fallback can cost contrast, never correctness."""
     from .palette import Palette, palettes  # noqa: PLC0415
 
-    try:
+    if name in palettes:
         return palettes.get(name)
-    except KeyError:
-        pass
     try:
         return Palette.from_matplotlib(name, n=32)
     except Exception:  # noqa: BLE001 — mpl absent or unknown name

@@ -1,4 +1,4 @@
-"""Ecdf element — the empirical CDF of a value column ([D91], parity increment 3)."""
+"""Ecdf element — the empirical CDF of a value column (parity increment 3)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from ..data import Accessor, DataLike, as_data_ref
 
 class Ecdf(Element):
     """The empirical cumulative distribution of a raw `value` column — a step curve
-    rising 0→1. The statistic is computed in core (`_stats.ecdf`, the [D67]
+    rising 0→1. The statistic is computed in core (`_stats.ecdf`, the house
     rule: qtviz decides the numbers) and drawn through each backend's
     post-step curve path."""
 
@@ -49,8 +49,8 @@ class Ecdf(Element):
         self._freeze()
 
     def lower(self, ctx):
-        """[D122]: the empirical CDF as one post-step polyline from the shared
-        core `ecdf` ([D91]/[D93])."""
+        """The empirical CDF as one post-step polyline from the shared
+        core `ecdf`."""
         from ..core._stats import ecdf  # noqa: PLC0415
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
         from ..core.marks import Polyline, Stroke  # noqa: PLC0415

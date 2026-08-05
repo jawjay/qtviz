@@ -20,8 +20,8 @@ _NAMED_STYLES = ("solid", "dashed", "dotted", "dashdot")
 
 
 def check_line_style(style, *, who: str) -> None:
-    """`line_style` is a named style or an on/off dash-length tuple in points
-    ([D99]) — validated at construction, translated per backend."""
+    """`line_style` is a named style or an on/off dash-length tuple in
+    points — validated at construction, translated per backend."""
     if isinstance(style, str):
         if style not in _NAMED_STYLES:
             raise ValidationError(
@@ -40,7 +40,7 @@ def check_line_style(style, *, who: str) -> None:
 
 
 def check_axis(axis: str, raster: str, *, who: str) -> None:
-    """Twin-axis field guard ([D88]): `axis` names a known y axis, and a
+    """Twin-axis field guard: `axis` names a known y axis, and a
     datashaded element can't ride y2 (the raster pipeline is primary-axes)."""
     if axis not in ("y", "y2"):
         raise ValidationError(f"{who} axis must be 'y' or 'y2', got {axis!r}")
@@ -50,8 +50,8 @@ def check_axis(axis: str, raster: str, *, who: str) -> None:
 
 class Curve(Element):
     """A connected line through ordered x/y points; optionally stepped
-    (`step=`) and/or with point markers (`marker=`) ([D84]); `axis="y2"`
-    puts it on the twin right-hand axis ([D88])."""
+    (`step=`) and/or with point markers (`marker=`); `axis="y2"`
+    puts it on the twin right-hand axis."""
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("color", "color_by", "line_width", "line_style", "marker",
@@ -93,7 +93,7 @@ class Curve(Element):
                                      or raster == "datashader"):
             raise ValidationError(
                 "Curve color_by is a plain-line encoding (no marker/step/datashader) "
-                "in this release ([D100])"
+                "in this release"
             )
         check_choice(step, _STEPS, who="Curve", param="step", none_ok=True)
         check_choice(marker, _MARKERS, who="Curve", param="marker", none_ok=True)
@@ -126,7 +126,7 @@ class Curve(Element):
         return super().legend_entry(theme, index)
 
     def select_xy(self):
-        """Brush/pick registration coordinates ([D124]) — replaces the
+        """Brush/pick registration coordinates — replaces the
         isinstance tuples in backend event wiring."""
         return self.data.series("x"), self.data.series("y")
 

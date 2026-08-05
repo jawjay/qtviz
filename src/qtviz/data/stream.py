@@ -157,7 +157,7 @@ class StreamRef(TabularRef):
 
 
 def stream(columns: dict[str, Any], *, window: int | None = None) -> StreamRef:
-    """A live, append-able data source ([D76]): `stream({"t": float, "v": float},
+    """A live, append-able data source: `stream({"t": float, "v": float},
     window=100_000)`. Bind it to any element like a dict/DataFrame; views on it
     update as you `append` (from any thread). `window` keeps the last N rows."""
     return StreamRef(columns, window=window)

@@ -1,4 +1,4 @@
-"""Mesh element — non-uniform rectilinear grids ([D106], the pcolormesh
+"""Mesh element — non-uniform rectilinear grids (the pcolormesh
 analog; roadmap wave 3)."""
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from ._norm import NormedRaster, check_norm_clim
 
 
 def _check_edges(name: str, edges) -> tuple[float, ...]:
-    """[D111]: edges are 1-D and strictly increasing, with the rectilinear
+    """Edges are 1-D and strictly increasing, with the rectilinear
     boundary named explicitly instead of a raw numpy error."""
     try:
         arr = np.asarray(edges, dtype="float64")
@@ -34,7 +34,7 @@ class Mesh(NormedRaster, Element):
     cell `x[i]..x[i+1] × y[j]..y[j+1]` — edges are the
     canonical contract (`Heatmap` owns the centers convention; `Image` the
     uniform-bounds one). Non-uniform spacing is the point: log-spaced
-    frequency rows, irregular time bins. Shares the [D105] norm surface."""
+    frequency rows, irregular time bins. Shares the norm surface."""
 
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("x", "y")
@@ -84,7 +84,7 @@ class Mesh(NormedRaster, Element):
         self._freeze()
 
     def resolved_grid(self):
-        """[D124] the one gridded accessor: the resolved `GridData` — replaces
+        """The one gridded accessor: the resolved `GridData` — replaces
         scattered `element.data.grid()` reach-through in the backends."""
         return self.data.grid()
 

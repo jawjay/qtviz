@@ -16,7 +16,7 @@ from .color import ColorSpec
 
 
 class _Unset:
-    """Sentinel for `.opts()` field-wise merges ([D133]) — `None` must stay a
+    """Sentinel for `.opts()` field-wise merges — `None` must stay a
     real value (e.g. `background=None` clears)."""
 
     def __repr__(self) -> str:  # pragma: no cover — cosmetic
@@ -27,7 +27,7 @@ UNSET = _Unset()
 
 
 def _as_axis(value) -> AxisSpec | None:
-    """The [D133] shorthand: a bare string is the axis label."""
+    """The shorthand: a bare string is the axis label."""
     if value is None or isinstance(value, AxisSpec):
         return value
     if isinstance(value, str):
@@ -41,14 +41,14 @@ _SCALES = ("linear", "log", "symlog", "time")
 
 
 class AxisSpec(Immutable):
-    """Per-axis surface config (axis-surface seam; feasibility §2.1, [D59]).
+    """Per-axis surface configuration — label, scale, limits, ticks.
 
     `scale` (`linear|log|symlog|time`), declarative `lim`, `invert`;
-    `tick_format` ([D86]/[D102]) is `"auto"`, `"eng"`, a Python format-spec
+    `tick_format` is `"auto"`, `"eng"`, a Python format-spec
     (`".2f"`, `",d"`, `".0%"`), a strftime pattern, or a one-field template
     (`"${:,.0f}"`, `"{:.0f} ms"`); explicit `ticks`/`tick_labels` pin the
-    positions/labels ([D101]); `minor=True` requests minor ticks and
-    `tick_rotation` rotates the labels ([D103]). All positions are data space
+    positions/labels; `minor=True` requests minor ticks and
+    `tick_rotation` rotates the labels. All positions are data space
     (R1). A backend that can't render the requested `scale` warns and falls
     back to linear."""
 
@@ -100,14 +100,14 @@ _LEGEND_POSITIONS = ("auto", "right", "top", "none")
 
 class OverlayOptions(Immutable):
     """Shared-surface options for an `Overlay`: title, per-axis `AxisSpec` (`x`/`y`,
-    plus the twin `y2`, [D88]), `aspect`, legend toggle + position, background,
-    grid toggle ([D87]).
+    plus the twin `y2`, ), `aspect`, legend toggle + position, background,
+    grid toggle.
 
-    `x`/`y`/`y2` take an `AxisSpec` or — the [D133] shorthand — a bare string
+    `x`/`y`/`y2` take an `AxisSpec` or — the shorthand — a bare string
     meaning the axis label; `AxisSpec.label` is the one canonical home. `y2`
     configures the right-hand axis that appears when any series element sets
     `axis="y2"` — it is ignored when none does. `legend` is one union field
-    ([D133]): `True`/`"auto"` places automatically, `"right"`/`"top"` place
+: `True`/`"auto"` places automatically, `"right"`/`"top"` place
     explicitly, `False`/`"none"` hides everything."""
 
     def __init__(
@@ -167,7 +167,7 @@ def _as_ratios(v, name: str) -> tuple[float, ...] | None:
 class LayoutOptions(Immutable):
     """Arrangement options for a `Layout`: rows/cols, spacing, axis linking
     (`link_x`/`link_y`), tab/dock labels, relative column/row sizes
-    (`width_ratios`/`height_ratios`, [D108]), and a container `title`
+    (`width_ratios`/`height_ratios`, ), and a container `title`
     (the figure suptitle)."""
 
     def __init__(

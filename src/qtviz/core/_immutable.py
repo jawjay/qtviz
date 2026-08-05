@@ -91,5 +91,46 @@ class Immutable:
         return hash(self._value_key())
 
     def __repr__(self) -> str:
-        inner = ", ".join(f"{k}={v!r}" for k, v in self._fields().items())
-        return f"{type(self).__name__}({inner})"
+        """Class name + only the fields that differ from their constructor
+        defaults — `Scatter(data=<tabular x, y>, x='x', y='y')`, not a dump of
+        every default plus the auto-generated id. Data refs summarize as their
+        cheap schema, never a memory address."""
+        import inspect  # noqa: PLC0415
+        from collections.abc import Mapping  # noqa: PLC0415
+
+        params: Mapping[str, inspect.Parameter]
+        try:
+            params = inspect.signature(type(self).__init__).parameters
+        except (TypeError, ValueError):  # pragma: no cover — C-level __init__
+            params = {}
+        parts = []
+        for k, v in self._fields().items():
+            if k == "id":
+                continue  # auto-generated identity — pure noise in a repr
+            p = params.get(k)
+            if (p is not None and p.default is not inspect.Parameter.empty
+                    and _same_as_default(v, p.default)):
+                continue
+            parts.append(f"{k}={_repr_value(v)}")
+        return f"{type(self).__name__}({', '.join(parts)})"
+
+
+def _same_as_default(value: Any, default: Any) -> bool:
+    if value is default:
+        return True
+    try:
+        return bool(value == default)
+    except Exception:  # noqa: BLE001 — e.g. ndarray == None ambiguity
+        return False
+
+
+def _repr_value(value: Any) -> str:
+    if callable(getattr(value, "fingerprint", None)):  # a data ref
+        try:
+            sch = value.schema()
+            desc = (", ".join(sch.names) if sch.names
+                    else "×".join(str(n) for n in sch.shape) if sch.shape else "")
+            return f"<{sch.kind}{' ' + desc if desc else ''}>"
+        except Exception:  # noqa: BLE001 — a ref that can't schema still reprs
+            return f"<{type(value).__name__}>"
+    return repr(value)

@@ -8,7 +8,7 @@ it is unit-testable headless against stub backends.
 
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from typing import Literal, Union
 
 from ..errors import (
@@ -18,8 +18,9 @@ from ..errors import (
     ValidationError,
 )
 from ._immutable import Immutable
+from .color import ColorSpec
 from .element import Element
-from .options import UNSET, AxisSpec, LayoutOptions, OverlayOptions
+from .options import UNSET, AxisSpec, LayoutOptions, OverlayOptions, _Unset
 
 Node = Union[Element, "Overlay", "Layout"]
 
@@ -89,27 +90,34 @@ class Overlay(Immutable):
     def over(self, other: Node) -> Overlay:
         return self.__mul__(other)
 
-    def opts(self, *, title=UNSET, x=UNSET, y=UNSET, y2=UNSET, aspect=UNSET,
-             legend=UNSET, background=UNSET, grid=UNSET) -> Overlay:
-        """[D133] field-wise options merge: only the fields you pass change
+    def opts(self, *,
+             title: str | None | _Unset = UNSET,
+             x: AxisSpec | str | None | _Unset = UNSET,
+             y: AxisSpec | str | None | _Unset = UNSET,
+             y2: AxisSpec | str | None | _Unset = UNSET,
+             aspect: float | None | _Unset = UNSET,
+             legend: bool | str | _Unset = UNSET,
+             background: ColorSpec | None | _Unset = UNSET,
+             grid: bool | _Unset = UNSET) -> Overlay:
+        """Field-wise options merge: only the fields you pass change
         (`UNSET` keeps; `None` clears where meaningful). For `x`/`y`/`y2` a
         bare string merges into the existing spec's `.label`; a full
         `AxisSpec` replaces it. Chains — later calls win per field."""
         cur = self.options
         def axis(new, old):
-            if new is UNSET:
+            if isinstance(new, _Unset):
                 return old
             if isinstance(new, str):
                 base = old if isinstance(old, AxisSpec) else AxisSpec()
                 return base.with_(label=new)
             return new
         merged = OverlayOptions(
-            title=cur.title if title is UNSET else title,
+            title=cur.title if isinstance(title, _Unset) else title,
             x=axis(x, cur.x), y=axis(y, cur.y), y2=axis(y2, cur.y2),
-            aspect=cur.aspect if aspect is UNSET else aspect,
-            legend=cur.legend if legend is UNSET else legend,
-            background=cur.background if background is UNSET else background,
-            grid=cur.grid if grid is UNSET else grid,
+            aspect=cur.aspect if isinstance(aspect, _Unset) else aspect,
+            legend=cur.legend if isinstance(legend, _Unset) else legend,
+            background=cur.background if isinstance(background, _Unset) else background,
+            grid=cur.grid if isinstance(grid, _Unset) else grid,
         )
         return Overlay(self.children, options=merged, backend_hint=self.backend_hint)
 
@@ -125,7 +133,7 @@ class Layout(Immutable):
     """Side-by-side / grid / splitter / tabs / dock. Built by `+`. Children
     may use different backends. A grid built by `Layout.mosaic` additionally
     carries per-child `cells` — `(row, col, rowspan, colspan)` — so panes can
-    span ([D108])."""
+    span."""
 
     def __init__(self, children: Sequence[Node], *,
                  kind: Literal["grid", "splitter", "tabs", "dock"] = "grid",
@@ -155,23 +163,33 @@ class Layout(Immutable):
     def __mul__(self, other: Node) -> Overlay:
         return Overlay((self, other))
 
-    def opts(self, *, title=UNSET, rows=UNSET, cols=UNSET, spacing=UNSET,
-             link_x=UNSET, link_y=UNSET, tab_labels=UNSET,
-             width_ratios=UNSET, height_ratios=UNSET) -> Layout:
-        """[D133] field-wise merge of the layout options (`title` here is the
+    def opts(self, *,
+             title: str | None | _Unset = UNSET,
+             rows: int | None | _Unset = UNSET,
+             cols: int | None | _Unset = UNSET,
+             spacing: int | _Unset = UNSET,
+             link_x: bool | _Unset = UNSET,
+             link_y: bool | _Unset = UNSET,
+             tab_labels: Sequence[str] | None | _Unset = UNSET,
+             dock_areas: Mapping[int, str] | Sequence[tuple] | None | _Unset = UNSET,
+             width_ratios: Sequence[float] | None | _Unset = UNSET,
+             height_ratios: Sequence[float] | None | _Unset = UNSET) -> Layout:
+        """Field-wise merge of the layout options (`title` here is the
         container suptitle). Only passed fields change; chains."""
         cur = self.options
         merged = LayoutOptions(
-            rows=cur.rows if rows is UNSET else rows,
-            cols=cur.cols if cols is UNSET else cols,
-            spacing=cur.spacing if spacing is UNSET else spacing,
-            link_x=cur.link_x if link_x is UNSET else link_x,
-            link_y=cur.link_y if link_y is UNSET else link_y,
-            tab_labels=cur.tab_labels if tab_labels is UNSET else tab_labels,
-            dock_areas=cur.dock_areas,
-            title=cur.title if title is UNSET else title,
-            width_ratios=cur.width_ratios if width_ratios is UNSET else width_ratios,
-            height_ratios=cur.height_ratios if height_ratios is UNSET else height_ratios,
+            rows=cur.rows if isinstance(rows, _Unset) else rows,
+            cols=cur.cols if isinstance(cols, _Unset) else cols,
+            spacing=cur.spacing if isinstance(spacing, _Unset) else spacing,
+            link_x=cur.link_x if isinstance(link_x, _Unset) else link_x,
+            link_y=cur.link_y if isinstance(link_y, _Unset) else link_y,
+            tab_labels=cur.tab_labels if isinstance(tab_labels, _Unset) else tab_labels,
+            dock_areas=cur.dock_areas if isinstance(dock_areas, _Unset) else dock_areas,
+            title=cur.title if isinstance(title, _Unset) else title,
+            width_ratios=(cur.width_ratios if isinstance(width_ratios, _Unset)
+                          else width_ratios),
+            height_ratios=(cur.height_ratios if isinstance(height_ratios, _Unset)
+                           else height_ratios),
         )
         return Layout(self.children, kind=self.kind, options=merged,
                       backend_hint=self.backend_hint, cells=self.cells)
@@ -190,7 +208,7 @@ class Layout(Immutable):
     @classmethod
     def mosaic(cls, spec: str, *, options: LayoutOptions | None = None,
                backend_hint: str | None = None, **panes: Node) -> Layout:
-        """A grid from an ASCII plan ([D108], the `subplot_mosaic` precedent):
+        """A grid from an ASCII plan (the `subplot_mosaic` precedent):
 
             Layout.mosaic("AAB\\nCCB", A=curve, B=sidebar, C=table)
 

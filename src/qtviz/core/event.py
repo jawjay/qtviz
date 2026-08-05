@@ -18,17 +18,27 @@ ElementId = str
 
 @dataclass(frozen=True)
 class Event:
+    """Base of every typed interaction event. `source_id` names the element
+    that emitted it — subscribe with `view.on(EventType, cb)`, optionally
+    filtered by element via `source=`."""
+
     source_id: ElementId
 
 
 @dataclass(frozen=True)
 class RangeEvent(Event):
+    """The visible axis ranges changed (pan/zoom): `x`/`y` are the new
+    `(lo, hi)` data-space bounds."""
+
     x: tuple[float, float]
     y: tuple[float, float]
 
 
 @dataclass(frozen=True)
 class PickEvent(Event):
+    """A single data point was clicked: its `point_index` in the element's
+    data plus the data-space `x`/`y` of the point."""
+
     point_index: int
     x: float
     y: float
@@ -36,20 +46,30 @@ class PickEvent(Event):
 
 @dataclass(frozen=True)
 class SelectEvent(Event):
+    """A brush/box selection completed: the selected `indices` into the
+    element's data and the data-space `bounds` `(x0, y0, x1, y1)`."""
+
     indices: list[int] = field(default_factory=list)
     bounds: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
 
 
 @dataclass(frozen=True)
 class HoverEvent(Event):
+    """The pointer moved over the plot: nearest `point_index` (or `None` off
+    the data) and the data-space cursor position. On a datashaded raster
+    `value` carries the aggregated count/mean under the cursor."""
+
     point_index: int | None
     x: float
     y: float
-    value: float | None = None  # aggregated value under the cursor on a raster ([D46])
+    value: float | None = None
 
 
 @dataclass(frozen=True)
 class TapEvent(Event):
+    """A click on empty plot space (no point hit): the data-space `x`/`y` of
+    the click."""
+
     x: float
     y: float
 

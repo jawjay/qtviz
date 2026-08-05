@@ -14,11 +14,11 @@ from ._norm import NormedRaster, check_norm_clim
 
 class Heatmap(NormedRaster, Element):
     """A grid of tidy x/y cells shaded by a `z` value. Duplicate rows landing on
-    one cell reduce through `aggregator` ([D69]; the pre-0.4 implicit behavior
+    one cell reduce through `aggregator` (the pre-0.4 implicit behavior
     was `"last"`, kept in the vocabulary).
 
-    `annotate=` ([D113]) writes each aggregated value at its cell center —
-    `"auto"` for `%g`, or any [D86] format spec (`".1f"`, `"{:.0%}"`, …). The
+    `annotate=` writes each aggregated value at its cell center —
+    `"auto"` for `%g`, or any format spec (`".1f"`, `"{:.0%}"`, …). The
     text color is computed in core per cell (WCAG luminance of the cell's ramp
     color → theme foreground or background), and grids above ~400 cells warn
     and skip labels rather than smear unreadable text."""
@@ -74,7 +74,7 @@ class Heatmap(NormedRaster, Element):
         self._freeze()
 
     def resolved_cell_labels(self, xs, ys, grid, theme):
-        """The core-computed labels ([D113]) for an already-pivoted grid, or
+        """The core-computed labels for an already-pivoted grid, or
         `[]` when the option is off — one call site per backend renderer."""
         if self.annotate is None:
             return []

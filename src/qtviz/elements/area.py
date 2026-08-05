@@ -1,4 +1,4 @@
-"""Area element — filled series, layered or stacked ([D84b], parity increment 3)."""
+"""Area element — filled series, layered or stacked (parity increment 3)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ _MODES = ("overlay", "stacked")
 class Area(Element):
     """A series filled to the zero baseline. With `by=` each distinct group
     value becomes its own palette-colored band — layered translucently
-    (`mode="overlay"`) or cumulatively stacked (`"stacked"`) — the [D68]
+    (`mode="overlay"`) or cumulatively stacked (`"stacked"`) — the shared
     grouping pattern, so stacking stays inside one element. Grouped data pivots
     on unique x (duplicate rows in a group sum, like `Bars`)."""
 

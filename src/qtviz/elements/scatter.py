@@ -84,7 +84,7 @@ class Scatter(NormedRaster, Element):
         return super().legend_entry(theme, index)
 
     def select_xy(self):
-        """Brush/pick registration coordinates ([D124]) — replaces the
+        """Brush/pick registration coordinates — replaces the
         isinstance tuples in backend event wiring."""
         return self.data.series("x"), self.data.series("y")
 

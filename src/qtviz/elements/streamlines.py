@@ -1,4 +1,4 @@
-"""Streamlines element — field-line flow ([D118], wave 1.5)."""
+"""Streamlines element — field-line flow."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ class Streamlines(Element):
     coarse mask grid (`30×30 · density`), RK4 both directions with bilinear
     interpolation, termination on domain exit / stagnation / an occupied
     mask cell — the mask enforces line spacing. Every backend draws the
-    resulting polylines + one mid-line [D107] arrowhead each as two cheap
+    resulting polylines + one mid-line arrowhead each as two cheap
     NaN-separated curves.
 
     Recorded v1 scope cuts: no `color_by=speed` gradient lines (pg cannot
@@ -71,8 +71,8 @@ class Streamlines(Element):
         self._freeze()
 
     def lower(self, ctx):
-        """[D122]: lines + heads as two NaN-separated polylines — exactly the
-        Quiver primitive pair ([D118])."""
+        """Lines + heads as two NaN-separated polylines — exactly the
+        Quiver primitive pair."""
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
         from ..core.marks import Polyline, Stroke  # noqa: PLC0415
 
@@ -96,7 +96,7 @@ class Streamlines(Element):
         return u, v
 
     def resolved_paths(self):
-        """The shared core integration ([D110]): `(paths, heads)` polylines."""
+        """The shared core integration: `(paths, heads)` polylines."""
         from ..core._streamlines import streamline_paths  # noqa: PLC0415
 
         u, v = self._grids()

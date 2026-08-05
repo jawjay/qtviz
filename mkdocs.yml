@@ -39,6 +39,9 @@ plugins:
           options:
             show_root_heading: true
             show_source: false
+            # the `::: qtviz` blocks below would otherwise each repeat the
+            # package docstring; the intro lives once in api.md prose
+            show_docstring_modules: false
             heading_level: 3
             members_order: source
             separate_signature: true

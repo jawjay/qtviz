@@ -4,19 +4,19 @@ A thin, one-way shim (`milestone-holoviews-adapter.md`, spec §8). It *reads* a
 HoloViews object through its public API only — `.dframe()`, `.kdims`/`.vdims`,
 `.dimension_values()` + `.bounds.lbrt()` for gridded, plain iteration for
 containers — and *builds* qtviz Elements. No HoloViews internals are touched
-([D41]), so the adapter does not rot with HoloViews releases.
+, so the adapter does not rot with HoloViews releases.
 
 Leaves with a native equivalent become that Element; the long tail (Sankey,
-Chord, BoxWhisker, …) becomes a webengine `RawFigure` ([D28]).
+Chord, BoxWhisker, …) becomes a webengine `RawFigure`.
 
-Stage 3b adds `DynamicMap` one-way reactivity ([D44] Level 1) and the `hvplot`
-entry ([D43] Path A), both reusing existing machinery: each resolved DynamicMap
+Stage 3b adds `DynamicMap` one-way reactivity (Level 1) and the `hvplot`
+entry (Path A), both reusing existing machinery: each resolved DynamicMap
 frame is translated by the *static* path below, and a `derived` `Signal[Node]`
 driven by per-kdim `Signal`s feeds the View's reactive root (`core/view.py`).
 
 `holoviews` is imported lazily inside `from_holoviews` (not at module top) so that
 importing this module — and merely *collecting* its tests — never drags in
-numba/llvmlite/bokeh, which destabilizes the offscreen-Qt teardown ([D45]).
+numba/llvmlite/bokeh, which destabilizes the offscreen-Qt teardown.
 `hvplot` and the reactive layer are likewise imported lazily, only when used.
 """
 
@@ -39,7 +39,7 @@ def from_holoviews(obj: Any):
     a `RawFigure` hosted on the webengine backend. A `DynamicMap` with kdims
     returns a `Signal[Node]` (seeded at default kdim values — use
     `from_holoviews_dmap` to drive the kdims); a stream-only `DynamicMap` renders
-    its current frame statically with a warning ([D44] L1). Raises
+    its current frame statically with a warning (L1). Raises
     `UnsupportedHoloViewsElement` only if even the `RawFigure` fallback cannot apply.
     """
     import holoviews as hv  # noqa: PLC0415 — lazy, see module docstring [D45]
@@ -49,7 +49,7 @@ def from_holoviews(obj: Any):
 
 @dataclass(frozen=True)
 class DMapBinding:
-    """A reactive `DynamicMap` binding ([D44] Level 1): a `Signal[Node]` plus one
+    """A reactive `DynamicMap` binding (Level 1): a `Signal[Node]` plus one
     writable `Signal` per kdim. Setting a kdim signal re-resolves `dm[values]` and
     re-translates the frame, which the View re-renders (debounced). The composable
     primitive — the app drives `kdims[name]` however it likes (custom UI, its own
@@ -60,7 +60,7 @@ class DMapBinding:
 
 
 def from_holoviews_dmap(dm: Any) -> DMapBinding:
-    """Build a `DMapBinding` from a HoloViews `DynamicMap` (one-way, [D44] L1).
+    """Build a `DMapBinding` from a HoloViews `DynamicMap` (one-way, L1).
 
     One writable `Signal` per kdim (seeded by `_kdim_default`) feeds a `derived`
     `Signal[Node]` that resolves `dm[values]` and runs the static translation on
@@ -78,7 +78,7 @@ def from_holoviews_dmap(dm: Any) -> DMapBinding:
 
 
 def from_hvplot(data: Any, kind: str, **kwargs: Any):
-    """Translate an `hvplot` call into a qtviz `Node` ([D43] Path A).
+    """Translate an `hvplot` call into a qtviz `Node` (Path A).
 
     `data.hvplot(kind=kind, **kwargs)` returns a HoloViews object (Element /
     Overlay / often a `DynamicMap`), which `from_holoviews` already consumes — so

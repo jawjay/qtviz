@@ -16,8 +16,8 @@ _MODES = ("grouped", "stacked")
 class Bars(Element):
     """Bars — `x` categories (or numeric positions) with `y` heights. With
     `by=` each distinct group value becomes its own palette-colored series,
-    laid out side-by-side (`mode="grouped"`) or cumulatively (`"stacked"`)
-    ([D68]); `mode` is meaningful only with `by`."""
+    laid out side-by-side (`mode="grouped"`) or cumulatively (`"stacked"`);
+    `mode` is meaningful only with `by`."""
 
     REQUIRED_OPTIONS = ("x", "y")
     RECOMMENDED_OPTIONS = ("by", "mode", "color", "color_by", "orient",

@@ -94,6 +94,13 @@ class Palette(Immutable):
 
 
 class _PaletteRegistry:
+    """The built-in palette registry, exposed as `qtviz.palettes`.
+
+    `palettes.get("viridis")` / `palettes["viridis"]` look up a palette;
+    `palettes.list()` (or iteration) names them all; `palettes.register()`
+    adds your own. `Palette.from_matplotlib("...")` converts any matplotlib
+    colormap when that extra is installed."""
+
     def __init__(self) -> None:
         self._p: dict[str, Palette] = {}
 
@@ -101,12 +108,72 @@ class _PaletteRegistry:
         self._p[name] = palette
 
     def get(self, name: str) -> Palette:
-        return self._p[name]
+        try:
+            return self._p[name]
+        except KeyError:
+            import difflib  # noqa: PLC0415
+
+            from ..errors import ValidationError  # noqa: PLC0415
+
+            close = difflib.get_close_matches(name, self._p, n=3, cutoff=0.6)
+            hint = f"; did you mean {', '.join(repr(c) for c in close)}?" if close else ""
+            raise ValidationError(
+                f"no palette named {name!r}{hint} (registered: {sorted(self._p)}; "
+                f"Palette.from_matplotlib() converts any matplotlib colormap)"
+            ) from None
+
+    def __getitem__(self, name: str) -> Palette:
+        return self.get(name)
+
+    def __iter__(self):
+        return iter(self._p)
+
+    def __len__(self) -> int:
+        return len(self._p)
+
+    def __contains__(self, name: object) -> bool:
+        return name in self._p
 
     def list(self) -> list[str]:
         return list(self._p)
 
+    def __repr__(self) -> str:
+        return f"palettes({', '.join(sorted(self._p))})"
+
+
+# Perceptually-uniform continuous ramps (matplotlib's stops, 10 samples each)
+# + the categorical default — vendored so the registry needs no extra.
+_MAGMA = (
+    "#000004", "#180f3e", "#451077", "#721f81", "#9f2f7f",
+    "#cd4071", "#f1605d", "#fd9567", "#fec98d", "#fcfdbf",
+)
+_PLASMA = (
+    "#0d0887", "#47039f", "#7301a8", "#9c179e", "#bd3786",
+    "#d8576b", "#ed7953", "#fa9e3b", "#fdc926", "#f0f921",
+)
+_INFERNO = (
+    "#000004", "#1b0c42", "#4b0c6b", "#781c6d", "#a52c60",
+    "#cf4446", "#ed6925", "#fb9a06", "#f7d03c", "#fcffa4",
+)
+_CIVIDIS = (
+    "#00204d", "#00336f", "#39486b", "#575d6d", "#707173",
+    "#8a8779", "#a69d75", "#c4b56c", "#e4cf5b", "#ffea46",
+)
+_GRAY = ("#000000", "#1c1c1c", "#383838", "#555555", "#717171",
+         "#8d8d8d", "#aaaaaa", "#c6c6c6", "#e2e2e2", "#ffffff")
+_CATEGORY20 = (
+    "#1f77b4", "#aec7e8", "#ff7f0e", "#ffbb78", "#2ca02c",
+    "#98df8a", "#d62728", "#ff9896", "#9467bd", "#c5b0d5",
+    "#8c564b", "#c49c94", "#e377c2", "#f7b6d2", "#7f7f7f",
+    "#c7c7c7", "#bcbd22", "#dbdb8d", "#17becf", "#9edae5",
+)
 
 palettes = _PaletteRegistry()
 palettes.register("viridis", Palette.from_hex(_VIRIDIS, name="viridis", kind="continuous"))
+palettes.register("magma", Palette.from_hex(_MAGMA, name="magma", kind="continuous"))
+palettes.register("plasma", Palette.from_hex(_PLASMA, name="plasma", kind="continuous"))
+palettes.register("inferno", Palette.from_hex(_INFERNO, name="inferno", kind="continuous"))
+palettes.register("cividis", Palette.from_hex(_CIVIDIS, name="cividis", kind="continuous"))
+palettes.register("gray", Palette.from_hex(_GRAY, name="gray", kind="continuous"))
 palettes.register("category10", Palette.from_hex(_CATEGORY10, name="category10"))
+palettes.register("category20", Palette.from_hex(_CATEGORY20, name="category20"))

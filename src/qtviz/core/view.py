@@ -159,6 +159,17 @@ class _StreamBinding:
 
 
 class View(QWidget):
+    """The widget that renders a node tree — the bridge from declarative
+    elements to a live Qt widget.
+
+    `View(root)` renders an `Element`, `Overlay`, or `Layout` (or a reactive
+    `Signal[Node]`, re-rendering on change) through the chosen backend and IS
+    a plain `QWidget`: embed it in any PySide6 layout. Pan/zoom/selection
+    state survives `set_backend()` switches; `on()` subscribes to the typed
+    interaction events; lazy data resolves off the GUI thread with the last
+    render kept visible. Constructing a `View` before a `QApplication` exists
+    is safe — it creates one on demand."""
+
     # Cross-thread marshal for live-data appends ([D77]): emitted (queued) from
     # any thread, delivered here — the stable receiver — then routed to the
     # *current* binding. Bindings are rebuilt at every install; queued events
@@ -318,16 +329,24 @@ class View(QWidget):
 
     @require_gui_thread
     def set_backend(self, name_or_backend: str | Backend) -> None:
+        """Re-render through a different backend — by registered name
+        (`"pyqtgraph"`, `"matplotlib"`, `"webengine"`, `"auto"`) or a
+        `Backend` instance. The current pan/zoom/selection state carries
+        over; event subscriptions survive the switch."""
         self._backend_choice = name_or_backend
         self._rebuild()
 
     @require_gui_thread
     def set_theme(self, theme: Theme) -> None:
+        """Re-render with a different `Theme` (e.g. `Theme.dark()`)."""
         self._theme = theme
         self._rebuild()
 
     @require_gui_thread
     def set_root(self, root: Any) -> None:
+        """Replace the rendered node tree (an `Element`/`Overlay`/`Layout`)
+        and re-render. For continuously-updating data prefer a `qv.stream`
+        source or a reactive `Signal[Node]` root over repeated `set_root`."""
         self._root = root
         self._rebuild()
 
@@ -404,14 +423,14 @@ class View(QWidget):
 def show(root, *, title: str | None = None, size: tuple[int, int] = (960, 640),
          backend: str | Backend = "auto", theme: Theme | None = None,
          toolbar: bool = False, block: bool = True) -> View:
-    """[D134] the one-liner for scripts: wrap `root` in a `View` (an existing
+    """The one-liner for scripts: wrap `root` in a `View` (an existing
     `View` passes through), size/title/show it, and — with `block=True` — run
     the Qt event loop. Returns the View either way, so `block=False` hands
     back a live widget for embedding or tests. `View` itself stays a plain
     QWidget for real applications.
 
     Constructing widgets before calling `show` is safe: `View` ensures a
-    QApplication exists ([D141]), so `qv.show(qv.View(...))` and
+    QApplication exists, so `qv.show(qv.View(...))` and
     `qv.show(qv.Scatter(...))` both just work. `root` may also be a
     zero-argument callable returning the node or a ready `View` — a
     convenience for keeping `build()`-style examples importable, no longer a

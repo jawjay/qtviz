@@ -13,7 +13,7 @@ from ..errors import ValidationError
 class Histogram(Element):
     """Binned frequency of a single raw `value` column. `bins` is a count or one of
     numpy's rule names (`"auto"`, `"fd"`, `"sturges"`, …); the binning is
-    computed once in core so every backend draws the same bars ([D93])."""
+    computed once in core so every backend draws the same bars."""
 
     REQUIRED_OPTIONS = ("value",)
     RECOMMENDED_OPTIONS = ("bins", "density", "color", "alpha", "label", "axis")

@@ -1,4 +1,4 @@
-"""ErrorBars element (spec §5.7; limit arrows [D116], wave 1.4)."""
+"""ErrorBars element (spec §5.7; limit arrows , wave 1.4)."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from ..errors import ValidationError
 class ErrorBars(Element):
     """Error bars around `y` — `err` is symmetric, or `(lo, hi)` for asymmetric.
 
-    `lo_limit=` / `hi_limit=` ([D116]) name optional boolean columns; where
+    `lo_limit=` / `hi_limit=` name optional boolean columns; where
     true, that side's cap is drawn as an outward arrowhead — "the true value
-    lies beyond" (mpl's lolims/uplims semantic). Heads share the [D107]
+    lies beyond" (mpl's lolims/uplims semantic). Heads reuse the shared
     quiver construction and refer to the `direction` axis, so limits are
     per-axis (`direction="both"` rejects them — use two elements)."""
 
@@ -84,7 +84,7 @@ class ErrorBars(Element):
         return ch
 
     def resolved_limits(self):
-        """`(err_lo, err_hi, arrows)` from the resolved channels ([D116]):
+        """`(err_lo, err_hi, arrows)` from the resolved channels:
         limited sides are zeroed (the arrow shaft replaces the bar) and
         `arrows` is the core `(shaft, head)` polyline pair — `None` when no
         limit columns are set, so plain error bars render exactly as before."""

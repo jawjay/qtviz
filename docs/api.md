@@ -2,51 +2,72 @@
 
 Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`).
 
+Describe a plot once as immutable data (an `Element`), compose with `*`
+(overlay) and `+` (layout), then render through any backend — pyqtgraph,
+matplotlib, or webengine — swappable at runtime. `qv.show(...)` is the script
+one-liner; `qv.View` is the plain QWidget for applications.
+
 `qtviz.__version__` reports the installed version.
 
 ## Elements
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - Scatter
-        - Curve
-        - Bars
-        - Histogram
-        - Image
-        - Heatmap
-        - ErrorBars
-        - Spread
-        - BoxPlot
-        - Violin
-        - Area
-        - Ecdf
-        - Pie
-        - Contour
-        - Mesh
-        - Quiver
-        - Stem
-        - Streamlines
-        - RawFigure
+::: qtviz.Scatter
+
+::: qtviz.Curve
+
+::: qtviz.Bars
+
+::: qtviz.Histogram
+
+::: qtviz.Image
+
+::: qtviz.Heatmap
+
+::: qtviz.ErrorBars
+
+::: qtviz.Spread
+
+::: qtviz.BoxPlot
+
+::: qtviz.Violin
+
+::: qtviz.Area
+
+::: qtviz.Ecdf
+
+::: qtviz.Pie
+
+::: qtviz.Contour
+
+::: qtviz.Mesh
+
+::: qtviz.Quiver
+
+::: qtviz.Stem
+
+::: qtviz.Streamlines
+
+::: qtviz.RawFigure
 
 ## Annotation & reference elements
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - HLine
-        - VLine
-        - Span
-        - Text
-        - Arrow
-        - Rect
-        - Ellipse
-        - Polygon
-        - RefLine
+::: qtviz.HLine
+
+::: qtviz.VLine
+
+::: qtviz.Span
+
+::: qtviz.Text
+
+::: qtviz.Arrow
+
+::: qtviz.Rect
+
+::: qtviz.Ellipse
+
+::: qtviz.Polygon
+
+::: qtviz.RefLine
 
 ## Composition & View
 
@@ -54,87 +75,87 @@ Auto-generated from the public `qtviz` namespace (everything in `qtviz.__all__`)
 own annotations (`def render(el: qv.Element) -> None`). `Node` is the
 `Element | Overlay | Layout` union that `View` and `show` accept.
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - Element
-        - Node
-        - Overlay
-        - Layout
-        - View
-        - show
+::: qtviz.Element
+
+::: qtviz.Node
+
+::: qtviz.Overlay
+
+::: qtviz.Layout
+
+::: qtviz.View
+
+::: qtviz.show
 
 ## Data binding
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - col
-        - lit
-        - tabular
-        - gridded
-        - set_raster_threshold
-        - set_raster_size
-        - stream
+::: qtviz.col
+
+::: qtviz.lit
+
+::: qtviz.tabular
+
+::: qtviz.gridded
+
+::: qtviz.set_raster_threshold
+
+::: qtviz.set_raster_size
+
+::: qtviz.stream
 
 ## Encoding & styling
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - Color
-        - Palette
-        - palettes
-        - Theme
-        - set_default_theme
-        - Norm
-        - OverlayOptions
-        - LayoutOptions
-        - AxisSpec
+::: qtviz.Color
+
+::: qtviz.Palette
+
+::: qtviz.palettes
+
+::: qtviz.Theme
+
+::: qtviz.set_default_theme
+
+::: qtviz.Norm
+
+::: qtviz.OverlayOptions
+
+::: qtviz.LayoutOptions
+
+::: qtviz.AxisSpec
 
 ## Events
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - Event
-        - RangeEvent
-        - PickEvent
-        - SelectEvent
-        - HoverEvent
-        - TapEvent
+::: qtviz.Event
+
+::: qtviz.RangeEvent
+
+::: qtviz.PickEvent
+
+::: qtviz.SelectEvent
+
+::: qtviz.HoverEvent
+
+::: qtviz.TapEvent
 
 ## Reactive
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - signal
-        - derived
-        - effect
-        - batch
-        - Signal
+::: qtviz.signal
+
+::: qtviz.derived
+
+::: qtviz.effect
+
+::: qtviz.batch
+
+::: qtviz.Signal
 
 ## HoloViews / hvplot adapter
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - from_holoviews
-        - from_holoviews_dmap
-        - from_hvplot
+::: qtviz.from_holoviews
+
+::: qtviz.from_holoviews_dmap
+
+::: qtviz.from_hvplot
 
 ## Errors
 
@@ -143,21 +164,11 @@ own annotations (`def render(el: qv.Element) -> None`). `Node` is the
 (validation, negotiation, adapters, missing dependencies) lives in
 `qtviz.errors`.
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - QtvizError
+::: qtviz.QtvizError
 
 ## Backend selection
 
-::: qtviz
-    options:
-      show_root_heading: false
-      show_root_toc_entry: false
-      members:
-        - set_default_backend
+::: qtviz.set_default_backend
 
 ## Backend authors (`qtviz.backends`)
 

@@ -13,7 +13,7 @@ from ._norm import NormedRaster, check_norm_clim
 
 class Image(NormedRaster, Element):
     """A 2-D array drawn as an image over explicit `extent` (also hosts RGBA
-    rasters). `norm`/`vmin`/`vmax`/`gamma` engage the [D105] color surface —
+    rasters). `norm`/`vmin`/`vmax`/`gamma` engage the color surface —
     normalized once in core, colorbar/limits appear only when used."""
 
     DATA_KIND = "gridded"  # [D124]
@@ -61,6 +61,6 @@ class Image(NormedRaster, Element):
         self._freeze()
 
     def resolved_grid(self):
-        """[D124] the one gridded accessor: the resolved `GridData` — replaces
+        """The one gridded accessor: the resolved `GridData` — replaces
         scattered `element.data.grid()` reach-through in the backends."""
         return self.data.grid()

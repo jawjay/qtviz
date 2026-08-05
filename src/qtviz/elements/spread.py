@@ -1,5 +1,5 @@
-"""Spread element — filled band between two series (spec §5.8; [D99] adds the
-horizontal orientation; [D129] collapses the six optional accessors)."""
+"""Spread element — filled band between two series (spec §5.8; adds the
+horizontal orientation; collapses the six optional accessors)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from ..errors import ValidationError
 class Spread(Element):
     """A filled band between `lo` and `hi`. Exactly one of `x`/`y` positions
     it: `x=` runs the band in y over x positions (the confidence-interval
-    case); `y=` runs it in x over y positions ([D99]). `lo`/`hi` always name
+    case); `y=` runs it in x over y positions. `lo`/`hi` always name
     the band edges."""
 
     REQUIRED_OPTIONS = ("lo", "hi")
@@ -65,7 +65,7 @@ class Spread(Element):
         return {"pos": pos, "lo": self.lo, "hi": self.hi}
 
     def lower(self, ctx):
-        """[D122]: one `Band` mark, either orientation."""
+        """One `Band` mark, either orientation."""
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
         from ..core.marks import Band, Fill  # noqa: PLC0415
 

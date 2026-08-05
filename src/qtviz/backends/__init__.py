@@ -1,4 +1,4 @@
-"""Backend registry (spec §3.6).
+"""The backend registry and extension namespace.
 
 Backends are registered, never imported by core. Discovery is the [D125]
 entry-point group `qtviz.backends` — the built-ins declare theirs in

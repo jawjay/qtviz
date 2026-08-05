@@ -1,4 +1,4 @@
-"""The curated element vocabulary (spec §5 + the 0.4 additions, [D54]/[D70])."""
+"""The curated element vocabulary (spec §5 + the 0.4 additions, /)."""
 
 from __future__ import annotations
 

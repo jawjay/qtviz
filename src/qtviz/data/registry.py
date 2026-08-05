@@ -42,7 +42,7 @@ def list_data_adapters() -> list[DataAdapter]:
 
 def as_data_ref(data: Any, *, shape: str | None = None) -> DataRef:
     """Wrap `data` in the matching `DataRef`. `shape` ("tabular" | "gridded")
-    overrides the adapter's default shape choice (D17) — see `tabular`/`gridded`."""
+    overrides the adapter's default shape choice — see `tabular`/`gridded`."""
     if isinstance(data, DataRef):
         return data
     for adapter in _ADAPTERS:
@@ -56,10 +56,10 @@ def as_data_ref(data: Any, *, shape: str | None = None) -> DataRef:
 
 
 def tabular(data: Any) -> DataRef:
-    """Force `data` to a tabular ref — e.g. a 1-D xarray DataArray as columns (D17)."""
+    """Force `data` to a tabular ref — e.g. a 1-D xarray DataArray as columns."""
     return as_data_ref(data, shape="tabular")
 
 
 def gridded(data: Any) -> DataRef:
-    """Force `data` to a gridded ref — e.g. a plain 2-D array as an image grid (D17)."""
+    """Force `data` to a gridded ref — e.g. a plain 2-D array as an image grid."""
     return as_data_ref(data, shape="gridded")

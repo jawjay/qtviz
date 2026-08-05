@@ -125,12 +125,34 @@ class Element(Immutable):
         """[D133] surface configuration without abandoning the algebra:
         `el.opts(title=…, x="t [s]", y=AxisSpec(scale="log"))` wraps this
         element in a one-child `Overlay` carrying the options — the exact
-        `Overlay([el], options=…)` construction, as sugar. `x`/`y`/`y2` take a
-        label string or an `AxisSpec`. Chain on the result to refine."""
+        `Overlay([el], options=…)` construction, as sugar. Accepts the
+        `OverlayOptions` keywords (`title`, `x`, `y`, `y2`, `aspect`,
+        `legend`, `background`, `grid`); `x`/`y`/`y2` take a label string or
+        an `AxisSpec`. Chain on the result to refine."""
         from .compose import Overlay  # noqa: PLC0415
         from .options import OverlayOptions  # noqa: PLC0415
 
-        return Overlay((self,), options=OverlayOptions(**kw))
+        try:
+            options = OverlayOptions(**kw)
+        except TypeError:
+            import difflib  # noqa: PLC0415
+            import inspect  # noqa: PLC0415
+
+            from ..errors import ValidationError  # noqa: PLC0415
+
+            valid = [p for p in inspect.signature(OverlayOptions.__init__).parameters
+                     if p != "self"]
+            bad = sorted(set(kw) - set(valid))
+            if not bad:
+                raise  # a genuine TypeError from a valid keyword's value
+            hints = [difflib.get_close_matches(b, valid, n=1) for b in bad]
+            close = [h[0] for h in hints if h]
+            mean = f"; did you mean {', '.join(repr(c) for c in close)}?" if close else ""
+            raise ValidationError(
+                f"{type(self).__name__}.opts(): unknown option(s) "
+                f"{', '.join(repr(b) for b in bad)}{mean} (valid: {', '.join(valid)})"
+            ) from None
+        return Overlay((self,), options=options)
 
     # composition operators — lazy imports avoid an element↔compose cycle
     def __mul__(self, other):

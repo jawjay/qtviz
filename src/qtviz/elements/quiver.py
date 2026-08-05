@@ -1,4 +1,4 @@
-"""Quiver element — vector fields ([D107], roadmap wave 3)."""
+"""Quiver element — vector fields (roadmap wave 3)."""
 
 from __future__ import annotations
 
@@ -14,9 +14,9 @@ class Quiver(Element):
     `arrow_scale` converts (u, v) units to data-space arrow length
     (`"auto"` sizes the largest arrow to ~90% of the field's typical cell);
     `head_scale` scales the barbs. Geometry is computed once in core
-    ([D110]) so every backend draws the identical field.
+ so every backend draws the identical field.
 
-    `key=` adds a reference key ([D112]) — a legend entry whose sample glyph
+    `key=` adds a reference key — a legend entry whose sample glyph
     is an arrow built by the same core construction as the field, labeled
     with the stated magnitude (`key_label`, e.g. ``key=10,
     key_label="10 m/s"``, or the bare number). Legend-based deliberately:
@@ -79,7 +79,7 @@ class Quiver(Element):
         self._freeze()
 
     def legend_entry(self, theme, index: int = 0):
-        """With `key=` set, the entry is the reference key ([D112]): an arrow
+        """With `key=` set, the entry is the reference key: an arrow
         sample glyph plus a label stating the magnitude (`key_label` or the
         number). An element `label` folds in as ``"label (key)"``. Without a
         key this behaves like any labeled element."""
@@ -96,8 +96,8 @@ class Quiver(Element):
                            line_width=self.line_width, head_scale=self.head_scale)
 
     def lower(self, ctx):
-        """[D122] the whole cross-backend implementation: two NaN-separated
-        polylines from the [D107] geometry, style resolved into one `Stroke`,
+        """The whole cross-backend implementation: two NaN-separated
+        polylines from the geometry, style resolved into one `Stroke`,
         legend routed through `legend_entry()` — every backend draws these
         marks through its `_marks` adapter."""
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
@@ -112,7 +112,7 @@ class Quiver(Element):
         )
 
     def resolved_segments(self):
-        """The shared core geometry from the resolved channels ([D110])."""
+        """The shared core geometry from the resolved channels."""
         from ..core._geometry import quiver_scale, quiver_segments  # noqa: PLC0415
 
         d = self.data

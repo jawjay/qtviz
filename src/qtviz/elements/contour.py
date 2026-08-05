@@ -1,4 +1,4 @@
-"""Contour element — iso-lines over a 2-D grid ([D89], parity increment 6)."""
+"""Contour element — iso-lines over a 2-D grid (parity increment 6)."""
 
 from __future__ import annotations
 
@@ -12,16 +12,16 @@ from ..errors import ValidationError
 class Contour(Element):
     """Iso-value contours of a 2-D array over explicit `extent` (the `Image`
     data contract). `levels` is a count (uniform interior levels, computed once
-    in core so every backend draws the same lines — [D67]) or an explicit
+    in core so every backend draws the same lines — ) or an explicit
     sequence of values. `filled=True` shades between levels; pyqtgraph draws
     lines only and warns on `filled` (capability-honest).
 
-    `annotate=` ([D117]) writes each level's value inline on its longest
-    iso-line — `True` for `%g`, or any [D86] format spec. Placement (marching
+    `annotate=` writes each level's value inline on its longest
+    iso-line — `True` for `%g`, or any format spec. Placement (marching
     squares → arc-length midpoint, tangent angle normalized upright, and a
     background mask segment that breaks the line) is computed once in core,
     so every backend places identical labels — deliberately *not* mpl's
-    native `clabel` ([D110] over engine fidelity)."""
+    native `clabel` (over engine fidelity)."""
 
     DATA_KIND = "gridded"  # [D124]
     REQUIRED_OPTIONS = ("extent",)
@@ -75,12 +75,12 @@ class Contour(Element):
         self._freeze()
 
     def resolved_grid(self):
-        """[D124] the one gridded accessor: the resolved `GridData` — replaces
+        """The one gridded accessor: the resolved `GridData` — replaces
         scattered `element.data.grid()` reach-through in the backends."""
         return self.data.grid()
 
     def resolved_labels(self):
-        """The core-placed inline labels ([D117]), or `[]` when off — one
+        """The core-placed inline labels, or `[]` when off — one
         call site per backend renderer."""
         if self.annotate is False:
             return []

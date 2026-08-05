@@ -1,4 +1,4 @@
-"""Stem element — lollipop/stem plots ([D115], wave 1.4)."""
+"""Stem element — lollipop/stem plots."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from ..data import Accessor, DataLike, as_data_ref
 class Stem(Element):
     """A stem (lollipop) series: a vertical line from `baseline` to each
     `(x, y)`, capped by a marker head. The segment geometry is computed once
-    in core (`_geometry.stem_segments`, [D110]) and drawn as ONE
+    in core (`_geometry.stem_segments`, ) and drawn as ONE
     pair-connected polyline plus a marker layer per backend — never an item
     per stem. Heads pick/hover like Scatter points; the element takes a
     palette slot and contributes a legend entry like any series."""
@@ -60,7 +60,7 @@ class Stem(Element):
         self._freeze()
 
     def resolved_segments(self):
-        """The shared core stem geometry from the resolved channels ([D110])."""
+        """The shared core stem geometry from the resolved channels."""
         from ..core._geometry import stem_segments  # noqa: PLC0415
         from ..core._time import as_float_seconds  # noqa: PLC0415
 
@@ -69,11 +69,11 @@ class Stem(Element):
                              as_float_seconds(d.series("y")), self.baseline)
 
     def select_xy(self):
-        """Brush registration ([D124]) — heads select like Scatter points."""
+        """Brush registration — heads select like Scatter points."""
         return self.data.series("x"), self.data.series("y")
 
     def lower(self, ctx):
-        """[D122]: ONE pair-connected polyline for every stalk ([D115] — never
+        """ONE pair-connected polyline for every stalk (never
         an item per stem) + a pickable marker layer for the heads."""
         from ..core._time import as_float_seconds  # noqa: PLC0415
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415

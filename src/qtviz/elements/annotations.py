@@ -1,4 +1,4 @@
-"""Annotation / reference elements ([D70], milestone-0.4 §1).
+"""Annotation / reference elements (milestone-0.4 §1).
 
 Data-less pure-data elements — a reference line, a band, a text note. No
 `DataRef`: like `RawFigure` they pass through the resolve pipeline untouched.
@@ -8,7 +8,7 @@ labeled one contributes a neutral `legend_entry()`.
 
 Interactivity (dragging a threshold line, resizing a region) is deliberately
 not modeled — reach the live `InfiniteLine` / `LinearRegionItem` through
-`handle.native(element_id)` ([D53])."""
+`handle.native(element_id)`."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ class _Reference(Element):
     label: str | None  # declared for typing; Text carries no label
 
     def _ref_stroke(self, ctx):
-        """Shared [D122] stroke: theme-foreground default, [D99] dash vocab."""
+        """Shared stroke: theme-foreground default, dash vocab."""
         from ..core.lowering import resolve_ref_color  # noqa: PLC0415
         from ..core.marks import Stroke  # noqa: PLC0415
 
@@ -179,7 +179,7 @@ class Span(_Reference):
 class Text(_Reference):
     """A text note anchored at data coordinates `(x, y)`; `rotation` is
     counter-clockwise degrees, `halign`/`valign` place the box relative to
-    the point, and `frame=True` draws a theme-styled box behind it ([D96])."""
+    the point, and `frame=True` draws a theme-styled box behind it."""
 
     REQUIRED_OPTIONS = ("x", "y", "text")
     RECOMMENDED_OPTIONS = ("color", "size", "halign", "valign", "rotation", "frame")
@@ -231,7 +231,7 @@ class Text(_Reference):
 
 
 class RefLine(_Reference):
-    """An infinite reference line `y = slope·x + intercept` ([D99] — the
+    """An infinite reference line `y = slope·x + intercept` (the
     `axline` analog; `HLine`/`VLine` cover the axis-parallel cases). A
     straight data-space line isn't straight under log scales, so it
     warns-and-drops there."""
@@ -285,7 +285,7 @@ _HEADS = ("end", "both", "none")
 
 class Arrow(_Reference):
     """An arrow between two data points, head at the end point (`head="end"`,
-    or `"both"`/`"none"`) — the pointing half of `annotate` ([D96]); pair with
+    or `"both"`/`"none"`) — the pointing half of `annotate`; pair with
     a `Text` for a callout."""
 
     REQUIRED_OPTIONS = ("x0", "y0", "x1", "y1")

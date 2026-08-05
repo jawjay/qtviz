@@ -1,4 +1,4 @@
-"""Pie element — proportional wedges ([D90], parity increment 3)."""
+"""Pie element — proportional wedges (parity increment 3)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ class Pie(Element):
     labeled by a `by` category column; `hole` (0 ≤ hole < 1) makes a donut. Slice
     colors cycle the theme palette in row order.
 
-    Supported on matplotlib and webengine ([D90]); pyqtgraph has no pie
+    Supported on matplotlib and webengine; pyqtgraph has no pie
     primitive, so negotiation routes around it (the `RawFigure` precedent —
     an element need not render everywhere)."""
 

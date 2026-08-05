@@ -1,6 +1,6 @@
-"""[D130] shared raster-norm surface: `norm` (string shorthand | `Norm`) +
+"""The shared raster-norm surface: `norm` (string shorthand | `Norm`) +
 `clim` — replaces the per-element 5-parameter cluster. The old field names
-survive as read-only properties so the [D105] pipeline reads one vocabulary.
+survive as read-only properties so the pipeline reads one vocabulary.
 """
 
 from __future__ import annotations
@@ -29,8 +29,8 @@ def check_norm_clim(norm, clim, *, who: str):
 
 
 class NormedRaster:
-    """Mixin: derived read-only views of (`norm`, `clim`) under the [D105]
-    pipeline's vocabulary. The host element sets both instance attrs."""
+    """Mixin: derived read-only views of (`norm`, `clim`) under the
+    normalization pipeline's vocabulary. The host element sets both attrs."""
 
     norm: str | Norm
     clim: tuple | None

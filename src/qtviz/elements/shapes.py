@@ -1,6 +1,6 @@
-"""Shape annotations — Rect / Ellipse / Polygon ([D97], roadmap wave 1).
+"""Shape annotations — Rect / Ellipse / Polygon (roadmap wave 1).
 
-Data-space outlines (fill opt-in) in the [D70] annotation class: literal
+Data-space outlines (fill opt-in) in the annotation class: literal
 coordinates, no `DataRef`, theme-foreground default, composable via `*`.
 Shapes are *data-space*: under a log scale their points transform like every
 annotation, so an `Ellipse` stops looking elliptical there on every backend —
@@ -27,7 +27,7 @@ class _Shape(_Reference):
         raise NotImplementedError
 
     def lower(self, ctx):
-        """[D122]: one closed outline from the shared [D97] geometry."""
+        """One closed outline from the shared geometry."""
         import numpy as np  # noqa: PLC0415
 
         from ..core.lowering import Lowered, resolve_ref_color  # noqa: PLC0415

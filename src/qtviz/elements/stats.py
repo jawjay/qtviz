@@ -1,4 +1,4 @@
-"""Statistical elements — BoxPlot + Violin ([D67], milestone-0.4 §4).
+"""Statistical elements — BoxPlot + Violin (milestone-0.4 §4).
 
 Both reduce a raw `value` column through the shared `core/_stats` implementations
 (`box_stats`, `kde`) at render, so every backend draws the *same* numbers —

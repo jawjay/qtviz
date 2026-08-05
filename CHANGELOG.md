@@ -61,6 +61,27 @@ All notable changes to qtviz are documented here. The format follows
   through the shared `map_colors` seam, so all three backends honor it
   identically and any non-linear norm keeps the honest endpoints-only legend
   key ([D48]). (`Contour` norm/clim is recorded as a follow-up — [D137].)
+- **Element reprs are readable** — `repr(Scatter(...))` now shows the class
+  plus only non-default fields, with the data ref summarized as its schema
+  (`Scatter(data=<tabular x, y>, x='x', y='y')`) instead of dumping every
+  default, the auto-generated id, and a raw memory address.
+- **`qtviz.palettes` behaves like a registry** — `palettes["magma"]`,
+  iteration, `len()`, a readable repr, and a helpful `ValidationError` with
+  close-match suggestions on unknown names (was a bare `KeyError`). Six new
+  built-ins ship (magma, plasma, inferno, cividis, gray, category20)
+  alongside viridis/category10 — no matplotlib needed.
+- **`.opts()` is fully typed and typo-friendly** — `Overlay.opts` and
+  `Layout.opts` carry explicit per-field annotations (IDE completion works),
+  `Layout.opts` gains the previously unreachable `dock_areas`, and a typo'd
+  `Element.opts(titel=...)` now raises
+  `Scatter.opts(): unknown option(s) 'titel'; did you mean 'title'?` instead
+  of leaking the internal `OverlayOptions` constructor.
+- **Public docstrings speak to users** ([D142]): internal decision tags
+  (`[Dnn]`) and spec-section references moved out of the rendered API
+  reference into code comments; `View`, its `set_*` methods, and every event
+  type now carry real docstrings; the API page renders each name once via
+  per-object blocks (the package docstring no longer repeats above every
+  section).
 - **`color=` accepts the full CSS4/X11 named-color set** ([D143]) — ~148 names
   (matplotlib's vocabulary) instead of 16, validated **eagerly at
   construction** in every element; an unknown name now fails at the call the

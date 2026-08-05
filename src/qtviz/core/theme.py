@@ -89,7 +89,7 @@ _DEFAULT_THEME: Theme | None = None
 
 
 def set_default_theme(theme: Theme | None) -> None:
-    """[D134] the app-level default a `View(theme=None)` consults — symmetry
+    """The app-level default a `View(theme=None)` consults — symmetry
     with `set_default_backend`. `None` restores the built-in light theme."""
     global _DEFAULT_THEME
     _DEFAULT_THEME = theme

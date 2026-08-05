@@ -1,7 +1,11 @@
-"""qtviz — Qt-native declarative plotting (see design/spec.md).
+"""qtviz — declarative, native-Qt plotting for PySide6 applications.
 
-Public API is assembled here as each subsystem lands. This is the import the
-acceptance suite (tests/qtviz) targets.
+Describe a plot once as immutable data (an `Element`), compose with `*`
+(overlay) and `+` (layout), then render through any backend — pyqtgraph
+(fast, native, the default), matplotlib (publication quality), or webengine
+(Plotly/Bokeh in a QWebEngineView) — swappable at runtime with pan/zoom
+state preserved. `qv.show(...)` is the script one-liner; `qv.View` is the
+plain QWidget for real applications. Rendering is 100% offline.
 """
 
 from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
