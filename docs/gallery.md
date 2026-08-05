@@ -168,7 +168,7 @@ under the cursor.
 
 ### `31_axis_labels` — axis labels & titles
 
-`OverlayOptions(title, x_label, y_label)` on each surface; per-pane labels in a
+`.opts(title=…, x=…, y=…)` on each surface; per-pane labels in a
 `Layout`; renders identically on every backend.
 
 ![Titled panes with axis labels](images/examples/31_axis_labels.png)

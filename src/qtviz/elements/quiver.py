@@ -95,11 +95,10 @@ class Quiver(Element):
                            line_width=self.line_width, head_scale=self.head_scale)
 
     def lower(self, ctx):
-        """[D122] pilot lowering — the whole cross-backend implementation:
-        two NaN-separated polylines from the [D107] geometry, style resolved
-        into one `Stroke`, legend routed through `legend_entry()`. Not yet on
-        the render path: backends still dispatch through their registries
-        until wave 2 flips them to draw marks."""
+        """[D122] the whole cross-backend implementation: two NaN-separated
+        polylines from the [D107] geometry, style resolved into one `Stroke`,
+        legend routed through `legend_entry()` — every backend draws these
+        marks through its `_marks` adapter."""
         from ..core.lowering import Lowered, resolve_color  # noqa: PLC0415
         from ..core.marks import Polyline, Stroke  # noqa: PLC0415
 

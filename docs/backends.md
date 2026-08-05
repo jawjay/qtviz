@@ -1,15 +1,26 @@
 # Writing a backend
 
 Backends are qtviz's open seam: **registered, never imported by the core**.
-Adding one touches only its own directory — the composition layer, negotiation,
+Adding one touches only its own package — the composition layer, negotiation,
 `View`, and every existing backend are none the wiser. This page is the
 contract; the acceptance bar is mechanical: *make the conformance suite green*.
 
 ```
-your element renderers ──┐
-Capabilities (honest) ───┼──►  Backend  ──register──►  qtviz.backends
+your mark drawers (~8) ──┐
+native fast paths ───────┼──►  Backend  ──entry point──►  qtviz.backends
+Capabilities (honest) ───┤
 RenderHandle (lifecycle) ┘
 ```
+
+Since 2.0 a backend gets the **geometry tail for free** ([D122]): 14 elements
+(Quiver, Streamlines, Stem, Spread, Ecdf + the 9 annotations) lower in core to
+a small typed **Mark** vocabulary — write one drawer per mark type
+(`Polyline`, `Markers`, `Band`, `Rects`, `PolygonMark`, `TextMark`, `Rule`,
+`SpanMark`, `ArrowMark`; see `qtviz.core.marks`) and dispatch any element
+whose `lower()` is overridden through a generic `render_lowered`. Register a
+native renderer only where your engine has a better primitive — **a
+registered native renderer always wins over lowering**. The three built-in
+`backends/*/_marks.py` files are the reference adapters.
 
 ## The Backend protocol
 
@@ -21,15 +32,24 @@ class MyBackend:
     capabilities = Capabilities(...)     # static, behavior-free, HONEST
     renderers = RendererRegistry()       # Element type → renderer fn
 
+    requires_display = False                 # True when a live compositor is needed
+
     def supports(self, element_type) -> bool: ...
     def render(self, node, *, theme, parent=None) -> RenderHandle: ...
     def can_host(self, kind) -> bool: ...          # "overlay" / "grid" panes?
     def honored_options(self, element_type) -> frozenset[str]: ...
-
-
-import qtviz.backends
-qtviz.backends.register(MyBackend())
 ```
+
+**Discovery is the `qtviz.backends` entry-point group** ([D125]) — declare it
+in your package's pyproject and qtviz finds you with zero qtviz edits:
+
+```toml
+[project.entry-points."qtviz.backends"]
+mybackend = "my_pkg.backend:backend"
+```
+
+Explicit `qtviz.backends.register(MyBackend())` still works and is the right
+call in tests and embedded setups.
 
 `render` receives a **resolved** node: every element's channel accessors have
 already become role-keyed numpy arrays (`element.data.series("x")`), and
@@ -44,11 +64,14 @@ actually enforces — they are the library's character, not style preferences:
 1. **Capability honesty ([D52]).** Every flag in your `Capabilities` must have
    a code path behind it. No aspirational `dimensions={3}`, no `streaming=True`
    without an incremental path (`set_element_data`) or an equivalent.
-2. **Honor-or-warn ([D51], spec §3.4).** For each element type, declare the
-   `RECOMMENDED_OPTIONS` you actually consume in an `HONORED` table and return
-   it from `honored_options()`. Call `check_recommended(element, ...)` before
-   rendering: anything the user set that you don't honor warns once
-   (`QtvizWarning`) — silent drops fail the suite.
+2. **Honor-or-warn ([D51]/[D123], spec §3.4).** The honored sets live on the
+   **elements** since 2.0: `honored_options()` returns
+   `element_type.HONORED_NATIVE` minus your declared deltas for natives, and
+   `element_type.HONORED_BY_LOWERING` for lowered elements (proven honest by
+   the core perturbation guard — an option is honored iff it visibly changes
+   the `Lowered`). Call `check_recommended(element, ...)` before rendering:
+   anything the user set that you don't honor warns once (`QtvizWarning`) —
+   silent drops fail the suite.
 3. **R1 — data space at every seam ([D59]).** Every coordinate you emit
    (events) or accept (state, brush bounds) is **data space**. If your engine
    works in another space (log exponents, screen pixels), you normalize at the
@@ -118,6 +141,8 @@ class TextBackend:
 
     def supports(self, element_type):
         return self.renderers.get(element_type) is not None
+
+    requires_display = False
 
     def honored_options(self, element_type):
         return frozenset()                        # honors nothing → everything warns

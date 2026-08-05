@@ -116,6 +116,7 @@ view.set_backend("matplotlib")                     # swap at runtime — keeps z
 
 ```python
 view.on(qv.SelectEvent, lambda e: print(e.indices, e.bounds))   # brush → row indices
+view.on(qv.SelectEvent, on_brush, source=scatter)  # scoped to one element ([D134])
 view.on(qv.PickEvent,   lambda e: print(e.point_index, e.x, e.y))
 view.on(qv.HoverEvent,  lambda e: print(e.x, e.y, e.value))     # value set on datashaded rasters
 ```

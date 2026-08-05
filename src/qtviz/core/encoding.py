@@ -384,7 +384,7 @@ def heatmap_cell_labels(
         from ..errors import QtvizWarning  # noqa: PLC0415
 
         warnings.warn(
-            f"cell_labels: {g.size} cells exceed the ~{max_cells} readability "
+            f"Heatmap annotate: {g.size} cells exceed the ~{max_cells} readability "
             "guard; labels skipped", QtvizWarning, stacklevel=2)
         return []
     normed, _lo, _hi = normalize_values(g, norm=norm, vmin=vmin, vmax=vmax,

@@ -92,7 +92,7 @@ def test_cell_count_guard_warns_and_skips():
 
     theme = qv.Theme.light()
     n = 25
-    with pytest.warns(QtvizWarning, match="cell_labels"):
+    with pytest.warns(QtvizWarning, match="annotate"):
         out = heatmap_cell_labels(
             np.arange(n, dtype=float), np.arange(n, dtype=float),
             np.ones((n, n)), spec="auto", colormap="viridis",

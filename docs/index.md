@@ -10,22 +10,20 @@ backends at runtime, and drops into any PySide6 application as a plain `QWidget`
 
 ```python
 import numpy as np
-from PySide6.QtWidgets import QApplication
+
 import qtviz as qv
 
-app = QApplication([])
 x = np.linspace(0, 10, 500)
-
-view = qv.View(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"))
-view.show()
-app.exec()
+qv.show(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"), title="hello")
 ```
 
 ![A scatter plot rendered by qtviz in a native Qt window](images/examples/01_hello.png)
 
 That is a complete program: a real Qt window, an OpenGL-accelerated scatter, pan and
 zoom out of the box. Change one keyword — `backend="matplotlib"` or
-`backend="webengine"` — and the same line renders through a different engine.
+`backend="webengine"` — and the same line renders through a different engine. In a
+real application, skip `show()` and drop `qv.View(...)` into your layout like any
+`QWidget`.
 
 ## Why qtviz?
 

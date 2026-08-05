@@ -1,13 +1,14 @@
-"""Axis labels & titles — the shared-surface options (`OverlayOptions`).
+"""Axis labels & titles — configure any surface with `.opts()` ([D133]).
 
-Wrap any element (or overlay) in an `Overlay` carrying `OverlayOptions` to give
-its surface a `title`, an `x_label`, and a `y_label`. The same description renders
-those labels identically on every backend — pyqtgraph, matplotlib, and webengine —
-and, inside a `Layout`, each pane keeps its own labels.
+Call `.opts()` on any element or composition to give its surface a `title`
+and axis labels — a bare string is the label; pass an `AxisSpec` for scales,
+limits, and tick control. The same description renders identically on every
+backend — pyqtgraph, matplotlib, and webengine — and, inside a `Layout`,
+each pane keeps its own labels.
 
     points * trend                                   # an overlay (no labels)
-    qv.Overlay([points, trend], options=qv.OverlayOptions(
-        title="Sensor response", x="drive (V)", y="output (mV)"))
+    (points * trend).opts(
+        title="Sensor response", x="drive (V)", y="output (mV)")
 
 Try a different engine — the labels come out the same:
     qv.View(figure, backend="matplotlib")
