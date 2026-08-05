@@ -8,6 +8,24 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Pane identity on events ([D149], `design/pane-handles.md` S4):** every
+  event now carries `pane` — the label of the surface it came from (keyword-
+  only, `None`-defaulted, so existing constructors/tests are untouched) — and
+  `view.on(...)` grows the matching filter:
+  `view.on(qv.RangeEvent, on_zoom, pane="price")`, composable with
+  `source=`. Element events (pick/select/hover) keep the element id as
+  `source_id`; in a mixed-backend/tab/splitter layout the host maps each
+  child's local labels to the layout's flat ones on delivery, so third-party
+  single-surface backends get pane-correct events with zero changes.
+
+### Changed
+
+- **`RangeEvent`/`TapEvent.source_id` is now the pane label** (`"price"`, or
+  `"0"`, `"1"`, … when unlabeled) instead of a random per-render uuid. The
+  uuid was regenerated on every render and never exposed, so nothing could
+  meaningfully depend on it; the label is stable across rebuilds and backend
+  switches and answers "which pane did the user zoom?" directly.
+
 - **`view.pane(...)` / `view.panes` — the pane handle ([D147],
   `design/pane-handles.md` S3):** every surface of a render (grid cell, tab,
   splitter pane, or the whole plot) is addressable downstream by label or

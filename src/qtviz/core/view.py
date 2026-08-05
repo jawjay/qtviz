@@ -375,10 +375,22 @@ class View(QWidget):
 
     # ── events ──
     def on(self, event_type: type, cb: Callable, *, throttle_ms: int | None = None,
-           source=None) -> Disposable:
+           source=None, pane=None) -> Disposable:
         """Subscribe to a typed event. `source=` ([D134]) filters by the
         emitting element — pass an Element (or its id), or a sequence of
-        either; it replaces the `e.source_id == el.id` lambda idiom."""
+        either; it replaces the `e.source_id == el.id` lambda idiom.
+        `pane=` ([D149]) filters by the emitting surface — a pane label
+        ([D145]; `"0"`, `"1"`, … when unlabeled) or a sequence of labels:
+        `view.on(qv.RangeEvent, on_zoom, pane="price")`. Both filters
+        compose."""
+        if pane is not None:
+            wanted_panes = frozenset(
+                pane if isinstance(pane, (list, tuple, set)) else (pane,))
+            inner_p = cb
+
+            def cb(ev, _inner=inner_p, _wanted=wanted_panes):  # noqa: A001 — deliberate rebind
+                if getattr(ev, "pane", None) in _wanted:
+                    _inner(ev)
         if source is not None:
             items = source if isinstance(source, (list, tuple, set)) else (source,)
             wanted = frozenset(getattr(x, "id", x) for x in items)

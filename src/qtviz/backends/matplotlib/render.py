@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import uuid
 from dataclasses import replace
 from pathlib import Path
 
@@ -29,7 +28,7 @@ from ...core.compose import (
     surface_of,
 )
 from ...core.element import Element
-from ...core.event import EventBus
+from ...core.event import EventBus, PaneBus
 from ...core.threading import require_gui_thread
 from ...data import resolve_node
 from ...errors import RendererMissingError
@@ -125,15 +124,17 @@ class MplRenderHandle(RenderHandle):
         labels = flat_pane_labels(self._root)  # [D145] given labels, else indices
         if len(labels) != len(self._surfaces):  # defensive: identity never crashes
             labels = tuple(str(i) for i in range(len(self._surfaces)))
-        return tuple(MplPane(lb, self._fig, s, self.event_bus)
+        return tuple(MplPane(lb, self._fig, s, s.get("bus", self.event_bus))
                      for lb, s in zip(labels, self._surfaces, strict=True))
 
     def select_bounds(self, ax_index: int, xmin, ymin, xmax, ymax) -> None:
         """Programmatic brush (approximate) — emits one SelectEvent per
         selectable element on the axes (element id + indices + bounds); the
         interactive rubber band ([D95]) drives the same helper."""
-        _events.emit_bounds_select(self._surfaces[ax_index]["selectables"],
-                                   self.event_bus, xmin, ymin, xmax, ymax)
+        surf = self._surfaces[ax_index]
+        _events.emit_bounds_select(surf["selectables"],
+                                   surf.get("bus", self.event_bus),
+                                   xmin, ymin, xmax, ymax)
 
     @require_gui_thread
     def set_element_data(self, element_id: str, arrays: dict) -> bool:
@@ -250,6 +251,9 @@ class MatplotlibBackend:
                                 "width_ratios", "height_ratios"})
 
     def _render_into(self, node, fig, theme, bus, surfaces, natives) -> None:
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
+
+        labels = flat_pane_labels(node)  # [D145]/[D149]: pane identity at render
         if isinstance(node, Layout):
             from ...core.compose import grid_geometry  # noqa: PLC0415
 
@@ -259,27 +263,33 @@ class MatplotlibBackend:
             gs = fig.add_gridspec(nrows, ncols,
                                   width_ratios=opts.width_ratios,
                                   height_ratios=opts.height_ratios)
-            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
+            for child, label, (r, c, rs, cs) in zip(node.children, labels, cells,
+                                                    strict=True):
                 base = surfaces[0]["ax"] if surfaces else None
                 ax = fig.add_subplot(
                     gs[r:r + rs, c:c + cs],
                     sharex=base if opts.link_x else None,
                     sharey=base if opts.link_y else None,
                 )
-                self._render_cell(child, ax, theme, bus, surfaces, natives)
+                self._render_cell(child, ax, theme, bus, surfaces, natives, label)
             if opts.title:
                 fig.suptitle(opts.title, color=theme.foreground.mpl(),
                              fontsize=theme.title_size)
         else:
-            self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces, natives)
+            self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces,
+                              natives, labels[0])
 
-    def _render_cell(self, node, ax, theme, bus, surfaces, natives) -> None:
+    def _render_cell(self, node, ax, theme, bus, surfaces, natives,
+                     label: str = "0") -> None:
         apply_theme_ax(ax, theme)
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=FULL_SURFACE)  # ([D109])
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
         apply_surface(ax, surf, theme, x_scale, y_scale)
-        surface_id = uuid.uuid4().hex
+        # [D149]: the pane label IS the surface id (RangeEvent source_id) and
+        # every emit through the stamping bus carries pane=label.
+        bus = PaneBus(bus, label)
+        surface_id = label
         selectables: list = []
         children = node.children if isinstance(node, Overlay) else (node,)
         # twin axis ([D88]): created when any series child asks for y2
@@ -295,7 +305,7 @@ class MatplotlibBackend:
             ax2 = ax.twinx()
             apply_y2(ax2, y2_spec, theme, y2_scale)
         entry = {"ax": ax, "surface_id": surface_id,
-                 "selectables": selectables, "y2_ax": ax2,
+                 "selectables": selectables, "y2_ax": ax2, "bus": bus,
                  # pane → element map ([D147]): MplPane.elements reads this
                  "element_ids": tuple(el.id for el in children
                                       if isinstance(el, Element))}

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import replace
 from pathlib import Path
 
@@ -26,7 +25,7 @@ from ...core.compose import (
     surface_of,
 )
 from ...core.element import Element
-from ...core.event import EventBus
+from ...core.event import EventBus, PaneBus
 from ...core.threading import require_gui_thread
 from ...data import resolve_node
 from ...errors import RendererMissingError
@@ -281,6 +280,9 @@ class PyQtGraphBackend:
                                 "width_ratios", "height_ratios"})
 
     def _render_into(self, node, widget, theme, bus, plots, natives) -> None:
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
+
+        labels = flat_pane_labels(node)  # [D145]/[D149]: pane identity at render
         if isinstance(node, Layout):
             from ...core.compose import grid_geometry  # noqa: PLC0415
 
@@ -293,9 +295,10 @@ class PyQtGraphBackend:
                                 color=theme.foreground.hex(),
                                 size=f"{theme.title_size}pt")
                 row0 = 1
-            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
+            for child, label, (r, c, rs, cs) in zip(node.children, labels, cells,
+                                                    strict=True):
                 self._render_cell(child, widget, theme, bus, plots, natives,
-                                  r + row0, c, rowspan=rs, colspan=cs)
+                                  r + row0, c, rowspan=rs, colspan=cs, label=label)
             grid = widget.ci.layout  # QGraphicsGridLayout: integer stretches
             for c, ratio in enumerate(opts.width_ratios or ()):
                 grid.setColumnStretchFactor(c, max(1, round(ratio * 100)))
@@ -304,17 +307,21 @@ class PyQtGraphBackend:
             if opts.link_x or opts.link_y:
                 link_axes(plots, link_x=opts.link_x, link_y=opts.link_y)
         else:
-            self._render_cell(node, widget, theme, bus, plots, natives, 0, 0)
+            self._render_cell(node, widget, theme, bus, plots, natives, 0, 0,
+                              label=labels[0])
 
     # [D109]: everything except tick label rotation (no stable AxisItem API).
     SURFACE_HONORED = FULL_SURFACE - {"x.tick_rotation", "y.tick_rotation"}
 
     def _render_cell(self, node, widget, theme, bus, plots, natives, row, col,
-                     *, rowspan: int = 1, colspan: int = 1) -> None:
+                     *, rowspan: int = 1, colspan: int = 1, label: str = "0") -> None:
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=self.SURFACE_HONORED)
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
-        vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex,
+        # [D149]: the pane label IS the surface id (RangeEvent/TapEvent
+        # source_id) and every emit through the stamping bus carries pane=label.
+        bus = PaneBus(bus, label)
+        vb = QtvizViewBox(bus=bus, surface_id=label,
                           x_log=(x_scale == "log"), y_log=(y_scale == "log"))
         plot = widget.addPlot(row=row, col=col, rowspan=rowspan, colspan=colspan,
                               viewBox=vb)

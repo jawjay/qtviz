@@ -11,7 +11,6 @@ buffers anything sent before the page is `ready` (D25) — so the synchronous
 from __future__ import annotations
 
 import contextlib
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -137,8 +136,13 @@ class WebEngineRenderHandle(RenderHandle):
         events = _translate.translate(
             name, payload, traces=self._traces, surface_id=self._surface_id
         )
+        from dataclasses import replace  # noqa: PLC0415
+
         for ev in events:
-            self.event_bus.emit(self._with_raster_value(ev))
+            ev = self._with_raster_value(ev)
+            if ev.pane is None:  # [D149]: one figure = one pane
+                ev = replace(ev, pane=self._surface_id)
+            self.event_bus.emit(ev)
 
     def _with_raster_value(self, ev):
         """[D46]: a hover over a datashaded raster carries the aggregated value
@@ -168,7 +172,8 @@ class WebEngineRenderHandle(RenderHandle):
         if y is not None:
             self._y_range = (delog(y[0], self._y_log), delog(y[1], self._y_log))
         if self._x_range is not None and self._y_range is not None:
-            self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
+            self.event_bus.emit(RangeEvent(self._surface_id, self._x_range,
+                                           self._y_range, pane=self._surface_id))
 
     def native(self, element_id: str):
         """The live Plotly host (verbs: react/relayout/…) for any element this
@@ -272,7 +277,7 @@ class WebEngineBackend:
         host = PlotlyBackend(fig)
         view = PlotView(host, parent=parent)
         bus = EventBus()
-        handle = WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme,
+        handle = WebEngineRenderHandle(view, bus, host, source_ids, "0", theme,
                                        fig=fig)
         handle._wire_rasters(node)
         return handle
@@ -286,7 +291,7 @@ class WebEngineBackend:
         host = _make_host(node.kind, node.figure)
         view = PlotView(host, parent=parent)
         bus = EventBus()
-        return WebEngineRenderHandle(view, bus, host, [node.id], uuid.uuid4().hex, theme)
+        return WebEngineRenderHandle(view, bus, host, [node.id], "0", theme)
 
 
 def _make_host(kind: str, figure):

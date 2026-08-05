@@ -337,13 +337,19 @@ class Backend(Protocol):
 class _MergedBus:
     """The event bus of a CompositeRenderHandle. A subscription fans out to
     every child bus, so `View.on(...)` sees one stream no matter how many
-    panes/backends sit underneath (spec §2.8)."""
+    panes/backends sit underneath (spec §2.8). Per-child `transforms` rewrite
+    events on delivery — the [D149] label shim: a hosted child stamps its
+    *local* pane labels, the transform maps them to the layout's flat ones."""
 
-    def __init__(self, child_buses) -> None:
+    def __init__(self, child_buses, transforms=None) -> None:
         self._buses = list(child_buses)
+        self._transforms = list(transforms or [None] * len(self._buses))
 
     def subscribe(self, event_type, cb, *, throttle_ms=None) -> Disposable:
-        disposables = [b.subscribe(event_type, cb, throttle_ms=throttle_ms) for b in self._buses]
+        disposables = []
+        for b, tr in zip(self._buses, self._transforms, strict=True):
+            wrapped = cb if tr is None else (lambda ev, _cb=cb, _tr=tr: _cb(_tr(ev)))
+            disposables.append(b.subscribe(event_type, wrapped, throttle_ms=throttle_ms))
 
         def dispose_all() -> None:
             for d in disposables:
@@ -372,9 +378,36 @@ class CompositeRenderHandle(RenderHandle):
 
     def __init__(self, widget: Any, child_handles: list[RenderHandle], *,
                  pane_labels: tuple[str, ...] | None = None) -> None:
-        super().__init__(widget, _MergedBus([h.event_bus for h in child_handles]), "composite")
         self._children = child_handles
         self._pane_labels = pane_labels  # [D145]: flat labels from the Layout
+        # [D149] label shim: each child stamps its LOCAL pane labels on events;
+        # map them to the layout's flat labels on delivery. Surface events
+        # (range/tap) carry the label as source_id too — rewritten alongside.
+        transforms, offset = [], 0
+        for h in child_handles:
+            local = [p.label for p in h.panes()]
+            flat = (list(pane_labels[offset:offset + len(local)])
+                    if pane_labels and len(pane_labels) >= offset + len(local)
+                    else [str(i) for i in range(offset, offset + len(local))])
+            offset += len(local)
+            mapping = dict(zip(local, flat, strict=True))
+            sole = flat[0] if len(flat) == 1 else None
+
+            def _stamp(ev, _map=mapping, _sole=sole):
+                from dataclasses import replace  # noqa: PLC0415
+
+                target = _map.get(ev.pane) if ev.pane is not None else _sole
+                if target is None:
+                    return ev
+                changes: dict = {"pane": target}
+                if ev.source_id == ev.pane:  # surface event: label rides source_id
+                    changes["source_id"] = target
+                return replace(ev, **changes)
+
+            transforms.append(_stamp)
+        super().__init__(widget,
+                         _MergedBus([h.event_bus for h in child_handles], transforms),
+                         "composite")
 
     @property
     def children(self) -> list[RenderHandle]:
