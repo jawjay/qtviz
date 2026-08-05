@@ -443,6 +443,16 @@ class PyQtGraphBackend:
         iplot = pg.PlotItem(viewBox=vb)
         iplot.setParentItem(parent_plot)
         iplot.setZValue(parent_plot.zValue() + 1)
+        # opaque panel over the WHOLE inset rect (axes margins included):
+        # without it the parent's curves/grid show through (matplotlib's
+        # inset facecolor is opaque — parity). Spiked: autoFillBackground +
+        # a themed Window palette occludes cleanly.
+        from PySide6.QtGui import QColor, QPalette  # noqa: PLC0415
+
+        pal = QPalette()
+        pal.setColor(QPalette.ColorRole.Window, QColor(theme.background.hex()))
+        iplot.setPalette(pal)
+        iplot.setAutoFillBackground(True)
         x0, y0, fw, fh = inset.rect
         parent_vb = parent_plot.vb
 
