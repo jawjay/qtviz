@@ -30,6 +30,7 @@ nav:
   - Writing a backend: backends.md
   - Stability policy: stability.md
   - Design notes: design.md
+  - Contributing: contributing.md
 
 plugins:
   - search

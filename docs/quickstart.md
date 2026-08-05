@@ -1,26 +1,69 @@
 # Quickstart
 
-A tour of the whole library in a handful of snippets. Five concepts — `Element`,
-composition (`*` / `+`), `View`, `Theme`, typed events — cover everything.
+## Install
 
-```python
-import qtviz as qv
-
-qv.show(qv.Scatter({"x": x, "y": y}, x="x", y="y"), title="hello")   # one line
+```bash
+pip install qtviz                # or:  uv add qtviz
+pip install "qtviz[matplotlib]"  # + the matplotlib backend
+pip install "qtviz[all]"         # every user-facing extra
 ```
 
-Configure any node's surface with `.opts()` — no wrapper construction needed:
+The hard dependencies are `PySide6`, `pyqtgraph`, and `numpy` — the default
+backend works out of the box.
+
+## First plot
+
+A complete program — a real Qt window with pan and zoom:
 
 ```python
-qv.Curve(d, x="t", y="v").opts(title="Voltage", x="t [s]", y=qv.AxisSpec(scale="log"))
-(a * b).opts(y="Temp", y2="RPM")                       # dual axis, configured after composing
-qv.Layout.mosaic("AAB;CCB", A=a, B=b, C=c).opts(title="Dashboard", link_x=True)
+import numpy as np
+import qtviz as qv
+
+x = np.linspace(0, 10, 500)
+qv.show(qv.Scatter({"x": x, "y": np.sin(x)}, x="x", y="y"), title="hello")
+```
+
+Swap the engine without touching the plot — `backend="matplotlib"` or
+`"webengine"` renders the same element through a different backend. In a real
+application, skip `show()` and drop `qv.View(element)` — a plain `QWidget` —
+into any PySide6 layout.
+
+## First dashboard
+
+Compose with two operators (`*` overlays on shared axes, `+` lays out panels)
+and configure any node's surface with `.opts()`:
+
+```python
+import numpy as np
+import qtviz as qv
+
+t = np.linspace(0, 10, 1000)
+data = {"t": t, "v": np.sin(t) * np.exp(-t / 8), "n": np.random.default_rng(0).normal(0, 0.2, t.size)}
+
+signal = qv.Curve(data, x="t", y="v", label="signal")
+noise = qv.Scatter(data, x="t", y="n", alpha=0.4, label="noise")
+hist = qv.Histogram(data, value="n", bins="fd")
+
+qv.show((signal * noise + hist).opts(link_x=True, title="First dashboard"))
 ```
 
 Elements are immutable — tweak one property with `.with_()`:
 
 ```python
-s2 = scatter.with_(alpha=0.5)      # a new element; the original is untouched
+s2 = noise.with_(alpha=0.8)        # a new element; the original is untouched
+```
+
+---
+
+# The whole surface at a glance
+
+Five concepts — `Element`, composition (`*` / `+`), `View`, `Theme`, typed
+events — cover everything below.
+
+```python
+qv.Curve(d, x="t", y="v").opts(title="Voltage", x="t [s]", y=qv.AxisSpec(scale="log"))
+(a * b).opts(y="Temp", y2="RPM")                       # dual axis, configured after composing
+qv.Layout.mosaic("AAB;CCB", A=a, B=b, C=c).opts(title="Dashboard", link_x=True)
 ```
 
 ## Elements
@@ -40,7 +83,7 @@ qv.Stem(table, x="day", y="delta", baseline=0.0)              # lollipop series
 qv.Heatmap(table, x="x", y="y", z="z", annotate="auto")    # contrast-aware labels
 qv.Image(array2d, extent=(0, 0, 10, 10), norm="log")          # also "power",
 qv.Mesh(array2d,  x=xe, y=np.geomspace(1, 64, 13),
-        norm=qv.Norm("boundary", levels=[0, 1, 2, 4, 8]))     # one norm spec ([D130])
+        norm=qv.Norm("boundary", levels=[0, 1, 2, 4, 8]))     # one norm spec
 qv.Contour(field2d, extent=(0, 0, 10, 10), levels=8, annotate=True)
 qv.Quiver(table, x="x", y="y", u="u", v="v", key=10, key_label="10 m/s")
 qv.Streamlines({"u": u2d, "v": v2d}, u="u", v="v", extent=(0, 0, 10, 10), density=1.5)
@@ -116,7 +159,7 @@ view.set_backend("matplotlib")                     # swap at runtime — keeps z
 
 ```python
 view.on(qv.SelectEvent, lambda e: print(e.indices, e.bounds))   # brush → row indices
-view.on(qv.SelectEvent, on_brush, source=scatter)  # scoped to one element ([D134])
+view.on(qv.SelectEvent, on_brush, source=scatter)  # scoped to one element
 view.on(qv.PickEvent,   lambda e: print(e.point_index, e.x, e.y))
 view.on(qv.HoverEvent,  lambda e: print(e.x, e.y, e.value))     # value set on datashaded rasters
 ```
