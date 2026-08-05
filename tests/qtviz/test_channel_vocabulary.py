@@ -38,8 +38,8 @@ ELEMENT_TYPES = sorted(
 )
 
 
-def test_all_28_elements_are_covered():
-    assert len(ELEMENT_TYPES) == 28
+def test_all_29_elements_are_covered():
+    assert len(ELEMENT_TYPES) == 29  # 28 + Inset ([D152])
 
 
 @pytest.mark.parametrize("et", ELEMENT_TYPES, ids=lambda t: t.__name__)

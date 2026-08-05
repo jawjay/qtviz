@@ -272,8 +272,12 @@ class PyQtGraphBackend:
         self._last_theme = None
 
     def supports(self, element_type: type) -> bool:
-        # native registration, or a [D122] lowering the mark adapter can draw
+        # native registration, a [D122] lowering the mark adapter can draw, or
+        # a structural element handled in the surface loop (Inset, [D152])
         if self.renderers.get(element_type) is not None:
+            return True
+        if (issubclass(element_type, Element)
+                and getattr(element_type, "STRUCTURAL_CHILD", None)):
             return True
         return (issubclass(element_type, Element)
                 and element_type.lower is not Element.lower)
@@ -285,6 +289,8 @@ class PyQtGraphBackend:
             return frozenset()
         if self.renderers.get(element_type) is not None:
             return element_type.HONORED_NATIVE - HONORED_DELTAS.get(element_type, frozenset())
+        if getattr(element_type, "STRUCTURAL_CHILD", None):  # Inset ([D152])
+            return element_type.HONORED_NATIVE
         return element_type.HONORED_BY_LOWERING
 
     def can_host(self, kind: str) -> bool:
@@ -309,9 +315,14 @@ class PyQtGraphBackend:
                                 "width_ratios", "height_ratios"})
 
     def _render_into(self, node, widget, theme, bus, plots, natives) -> None:
+        from collections import deque  # noqa: PLC0415
+
         from ...core.compose import flat_pane_labels  # noqa: PLC0415
 
-        labels = flat_pane_labels(node)  # [D145]/[D149]: pane identity at render
+        # [D145]/[D149]: pane identity at render. A deque consumed in traversal
+        # order — one per surface, one per inset ([D152]) — provably matching
+        # flat_pane_labels' depth-first walk.
+        labels = deque(flat_pane_labels(node))
         if isinstance(node, Layout):
             from ...core.compose import grid_geometry  # noqa: PLC0415
 
@@ -324,10 +335,9 @@ class PyQtGraphBackend:
                                 color=theme.foreground.hex(),
                                 size=f"{theme.title_size}pt")
                 row0 = 1
-            for child, label, (r, c, rs, cs) in zip(node.children, labels, cells,
-                                                    strict=True):
+            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
                 self._render_cell(child, widget, theme, bus, plots, natives,
-                                  r + row0, c, rowspan=rs, colspan=cs, label=label)
+                                  r + row0, c, rowspan=rs, colspan=cs, labels=labels)
             grid = widget.ci.layout  # QGraphicsGridLayout: integer stretches
             for c, ratio in enumerate(opts.width_ratios or ()):
                 grid.setColumnStretchFactor(c, max(1, round(ratio * 100)))
@@ -337,23 +347,36 @@ class PyQtGraphBackend:
                 link_axes(plots, cells=cells, link_x=opts.link_x, link_y=opts.link_y)
         else:
             self._render_cell(node, widget, theme, bus, plots, natives, 0, 0,
-                              label=labels[0])
+                              labels=labels)
 
     # [D109]: everything except tick label rotation (no stable AxisItem API).
     SURFACE_HONORED = FULL_SURFACE - {"x.tick_rotation", "y.tick_rotation"}
 
-    def _render_cell(self, node, widget, theme, bus, plots, natives, row, col,
-                     *, rowspan: int = 1, colspan: int = 1, label: str = "0") -> None:
+    def _surface_target(self, node, theme, bus, label):
+        """Surface config + a wired ViewBox for one pane; the caller parents
+        the `PlotItem` (grid cell or inset). [D149]: the pane label IS the
+        surface id and every emit through the stamping bus carries it."""
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=self.SURFACE_HONORED)
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
-        # [D149]: the pane label IS the surface id (RangeEvent/TapEvent
-        # source_id) and every emit through the stamping bus carries pane=label.
-        bus = PaneBus(bus, label)
-        vb = QtvizViewBox(bus=bus, surface_id=label,
+        pane_bus = PaneBus(bus, label)
+        vb = QtvizViewBox(bus=pane_bus, surface_id=label,
                           x_log=(x_scale == "log"), y_log=(y_scale == "log"))
+        return surf, x_scale, y_scale, pane_bus, vb
+
+    def _render_cell(self, node, widget, theme, bus, plots, natives, row, col,
+                     *, rowspan: int = 1, colspan: int = 1, labels=None) -> None:
+        label = labels.popleft() if labels else "0"
+        surf, x_scale, y_scale, pane_bus, vb = self._surface_target(node, theme, bus, label)
         plot = widget.addPlot(row=row, col=col, rowspan=rowspan, colspan=colspan,
                               viewBox=vb)
+        self._populate_plot(node, plot, vb, surf, x_scale, y_scale, pane_bus,
+                            theme, bus, plots, natives, labels)
+
+    def _populate_plot(self, node, plot, vb, surf, x_scale, y_scale, bus, theme,
+                       raw_bus, plots, natives, labels) -> None:
+        """Everything inside one surface — shared by grid cells and insets
+        ([D152]): theming, surface apply, y2, the element loop, legend."""
         style_plot(plot, theme)
         apply_surface(plot, surf, theme, x_scale, y_scale)
         plots.append(plot)
@@ -371,20 +394,26 @@ class PyQtGraphBackend:
             vb2 = make_y2(plot, vb, y2_spec, theme, x_scale, y2_scale)
             plot._qtviz_vb2 = vb2
             y2_host = _Y2Host(plot, vb2)
-        indices = series_index_map(children)  # palette slots; annotations excluded
+        indices = series_index_map(children)  # palette slots; chrome excluded
         ctx = RenderContext(theme=theme, parent=plot, event_bus=bus, backend=self,
                             parent_axes=plot, x_scale=x_scale, y_scale=y_scale,
                             show_legend=surf.legend_enabled,
                             legend_position=surf.legend_position)
         for element, si in zip(children, indices, strict=True):
+            if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
+                self._render_inset(element, plot, theme, raw_bus, plots,
+                                   natives, labels)
+                continue
             on_y2 = getattr(element, "axis", "y") == "y2"
             el_ctx = replace(ctx, series_index=si,
                              parent_axes=y2_host if on_y2 else plot,
                              y_scale=y2_scale if on_y2 else y_scale)
             self._render_element(element, el_ctx, natives)
-        # pane → element map ([D147]): PgPane.elements reads this off the item
+        # pane → element map ([D147]): PgPane.elements reads this off the item.
+        # Insets are chrome here — their contents list on their OWN pane.
         plot._qtviz_element_ids = tuple(
-            el.id for el in children if isinstance(el, Element))
+            el.id for el in children
+            if isinstance(el, Element) and not getattr(el, "STRUCTURAL_CHILD", None))
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:
@@ -395,6 +424,35 @@ class PyQtGraphBackend:
                 from ._legend import append_legend_entries  # noqa: PLC0415
 
                 append_legend_entries(plot, entries, theme, surf.legend_position)
+
+    def _render_inset(self, inset, parent_plot, theme, raw_bus, plots, natives,
+                      labels) -> None:
+        """A child `PlotItem` floating on the parent ([D152], spiked): geometry
+        is `rect` (axes-fraction, y from the BOTTOM — mpl semantics; Qt item
+        coords run y-down, hence the flip) of the parent ViewBox's rect,
+        re-placed on the parent's `sigResized`."""
+        from PySide6.QtCore import QRectF  # noqa: PLC0415
+
+        label = labels.popleft() if labels else str(len(plots))
+        surf, x_scale, y_scale, pane_bus, vb = self._surface_target(
+            inset.child, theme, raw_bus, label)
+        iplot = pg.PlotItem(viewBox=vb)
+        iplot.setParentItem(parent_plot)
+        iplot.setZValue(parent_plot.zValue() + 1)
+        x0, y0, fw, fh = inset.rect
+        parent_vb = parent_plot.vb
+
+        def _place(*_a, _ip=iplot, _pv=parent_vb) -> None:
+            r = _pv.geometry()  # the parent's plot area, in parent item coords
+            _ip.setGeometry(QRectF(r.x() + x0 * r.width(),
+                                   r.y() + (1.0 - y0 - fh) * r.height(),
+                                   fw * r.width(), fh * r.height()))
+
+        parent_vb.sigResized.connect(_place)
+        _place()
+        natives[inset.id] = iplot  # [D53]: the inset's live PlotItem
+        self._populate_plot(inset.child, iplot, vb, surf, x_scale, y_scale,
+                            pane_bus, theme, raw_bus, plots, natives, labels)
 
     def _render_element(self, element: Element, ctx, natives) -> None:
         fn = self.renderers.get(type(element))  # native fast path wins ([D122])

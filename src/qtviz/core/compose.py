@@ -437,6 +437,13 @@ def flat_pane_labels(node: Node) -> tuple[str, ...]:
 
     given: list[str | None] = []
 
+    def leaf(n: Node, lb: str | None) -> None:
+        given.append(lb)  # the surface itself …
+        kids = n.children if isinstance(n, Overlay) else (n,)
+        for el in kids:  # … then its insets, in child order ([D152]/[D153])
+            if getattr(el, "STRUCTURAL_CHILD", None):
+                given.append(getattr(el, "label", None))
+
     def walk(n: Node) -> None:
         if isinstance(n, Layout):
             labels = n.labels or (None,) * len(n.children)
@@ -444,9 +451,9 @@ def flat_pane_labels(node: Node) -> tuple[str, ...]:
                 if isinstance(child, Layout):
                     walk(child)
                 else:
-                    given.append(lb)
+                    leaf(child, lb)
         else:
-            given.append(None)
+            leaf(n, None)
 
     walk(node)
     out = [lb if lb is not None else str(i) for i, lb in enumerate(given)]
@@ -629,6 +636,13 @@ def negotiate(node: Node, view_backend: str | None, *, ancestor_hint: str | None
             f"{type(node).__name__} not supported on {chosen!r}; "
             f"supported on: {supported}"
         )
+    if node.STRUCTURAL_CHILD is not None:  # [D152]: an Inset's contents render
+        child = getattr(node, node.STRUCTURAL_CHILD)  # on the SAME surface —
+        inner = negotiate(child, view_backend, ancestor_hint=chosen)
+        if inner != chosen:  # — so the same backend, like overlay children
+            raise IncompatibleOverlayError(
+                f"an inset renders on its parent's surface; its contents "
+                f"resolve to {inner!r} but the surface is {chosen!r}")
     return chosen
 
 
@@ -656,6 +670,15 @@ def auto_negotiate(node: Node, *, ancestor_hint: str | None = None) -> str:
             auto_negotiate(child)
         return "auto"
 
+    if getattr(node, "STRUCTURAL_CHILD", None):  # [D152]: intersect over contents
+        elems = list(_elements_of(node))
+        candidates = [b for b in backends.registered()
+                      if all(b.supports(type(e)) for e in elems)]
+        if not candidates:
+            raise NoBackendForError(
+                "no single backend supports the inset and its contents: "
+                f"{sorted({type(e).__name__ for e in elems})}")
+        return _pick(candidates, max((_data_size(e) or 0) for e in elems))
     candidates = [b for b in backends.registered() if b.supports(type(node))]
     if not candidates:
         raise NoBackendForError(f"no registered backend supports {type(node).__name__}")

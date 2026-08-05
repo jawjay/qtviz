@@ -101,3 +101,60 @@ def test_inset_is_chrome_in_series_indexing():
     children = (s1, qv.Inset(_s(), rect=(0, 0, 0.4, 0.4)), s2)
     assert series_index_map(children) == [0, 0, 1]  # inset shifts nothing
     assert children[1].legend_entry(qv.Theme.light()) is None
+
+
+# ── I2: rendering ────────────────────────────────────────────────────────────
+@pytest.mark.tier2
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_inset_renders_on_native_backends(name, qtbot):
+    view = qv.View(_s() * qv.Inset(_zoom(), rect=(0.55, 0.55, 0.4, 0.4),
+                                   label="zoom"), backend=name)
+    qtbot.addWidget(view)
+    inset_native = view.native([el for el in _elements_of(view.root)
+                                if isinstance(el, qv.Inset)][0].id)
+    assert inset_native is not None  # the live inset surface ([D53])
+
+
+@pytest.mark.tier2
+def test_mpl_inset_honors_child_surface(qtbot):
+    view = qv.View(_s() * qv.Inset(_zoom(), rect=(0.5, 0.5, 0.45, 0.45),
+                                   label="zoom"), backend="matplotlib")
+    qtbot.addWidget(view)
+    iax = view.pane("zoom").native
+    assert tuple(iax.get_xlim()) == pytest.approx((2.0, 4.0))
+    assert tuple(iax.get_ylim()) == pytest.approx((4.0, 16.0))
+
+
+@pytest.mark.tier2
+def test_pg_inset_tracks_parent_geometry(qtbot):
+    view = qv.View(_s() * qv.Inset(_zoom(), rect=(0.5, 0.5, 0.4, 0.4),
+                                   label="zoom"), backend="pyqtgraph")
+    qtbot.addWidget(view)
+    view.resize(800, 600)
+    view.show()
+    iplot = view.pane("zoom").native
+    w1 = iplot.geometry().width()
+    view.resize(1200, 900)
+    qtbot.waitUntil(lambda: iplot.geometry().width() > w1, timeout=2000)
+
+
+@pytest.mark.tier2
+def test_inset_in_a_grid_pane(qtbot):
+    lay = qv.Layout.grid({
+        "main": _s() * qv.Inset(_zoom(), rect=(0.5, 0.5, 0.4, 0.4), label="zoom"),
+        "side": qv.Curve(D, x="x", y="y"),
+    })
+    view = qv.View(lay, backend="pyqtgraph")
+    qtbot.addWidget(view)
+    assert [p.label for p in view.panes] == ["main", "zoom", "side"]
+
+
+@pytest.mark.tier2
+def test_webengine_figure_skips_inset_with_warning():
+    pytest.importorskip("plotly")
+    from qtviz.backends.webengine._figure import build
+
+    node = _s() * qv.Inset(_zoom(), rect=(0.5, 0.5, 0.4, 0.4), label="zoom")
+    with pytest.warns(qv.errors.QtvizWarning, match="inset axes are not supported"):
+        fig, source_ids = build(node, qv.Theme.light())
+    assert len(source_ids) == 1  # the parent scatter only; no inset traces

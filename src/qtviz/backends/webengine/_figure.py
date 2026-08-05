@@ -787,6 +787,19 @@ def build(node, theme) -> tuple[dict, list[str]]:
             raise IncompatibleOverlayError(
                 "RawFigure is a whole figure and can't be overlaid; render it on its own"
             )
+        if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
+            # design/inset-axes.md I5: Plotly domain-axes support is its own
+            # step — until then the inset warns and is skipped, the parent
+            # renders normally (visible degradation, never silent, [D51]).
+            import warnings  # noqa: PLC0415
+
+            from ...errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn(
+                f"webengine: inset axes are not supported yet; inset "
+                f"{getattr(element, 'label', None)!r} skipped (renders on "
+                f"pyqtgraph/matplotlib).", QtvizWarning, stacklevel=2)
+            continue
         check_recommended(
             element, backend_name="webengine", honored=honored_for(type(element)),
         )
