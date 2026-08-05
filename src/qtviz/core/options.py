@@ -155,6 +155,15 @@ def _as_pairs(m) -> tuple | None:
     return tuple((int(k), str(v)) for k, v in items)
 
 
+def _as_link(v, name: str):
+    """[D146] axis-link vocabulary: `False` (none), `True` (all panes),
+    `"col"`/`"row"` (within each grid column/row; a spanning pane joins — and
+    transitively merges — every group it covers)."""
+    if isinstance(v, bool) or v in ("col", "row"):
+        return v
+    raise ValidationError(f"{name} must be a bool, 'col', or 'row', got {v!r}")
+
+
 def _as_ratios(v, name: str) -> tuple[float, ...] | None:
     if v is None:
         return None
@@ -166,7 +175,8 @@ def _as_ratios(v, name: str) -> tuple[float, ...] | None:
 
 class LayoutOptions(Immutable):
     """Arrangement options for a `Layout`: rows/cols, spacing, axis linking
-    (`link_x`/`link_y`), tab/dock labels, relative column/row sizes
+    (`link_x`/`link_y` — `True` links all panes, `"col"`/`"row"` link within
+    each grid column/row, [D146]), tab/dock labels, relative column/row sizes
     (`width_ratios`/`height_ratios`, ), and a container `title`
     (the figure suptitle)."""
 
@@ -176,8 +186,8 @@ class LayoutOptions(Immutable):
         rows: int | None = None,
         cols: int | None = None,
         spacing: int = 6,
-        link_x: bool = False,
-        link_y: bool = False,
+        link_x: bool | str = False,
+        link_y: bool | str = False,
         tab_labels: Sequence[str] | None = None,
         dock_areas: Mapping[int, str] | Sequence[tuple] | None = None,
         title: str | None = None,
@@ -187,8 +197,8 @@ class LayoutOptions(Immutable):
         self.rows = rows
         self.cols = cols
         self.spacing = spacing
-        self.link_x = link_x
-        self.link_y = link_y
+        self.link_x = _as_link(link_x, "link_x")
+        self.link_y = _as_link(link_y, "link_y")
         self.tab_labels = tuple(tab_labels) if tab_labels is not None else None
         self.dock_areas = _as_pairs(dock_areas)
         self.title = title

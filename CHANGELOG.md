@@ -8,6 +8,26 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Structured axis sharing ([D146]):** `link_x`/`link_y` widen from bools to
+  `bool | "col" | "row"` — `True` links all panes (unchanged), `"col"`/`"row"`
+  link within each grid column/row, with spanning panes merging groups
+  transitively (the `subplot_mosaic` sharing rule). Groups derive from the
+  same cells that decide grid shape, so mosaic spans compose. pyqtgraph links
+  natively per group (`setXLink` to the group leader), matplotlib shares axes
+  per group (`sharex`/`sharey`). `"col"`/`"row"` on a non-grid kind is a
+  construction-time `ValidationError`.
+
+- **Cross-backend linking ([D151]):** `link_x`/`link_y` now work across
+  host-composed layouts — mixed-backend grids, splitters, tabs, and grids
+  holding nested layouts — where they were previously warned-and-ignored. A
+  `_LinkController` on the composite handle propagates `RangeEvent`s within
+  each link group via `pane.set_range`, guarded against feedback two ways:
+  a reentrancy flag for synchronous echoes and a value guard (skip members
+  already at the target range) for asynchronous ones (webengine relayout
+  round-trips). Nested-`Layout` panes are excluded from cross-pane groups
+  with a warning (many surfaces — ambiguous); their internal linking stays
+  their own options' business.
+
 - **Per-pane export ([D150] S5):** `view.pane("price").export("png", path)`
   writes just that pane. pyqtgraph exports the `PlotItem` subtree (png, one
   cell of a shared-scene grid); matplotlib crops the figure to the axes'

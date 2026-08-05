@@ -334,7 +334,7 @@ class PyQtGraphBackend:
             for r, ratio in enumerate(opts.height_ratios or ()):
                 grid.setRowStretchFactor(r + row0, max(1, round(ratio * 100)))
             if opts.link_x or opts.link_y:
-                link_axes(plots, link_x=opts.link_x, link_y=opts.link_y)
+                link_axes(plots, cells=cells, link_x=opts.link_x, link_y=opts.link_y)
         else:
             self._render_cell(node, widget, theme, bus, plots, natives, 0, 0,
                               label=labels[0])

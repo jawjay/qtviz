@@ -204,6 +204,12 @@ class Layout(Immutable):
         if self.cells is not None and len(self.cells) != len(self.children):
             raise ValidationError(
                 f"cells ({len(self.cells)}) must match children ({len(self.children)})")
+        if self.kind != "grid":  # [D146]: col/row sharing is grid geometry
+            for name in ("link_x", "link_y"):
+                if getattr(self.options, name) in ("col", "row"):
+                    raise ValidationError(
+                        f"{name}={getattr(self.options, name)!r} needs a grid "
+                        f"layout, got kind={self.kind!r} (True links all panes)")
         if self.cells is not None:
             _validate_cells(self.cells, where="Layout cells")
         if self.labels is not None:
@@ -279,8 +285,8 @@ class Layout(Immutable):
              rows: int | None | _Unset = UNSET,
              cols: int | None | _Unset = UNSET,
              spacing: int | _Unset = UNSET,
-             link_x: bool | _Unset = UNSET,
-             link_y: bool | _Unset = UNSET,
+             link_x: bool | str | _Unset = UNSET,
+             link_y: bool | str | _Unset = UNSET,
              tab_labels: Sequence[str] | None | _Unset = UNSET,
              dock_areas: Mapping[int, str] | Sequence[tuple] | None | _Unset = UNSET,
              width_ratios: Sequence[float] | None | _Unset = UNSET,
@@ -379,6 +385,43 @@ class Layout(Immutable):
     @classmethod
     def splitter(cls, children, **kw) -> Layout:
         return cls(children, kind="splitter", **kw)
+
+
+def link_groups(cells: Sequence[Cell], count: int, mode) -> list[list[int]]:
+    """Child-index groups to axis-link ([D146]), from the same `cells` that
+    decide grid shape. `False` → none; `True` → one group of all; `"col"` /
+    `"row"` → connected components of children sharing a column/row — a
+    spanning pane joins every column/row it covers (the `subplot_mosaic`
+    sharing rule), transitively merging groups. Only groups of 2+ return."""
+    if mode is False or count < 2:
+        return []
+    if mode is True:
+        return [list(range(count))]
+    parent = list(range(count))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    seen: dict[int, int] = {}  # column (or row) index → first child covering it
+    for i, (r, c, rs, cs) in enumerate(cells[:count]):
+        span = range(c, c + cs) if mode == "col" else range(r, r + rs)
+        for k in span:
+            if k in seen:
+                union(i, seen[k])
+            else:
+                seen[k] = i
+    groups: dict[int, list[int]] = {}
+    for i in range(count):
+        groups.setdefault(find(i), []).append(i)
+    return [g for g in groups.values() if len(g) > 1]
 
 
 def flat_pane_labels(node: Node) -> tuple[str, ...]:

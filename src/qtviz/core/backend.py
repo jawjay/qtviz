@@ -388,6 +388,7 @@ class CompositeRenderHandle(RenderHandle):
                  pane_labels: tuple[str, ...] | None = None) -> None:
         self._children = child_handles
         self._pane_labels = pane_labels  # [D145]: flat labels from the Layout
+        self._link: Any = None           # [D151]: host link controller, if any
         # [D149] label shim: each child stamps its LOCAL pane labels on events;
         # map them to the layout's flat labels on delivery. Surface events
         # (range/tap) carry the label as source_id too — rewritten alongside.
@@ -453,6 +454,9 @@ class CompositeRenderHandle(RenderHandle):
     def dispose(self) -> None:
         import contextlib  # noqa: PLC0415
 
+        if self._link is not None:  # [D151] cross-pane link controller
+            self._link.dispose()
+            self._link = None
         for h in self._children:
             h.dispose()
         w = self.widget

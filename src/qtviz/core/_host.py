@@ -68,12 +68,109 @@ def _resolve_layout(layout: Layout, view_backend) -> tuple[bool, str | None]:
 
 
 # LayoutOptions the Qt host honors ([D109]/[D108]): grid shape (rows/cols
-# incl. mosaic spans), ratios, spacing, tab/dock chrome, and the container
-# title (a header label on any kind). link_x/link_y don't cross mixed-backend
-# panes.
+# incl. mosaic spans), ratios, spacing, tab/dock chrome, the container title
+# (a header label on any kind), and — via the [D151] `_LinkController` —
+# link_x/link_y across mixed-backend panes.
 _HOST_LAYOUT_HONORED = frozenset({"rows", "cols", "spacing", "tab_labels",
-                                  "dock_areas", "title",
+                                  "dock_areas", "title", "link_x", "link_y",
                                   "width_ratios", "height_ratios"})
+
+
+class _LinkController:
+    """Cross-backend axis linking for host-composed layouts ([D151]).
+
+    Single-backend grids link natively (pg `setXLink`, mpl `sharex`); a
+    composite has no shared scene, so linking rides the event loop: a
+    `RangeEvent` from a pane in a link group propagates its range to the
+    group's other panes via `pane.set_range`. Two guards keep the loop from
+    feeding back: a reentrancy flag (synchronous echoes — pg/mpl emit range
+    callbacks *inside* the set) and a value guard (asynchronous echoes — a
+    webengine pane reports its relayout later; a member already at the target
+    range is skipped, so propagation converges instead of ping-ponging)."""
+
+    def __init__(self, handle, x_groups, y_groups) -> None:
+        from .event import RangeEvent  # noqa: PLC0415
+
+        self._handle = handle
+        self._x_groups = [frozenset(g) for g in x_groups]
+        self._y_groups = [frozenset(g) for g in y_groups]
+        self._syncing = False
+        self._sub = handle.event_bus.subscribe(RangeEvent, self._on_range)
+
+    def _on_range(self, ev) -> None:
+        if self._syncing or ev.pane is None:
+            return
+        self._syncing = True
+        try:
+            self._propagate(ev.pane, "x", ev.x, self._x_groups)
+            self._propagate(ev.pane, "y", ev.y, self._y_groups)
+        finally:
+            self._syncing = False
+
+    def _propagate(self, origin: str, axis: str, rng, groups) -> None:
+        import math  # noqa: PLC0415
+
+        if rng is None:
+            return
+        for group in groups:
+            if origin not in group:
+                continue
+            for label in group:
+                if label == origin:
+                    continue
+                try:
+                    pane = self._handle.pane(label)
+                except KeyError:  # the render changed underneath — drop
+                    continue
+                cur = getattr(pane.capture(), f"{axis}_range")
+                if cur is not None and all(
+                        math.isclose(a, b, rel_tol=1e-9, abs_tol=1e-12)
+                        for a, b in zip(cur, rng, strict=True)):
+                    continue  # value guard: already there (async echo)
+                pane.set_range(**{axis: tuple(rng)})
+            return  # a pane belongs to exactly one group per axis
+
+    def dispose(self) -> None:
+        self._sub.dispose()
+
+
+def _link_pane_groups(layout: Layout, mode) -> list[list[str]]:
+    """[D151]: link groups as flat pane labels for a host-composed layout.
+    Groups come from `link_groups` over the layout's direct children (grid
+    cells for grids; `True` on splitter/tabs/dock links all — `"col"/"row"`
+    are grid-only, rejected at construction). A nested-`Layout` child holds
+    many surfaces, so which one to link is ambiguous — it is excluded with a
+    one-time warning; its *internal* linking is its own options' business."""
+    from .compose import flat_pane_labels, grid_geometry, link_groups  # noqa: PLC0415
+
+    n = len(layout.children)
+    cells = (grid_geometry(layout)[0] if layout.kind == "grid"
+             else [(0, i, 1, 1) for i in range(n)])
+    index_groups = link_groups(cells, n, mode)
+    if not index_groups:
+        return []
+    labels = flat_pane_labels(layout)
+    counts = [len(flat_pane_labels(child)) for child in layout.children]
+    offsets = [0]
+    for c in counts:
+        offsets.append(offsets[-1] + c)
+    out: list[list[str]] = []
+    dropped = False
+    for group in index_groups:
+        members = [labels[offsets[i]] for i in group if counts[i] == 1]
+        dropped = dropped or len(members) != len(group)
+        if len(members) > 1:
+            out.append(members)
+    if dropped:
+        import warnings  # noqa: PLC0415
+
+        from ..errors import QtvizWarning  # noqa: PLC0415
+
+        warnings.warn(
+            "layout-host: a nested Layout pane is excluded from axis linking "
+            "(many surfaces — ambiguous); link inside it with its own "
+            "link_x/link_y.", QtvizWarning, stacklevel=4)
+    return out
 
 
 class LayoutHost:
@@ -96,8 +193,15 @@ class LayoutHost:
             container = _titled(container, layout.options.title, theme)
         if parent is not None:
             container.setParent(parent)
-        return CompositeRenderHandle(container, child_handles,
-                                     pane_labels=flat_pane_labels(layout))
+        handle = CompositeRenderHandle(container, child_handles,
+                                       pane_labels=flat_pane_labels(layout))
+        opts = layout.options
+        if opts.link_x or opts.link_y:  # [D151]: linking crosses host panes
+            x_groups = _link_pane_groups(layout, opts.link_x)
+            y_groups = _link_pane_groups(layout, opts.link_y)
+            if x_groups or y_groups:
+                handle._link = _LinkController(handle, x_groups, y_groups)
+        return handle
 
 
 def _titled(inner: QWidget, title: str, theme) -> QWidget:

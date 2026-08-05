@@ -275,9 +275,15 @@ the omission is a decision, not an oversight.)
 
 > **Status 2026-08-05: S1–S5 all shipped** on `feat/pane-handles` (one commit
 > per step, d714377 → ab5a2d3), inside the 2.0 break per the owner call; the
-> §6 recommendations were adopted as decided. The sharing track ([D146]
-> `link_x="col"/"row"`, then the [D151] cross-backend gate) is the remaining
-> follow-on and awaits its own go.
+> §6 recommendations were adopted as decided. **The sharing track shipped the
+> same day on the same branch (owner go):** [D146] `link_x/link_y ∈ bool |
+> "col" | "row"` with cell-derived, span-merging groups (pg `setXLink` per
+> group, mpl `sharex` per group leader), and [D151] cross-backend linking via
+> a `_LinkController` on the composite handle — RangeEvent-driven
+> `pane.set_range` propagation, echo-guarded by a reentrancy flag (sync) plus
+> a value guard (async webengine round-trips); nested-layout panes are
+> excluded from cross-pane groups with a warning. The host now honors
+> `link_x`/`link_y` (`_HOST_LAYOUT_HONORED`).
 
 | Step | Contents | Depends on | Size |
 |---|---|---|---|

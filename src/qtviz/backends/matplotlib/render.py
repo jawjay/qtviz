@@ -281,13 +281,22 @@ class MatplotlibBackend:
             gs = fig.add_gridspec(nrows, ncols,
                                   width_ratios=opts.width_ratios,
                                   height_ratios=opts.height_ratios)
-            for child, label, (r, c, rs, cs) in zip(node.children, labels, cells,
-                                                    strict=True):
-                base = surfaces[0]["ax"] if surfaces else None
+            # [D146]: share within link groups — each member shares with its
+            # group's first pane (created earlier: the leader is the group min,
+            # and children render in index order).
+            from ...core.compose import link_groups  # noqa: PLC0415
+
+            n = len(node.children)
+            x_leader = {i: g[0] for g in link_groups(cells, n, opts.link_x)
+                        for i in g[1:]}
+            y_leader = {i: g[0] for g in link_groups(cells, n, opts.link_y)
+                        for i in g[1:]}
+            for i, (child, label, (r, c, rs, cs)) in enumerate(
+                    zip(node.children, labels, cells, strict=True)):
                 ax = fig.add_subplot(
                     gs[r:r + rs, c:c + cs],
-                    sharex=base if opts.link_x else None,
-                    sharey=base if opts.link_y else None,
+                    sharex=surfaces[x_leader[i]]["ax"] if i in x_leader else None,
+                    sharey=surfaces[y_leader[i]]["ax"] if i in y_leader else None,
                 )
                 self._render_cell(child, ax, theme, bus, surfaces, natives, label)
             if opts.title:
