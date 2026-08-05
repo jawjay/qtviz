@@ -54,7 +54,7 @@ def build(backend: str = "pyqtgraph"):
 
 def main() -> None:
     # try build(backend="matplotlib") — the labels come out the same
-    qv.show(build(), title="qtviz — axis labels & titles", size=(1000, 480))
+    qv.show(build, title="qtviz — axis labels & titles", size=(1000, 480))
 
 
 if __name__ == "__main__":

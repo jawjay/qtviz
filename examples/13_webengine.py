@@ -81,7 +81,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — webengine (Plotly)", size=(860, 600))
+    qv.show(build, title="qtviz — webengine (Plotly)", size=(860, 600))
 
 
 if __name__ == "__main__":

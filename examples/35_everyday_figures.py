@@ -124,7 +124,7 @@ def build() -> qv.View:
 
 
 def main() -> None:
-    qv.show(build(), title="qtviz — the everyday figures", size=(1600, 800))
+    qv.show(build, title="qtviz — the everyday figures", size=(1600, 800))
 
 
 if __name__ == "__main__":

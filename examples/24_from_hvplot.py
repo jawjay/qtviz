@@ -30,7 +30,7 @@ def build(theme: qv.Theme | None = None):
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — from_hvplot", size=(900, 480))
+    qv.show(build, title="qtviz — from_hvplot", size=(900, 480))
 
 
 if __name__ == "__main__":

@@ -41,7 +41,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — webengine elements (band + fit + points)", size=(880, 560))
+    qv.show(build, title="qtviz — webengine elements (band + fit + points)", size=(880, 560))
 
 
 if __name__ == "__main__":

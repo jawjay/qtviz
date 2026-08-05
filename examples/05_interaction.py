@@ -30,7 +30,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — interaction (Shift+drag to brush)", size=(700, 700))
+    qv.show(build, title="qtviz — interaction (Shift+drag to brush)", size=(700, 700))
 
 
 if __name__ == "__main__":

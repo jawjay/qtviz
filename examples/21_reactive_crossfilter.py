@@ -60,7 +60,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — reactive crossfilter", size=(1040, 540))
+    qv.show(build, title="qtviz — reactive crossfilter", size=(1040, 540))
 
 
 if __name__ == "__main__":

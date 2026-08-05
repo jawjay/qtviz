@@ -22,7 +22,7 @@ def build():
 
 
 def main() -> None:
-    qv.show(build(), title="qtviz — hello", size=(720, 520))  # [D134]: the Qt ceremony is gone
+    qv.show(build, title="qtviz — hello", size=(720, 520))  # [D134]: the Qt ceremony is gone
 
 
 if __name__ == "__main__":

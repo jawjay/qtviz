@@ -40,7 +40,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — element gallery", size=(1280, 560))
+    qv.show(build, title="qtviz — element gallery", size=(1280, 560))
 
 
 if __name__ == "__main__":

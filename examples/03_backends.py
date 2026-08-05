@@ -48,7 +48,7 @@ def build():
 
 
 def main() -> None:
-    qv.show(build(), title="qtviz — backends", size=(820, 560))  # [D134]: the Qt ceremony is gone
+    qv.show(build, title="qtviz — backends", size=(820, 560))  # [D134]: the Qt ceremony is gone
 
 
 if __name__ == "__main__":

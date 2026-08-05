@@ -62,7 +62,7 @@ def build(theme: qv.Theme | None = None):
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — market analytics", size=(1100, 660))
+    qv.show(build, title="qtviz — market analytics", size=(1100, 660))
 
 
 if __name__ == "__main__":

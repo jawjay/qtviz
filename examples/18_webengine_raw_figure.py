@@ -41,7 +41,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — RawFigure (Plotly 3-D surface)", size=(860, 640))
+    qv.show(build, title="qtviz — RawFigure (Plotly 3-D surface)", size=(860, 640))
 
 
 if __name__ == "__main__":

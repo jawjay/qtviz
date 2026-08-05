@@ -36,7 +36,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — color & size encoding", size=(1000, 480))
+    qv.show(build, title="qtviz — color & size encoding", size=(1000, 480))
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — webengine heatmap", size=(720, 640))
+    qv.show(build, title="qtviz — webengine heatmap", size=(720, 640))
 
 
 if __name__ == "__main__":

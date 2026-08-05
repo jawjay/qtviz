@@ -8,6 +8,14 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Fixed
 
+- **Running an example directly crashed** ("QWidget: Must construct a
+  QApplication before a QWidget"): `qv.show(build(), …)` evaluated the
+  builder — constructing the View widget — before `show` could create the
+  app. `show` now also accepts a **zero-argument callable**, invoked after
+  the QApplication exists; all 23 converted examples pass `build` itself,
+  and a subprocess suite (`test_example_mains.py`) runs example `__main__`s
+  with no pre-existing app so this path can't go untested again.
+
 - **Webengine plots track the outer widget's size** in every case: Plotly's
   `responsive` config covered live drags, but a resize landing while the
   page was still loading (or the widget hidden) was missed. The bridge view

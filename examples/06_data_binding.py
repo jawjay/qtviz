@@ -38,7 +38,7 @@ def build():
 
 def main() -> None:
     # [D134]: the Qt ceremony is gone
-    qv.show(build(), title="qtviz — data binding (string / Expression / callable)", size=(900, 520))
+    qv.show(build, title="qtviz — data binding (string / Expression / callable)", size=(900, 520))
 
 
 if __name__ == "__main__":
