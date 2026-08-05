@@ -8,6 +8,10 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **`py.typed` ships with the package** (PEP 561): downstream mypy/pyright now
+  see qtviz's full annotations instead of treating the library as untyped. A
+  hardening test asserts the marker is importable from the installed package.
+
 - **Webengine closes the dynamic-datashading gap** (D21/4b — pyqtgraph and
   matplotlib parity): datashaded rasters now **re-aggregate to the visible
   viewport at the plot's pixel resolution** on pan/zoom instead of scaling
@@ -26,6 +30,27 @@ All notable changes to qtviz are documented here. The format follows
   remaining raster delta.
 
 ### Fixed
+
+- **`Palette.from_matplotlib` works again**: it used `matplotlib.cm.get_cmap`,
+  removed in matplotlib 3.9, so the documented route to matplotlib colormaps
+  raised `AttributeError` on every supported matplotlib. Now uses the
+  `matplotlib.colormaps` registry (available since 3.5).
+
+- **Install hints are usable outside a repo checkout**: missing-extra messages
+  (webengine figure libraries, hvplot, datashader) now say
+  `pip install "qtviz[X]"` / `uv add "qtviz[X]"` instead of the
+  contributor-only `uv sync --extra X`.
+
+- **Accidental namespace leaks removed**: `qtviz.PackageNotFoundError`
+  (a re-exported `importlib.metadata` class) and `qtviz.annotations` (a
+  `__future__` feature object) are no longer reachable; a hardening test pins
+  the namespace.
+
+- **Optional-extra version floors were future-dated** (`dask>=2026.6.0`,
+  `xarray>=2026.4.0`, `matplotlib>=3.11.0`), making the extras uninstallable
+  for most environments; loosened to the versions the code actually needs
+  (`matplotlib>=3.8`, `dask>=2024.1`, `xarray>=2024.1`, `zarr>=3`,
+  `datashader>=0.16`).
 
 - **Webengine placed datashaded and user-built RGBA `Image` rasters in
   pixel-index space** (extent silently dropped, y axis flipped by Plotly's

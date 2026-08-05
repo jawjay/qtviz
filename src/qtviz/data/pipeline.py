@@ -108,7 +108,8 @@ def _needs_rasterize(node) -> bool:
 def _rasterize(node):
     if not _datashader_available():
         raise RuntimeError(
-            "raster='datashader' requires datashader — install: uv sync --extra datashader"
+            "raster='datashader' requires datashader — install: "
+            'pip install "qtviz[datashader]" (uv: uv add "qtviz[datashader]")'
         )
     from ..elements import Image  # noqa: PLC0415
     from ..ext.datashader import aggregate_element, shade_aggregate  # noqa: PLC0415

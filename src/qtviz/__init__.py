@@ -4,14 +4,12 @@ Public API is assembled here as each subsystem lands. This is the import the
 acceptance suite (tests/qtviz) targets.
 """
 
-from __future__ import annotations
-
-from importlib.metadata import PackageNotFoundError
+from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 
 try:
     __version__ = _pkg_version("qtviz")
-except PackageNotFoundError:  # source tree without installed metadata
+except _PackageNotFoundError:  # source tree without installed metadata
     __version__ = "0.0.0+unknown"
 
 from . import backends, data, errors, threading  # data layer first, then backends auto-register

@@ -102,7 +102,7 @@ def _hvplot_call(data: Any, kind: str, **kwargs: Any) -> Any:
     if accessor is None:
         raise AdapterError(
             "from_hvplot needs the hvplot accessor on the data object; install the "
-            "optional extra with: uv sync --extra hvplot"
+            'optional extra with: pip install "qtviz[hvplot]" (uv: uv add "qtviz[hvplot]")'
         )
     return accessor(kind=kind, **kwargs)
 

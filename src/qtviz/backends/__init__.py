@@ -114,8 +114,8 @@ def _autoregister() -> None:
         try:
             register(ep.load())
         except ImportError:
-            log.info("%s backend unavailable; install with: uv sync --extra %s",
-                     ep.name, ep.name)
+            log.info('%s backend unavailable; install with: pip install "qtviz[%s]" '
+                     '(uv: uv add "qtviz[%s]")', ep.name, ep.name, ep.name)
         except Exception as e:
             log.warning("%s backend failed to load: %s", ep.name, e)
 

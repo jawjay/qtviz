@@ -73,10 +73,13 @@ class Palette(Immutable):
 
     @classmethod
     def from_matplotlib(cls, name: str, *, n: int = 10) -> Palette:
-        import matplotlib.cm as cm  # noqa: PLC0415
+        import matplotlib  # noqa: PLC0415
 
-        cmap = cm.get_cmap(name)  # type: ignore[attr-defined]  # mpl<3.9 API kept for compat
-        stops = [tuple(cmap(i / (n - 1)))[:4] for i in range(n)]
+        cmap = matplotlib.colormaps[name]
+        stops: list[tuple[float, float, float, float]] = []
+        for i in range(n):
+            r, g, b, a = cmap(i / (n - 1))
+            stops.append((r, g, b, a))
         return cls(stops, name=name, kind="continuous")
 
     @classmethod

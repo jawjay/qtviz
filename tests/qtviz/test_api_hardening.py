@@ -5,7 +5,8 @@ These lock in the contract changes from the API review:
   a `QtvizError` and a stdlib `ValueError` (so old `except ValueError` and new
   `except QtvizError` handlers both catch bad input);
 - mutable global setters validate at the boundary instead of failing later;
-- install hints are uniform (uv, never pip).
+- install hints name the packaged extra (`qtviz[X]`), usable outside a checkout;
+- packaging invariants (py.typed ships; no accidental namespace leaks).
 """
 
 from __future__ import annotations
@@ -96,13 +97,34 @@ def test_set_raster_size_rejects_non_positive(dims):
         qv.set_raster_size(*dims)
 
 
-# ── install hints are uniform: uv, never pip (#5) ────────────────────────────
-def test_hvplot_install_hint_uses_uv_not_pip():
+# ── install hints name the packaged extra, not a repo-checkout workflow ──────
+def test_hvplot_install_hint_names_packaged_extra():
     adapter = pytest.importorskip("qtviz.adapter")
     # A plain object has no `.hvplot` accessor regardless of whether hvplot is
     # installed, so this deterministically hits the missing-accessor branch.
     with pytest.raises(errors.AdapterError) as exc:
         adapter.from_hvplot(object(), "line")
     msg = str(exc.value)
-    assert "uv" in msg
-    assert "pip install" not in msg
+    # An installed user can act on this hint without a repo checkout.
+    assert 'qtviz[hvplot]' in msg
+    assert "uv sync" not in msg
+
+
+# ── packaging: PEP 561 marker ships with the package ─────────────────────────
+def test_py_typed_marker_ships():
+    from importlib import resources
+
+    assert resources.files("qtviz").joinpath("py.typed").is_file()
+
+
+# ── the namespace holds only deliberate names ────────────────────────────────
+def test_no_accidental_namespace_leaks():
+    assert not hasattr(qv, "PackageNotFoundError")
+    assert not hasattr(qv, "annotations")
+
+
+def test_palette_from_matplotlib_uses_supported_api():
+    pytest.importorskip("matplotlib")
+    p = qv.Palette.from_matplotlib("magma", n=5)
+    assert len(p) == 5
+    assert p.kind == "continuous"
