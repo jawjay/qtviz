@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core._validate import check_alpha
+from ..core._validate import check_alpha, check_choice, check_color
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -84,6 +84,7 @@ class Curve(Element):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Curve")
+        check_color(color, who="Curve")
         check_line_style(line_style, who="Curve")
         from ..core._validate import check_exclusive  # noqa: PLC0415
 
@@ -94,12 +95,8 @@ class Curve(Element):
                 "Curve color_by is a plain-line encoding (no marker/step/datashader) "
                 "in this release ([D100])"
             )
-        if step is not None and step not in _STEPS:
-            raise ValidationError(f"Curve step must be one of {_STEPS} or None, got {step!r}")
-        if marker is not None and marker not in _MARKERS:
-            raise ValidationError(
-                f"Curve marker must be one of {_MARKERS} or None, got {marker!r}"
-            )
+        check_choice(step, _STEPS, who="Curve", param="step", none_ok=True)
+        check_choice(marker, _MARKERS, who="Curve", param="marker", none_ok=True)
         if not isinstance(marker_every, int) or isinstance(marker_every, bool) \
                 or marker_every < 1:
             raise ValidationError(f"marker_every must be a positive int, got {marker_every!r}")

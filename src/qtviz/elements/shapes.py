@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..core._validate import check_alpha
+from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
 from ..errors import ValidationError
 from .annotations import _Reference
@@ -44,6 +44,7 @@ class _Shape(_Reference):
 
     def _init_style(self, color, line_width, alpha, fill, label, who: str) -> None:
         check_alpha(alpha, who=who)
+        check_color(color, who=who)
         self.color = color
         self.line_width = float(line_width)
         self.alpha = float(alpha)

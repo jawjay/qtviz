@@ -121,7 +121,7 @@ class _StreamBinding:
             return  # mid-rebuild; the new render reads the fresh buffer anyway
         ok = True
         for el in self._elements:
-            arrays = el.data.resolve_channels(el.channels())
+            arrays = el.data.resolve_channels(el.channels(), who=type(el).__name__)
             if not handle.set_element_data(el.id, arrays):
                 ok = False
                 break

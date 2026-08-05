@@ -55,10 +55,11 @@ class ErrorBars(Element):
         self.x, self.y = x, y
         self.err = err
         self.direction = direction
-        from ..core._validate import check_alpha  # noqa: PLC0415
+        from ..core._validate import check_alpha, check_color  # noqa: PLC0415
         from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
 
         check_alpha(alpha, who="ErrorBars")
+        check_color(color, who="ErrorBars")
         check_axis(axis, "native", who="ErrorBars")
         self.color = color
         self.line_width = float(line_width)

@@ -110,6 +110,72 @@ def test_hvplot_install_hint_names_packaged_extra():
     assert "uv sync" not in msg
 
 
+# ── every deliberate rejection sits under QtvizError ([D143] wave B) ─────────
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda: qv.Overlay([]),
+        lambda: qv.Layout([]),
+        lambda: qv.Color("definitely-not-a-color"),
+        lambda: qv.Palette([]),
+    ],
+    ids=["overlay-empty", "layout-empty", "color-bad-name", "palette-empty"],
+)
+def test_constructor_rejections_are_qtviz_errors(build):
+    with pytest.raises(errors.QtvizError):
+        build()
+    with pytest.raises(ValueError):  # legacy handlers keep working
+        build()
+
+
+def test_missing_dependency_error_sits_under_both_taxonomies():
+    assert issubclass(errors.MissingDependencyError, errors.QtvizError)
+    assert issubclass(errors.MissingDependencyError, ImportError)
+
+
+# ── colors: CSS4 names, eager validation, close-match hints ([D143]) ─────────
+def test_css4_color_names_accepted():
+    assert qv.Color("steelblue").hex() == "#4682b4"
+    assert qv.Color("rebeccapurple").hex() == "#663399"
+
+
+def test_unknown_color_suggests_close_match():
+    with pytest.raises(errors.ValidationError) as exc:
+        qv.Color("steelblu")
+    assert "steelblue" in str(exc.value)
+
+
+def test_bad_static_color_fails_at_construction():
+    data = {"x": np.arange(3), "y": np.arange(3)}
+    with pytest.raises(errors.ValidationError):
+        qv.Curve(data, x="x", y="y", color="not-a-color")
+    with pytest.raises(errors.ValidationError):
+        qv.Scatter(data, x="x", y="y", color="not-a-color")
+
+
+# ── construction-time validation gaps closed (wave B) ────────────────────────
+def test_scatter_marker_validated_at_construction():
+    data = {"x": np.arange(3), "y": np.arange(3)}
+    with pytest.raises(errors.ValidationError) as exc:
+        qv.Scatter(data, x="x", y="y", marker="blob")
+    assert "marker" in str(exc.value)
+
+
+def test_image_rejects_wrong_ndim_and_extent():
+    with pytest.raises(errors.ValidationError):
+        qv.Image(np.arange(10.0), extent=(0, 1, 0, 1))  # 1-D into a 2-D element
+    with pytest.raises(errors.ValidationError):
+        qv.Image(np.zeros((4, 4)), extent=(0, 1))  # malformed extent
+    qv.Image(np.zeros((4, 4, 4)), extent=(0, 1, 0, 1))  # RGBA stays legal
+
+
+def test_channel_length_mismatch_names_the_element():
+    el = qv.Scatter({"x": np.arange(3), "y": np.arange(3)}, x="x", y="y")
+    with pytest.raises(errors.ValidationError) as exc:
+        el.data.resolve_channels({"x": "x", "y": np.arange(2)}, who="Scatter")
+    assert str(exc.value).startswith("Scatter:")
+
+
 # ── packaging: PEP 561 marker ships with the package ─────────────────────────
 def test_py_typed_marker_ships():
     from importlib import resources

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..core._validate import check_alpha
+from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -52,6 +52,7 @@ class Quiver(Element):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Quiver")
+        check_color(color, who="Quiver")
         if isinstance(arrow_scale, str):
             if arrow_scale != "auto":
                 raise ValidationError(

@@ -128,22 +128,20 @@ class StreamRef(TabularRef):
         with self._lock:
             return self._buf[name][: self._len].copy()      # torn-read-safe snapshot
 
-    def resolve_channels(self, channels: dict[str, Any]) -> dict[str, np.ndarray]:
+    def resolve_channels(
+        self, channels: dict[str, Any], *, who: str | None = None
+    ) -> dict[str, np.ndarray]:
         """Snapshot the buffer under the lock, then resolve accessors against the
         copy — a render never sees a torn append, and later appends never mutate
         an already-resolved frame."""
         from .accessor import resolve_accessor  # noqa: PLC0415
+        from .ref import check_channel_lengths  # noqa: PLC0415
 
         with self._lock:
             cols = {n: self._buf[n][: self._len].copy() for n in self._buf}
         out = {role: resolve_accessor(accessor, columns=cols, native=cols)
                for role, accessor in channels.items()}
-        lengths = {len(a) for a in out.values()}
-        if len(lengths) > 1:
-            raise ValidationError(
-                f"channels resolved to mismatched lengths: "
-                f"{ {r: len(a) for r, a in out.items()} }"
-            )
+        check_channel_lengths(out, who=who)
         return out
 
     def extent(self, name: str):

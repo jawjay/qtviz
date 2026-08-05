@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Literal
 
+from ..errors import ValidationError
 from ._immutable import Immutable
 from .color import Color, ColorSpec
 
@@ -38,7 +39,7 @@ class Palette(Immutable):
         self.name = name
         self.kind = kind
         if not self.colors:
-            raise ValueError("Palette needs at least one color")
+            raise ValidationError("Palette needs at least one color")
         self._freeze()
 
     def at(self, t: float) -> Color:

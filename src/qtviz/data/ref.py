@@ -21,6 +21,21 @@ from ..errors import ValidationError
 GridData = namedtuple("GridData", "values x y")
 
 
+def check_channel_lengths(
+    out: dict[str, np.ndarray], *, who: str | None = None
+) -> dict[str, np.ndarray]:
+    """The one length-mismatch check every `resolve_channels` shares — `who`
+    prefixes the element class name so the error points at the plot call."""
+    lengths = {len(a) for a in out.values()}
+    if len(lengths) > 1:
+        prefix = f"{who}: " if who else ""
+        raise ValidationError(
+            f"{prefix}channels resolved to mismatched lengths: "
+            f"{ {r: len(a) for r, a in out.items()} }"
+        )
+    return out
+
+
 @dataclass(frozen=True)
 class Schema:
     names: tuple[str, ...]
@@ -34,9 +49,12 @@ class DataRef:
 
     is_lazy: bool = False
 
-    def resolve_channels(self, channels: dict[str, Any]) -> dict[str, np.ndarray]:
+    def resolve_channels(
+        self, channels: dict[str, Any], *, who: str | None = None
+    ) -> dict[str, np.ndarray]:
         """Resolve `{role: accessor}` to `{role: 1-D ndarray}`, computing all
-        channels together (lazy refs push projection down). Default: empty."""
+        channels together (lazy refs push projection down). `who` names the
+        element in length-mismatch errors. Default: empty."""
         return {}
 
     def schema(self) -> Schema:
@@ -128,20 +146,16 @@ class EagerTabularRef(TabularRef):
         self._source = source
         self._cols = columns
 
-    def resolve_channels(self, channels: dict[str, Any]) -> dict[str, np.ndarray]:
+    def resolve_channels(
+        self, channels: dict[str, Any], *, who: str | None = None
+    ) -> dict[str, np.ndarray]:
         from .accessor import resolve_accessor  # noqa: PLC0415
 
         out = {
             role: resolve_accessor(accessor, columns=self._cols, native=self._source)
             for role, accessor in channels.items()
         }
-        lengths = {len(a) for a in out.values()}
-        if len(lengths) > 1:
-            raise ValidationError(
-                f"channels resolved to mismatched lengths: "
-                f"{ {r: len(a) for r, a in out.items()} }"
-            )
-        return out
+        return check_channel_lengths(out, who=who)
 
     def schema(self) -> Schema:
         return Schema(

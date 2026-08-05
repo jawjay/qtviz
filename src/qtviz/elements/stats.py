@@ -9,7 +9,7 @@ swatch rule as `color_by`).
 
 from __future__ import annotations
 
-from ..core._validate import check_alpha, check_exclusive
+from ..core._validate import check_alpha, check_color, check_exclusive
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -39,6 +39,7 @@ class _Distribution(Element):
         super().__init__(backend_hint=backend_hint, id=id)
         check_exclusive(color, by, names=("color", "by"), who=type(self).__name__)
         check_alpha(alpha, who=type(self).__name__)
+        check_color(color, who=type(self).__name__)
         self.data = as_data_ref(data)
         self.value = value
         self.by = by

@@ -298,7 +298,9 @@ def grid_reduce(xv, yv, zv, agg: str = "mean") -> tuple[np.ndarray, np.ndarray, 
         op.at(acc, flat, z)
         grid[filled] = acc[filled]
     else:  # pragma: no cover - constructor validates
-        raise ValueError(f"unknown aggregator {agg!r}")
+        from ..errors import ValidationError  # noqa: PLC0415
+
+        raise ValidationError(f"unknown aggregator {agg!r}")
     return xs, ys, grid.reshape(len(ys), len(xs))
 
 

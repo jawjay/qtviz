@@ -22,7 +22,7 @@ import importlib.util
 from dataclasses import dataclass
 from typing import Any
 
-from ..errors import ValidationError
+from ..errors import MissingDependencyError, ValidationError
 from .ref import EagerTabularRef
 
 
@@ -107,7 +107,7 @@ def _needs_rasterize(node) -> bool:
 
 def _rasterize(node):
     if not _datashader_available():
-        raise RuntimeError(
+        raise MissingDependencyError(
             "raster='datashader' requires datashader — install: "
             'pip install "qtviz[datashader]" (uv: uv add "qtviz[datashader]")'
         )
@@ -149,7 +149,7 @@ def resolve_node(node):
                     object.__setattr__(resolved, "_aux", GridAux(source=ref))
                 return resolved
             return node
-        arrays = node.data.resolve_channels(node.channels())
+        arrays = node.data.resolve_channels(node.channels(), who=type(node).__name__)
         return node._replace_data(EagerTabularRef(arrays, arrays))
     if hasattr(node, "children"):  # Overlay / Layout
         return node.with_(children=tuple(resolve_node(c) for c in node.children))

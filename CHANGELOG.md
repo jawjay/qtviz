@@ -29,6 +29,27 @@ All notable changes to qtviz are documented here. The format follows
   family). Raster colorbars/keys on webengine remain undrawn — the one
   remaining raster delta.
 
+### Changed
+
+- **`color=` accepts the full CSS4/X11 named-color set** ([D143]) — ~148 names
+  (matplotlib's vocabulary) instead of 16, validated **eagerly at
+  construction** in every element; an unknown name now fails at the call the
+  user wrote, with close-match suggestions ("did you mean 'steelblue'?") and
+  the accepted forms in the message.
+- **`except QtvizError` now genuinely catches every deliberate rejection**:
+  `Overlay([])`, `Layout([])`, `Color("bad")`, and `Palette([])` raised bare
+  `ValueError`; the xarray/dask channel-length checks raised bare `ValueError`
+  too. All now raise `ValidationError`. New `MissingDependencyError`
+  (`QtvizError` + `ImportError`) replaces `RuntimeError` for missing optional
+  dependencies (datashader pipeline, webengine's plotly host) and carries the
+  packaged install hint.
+- **Construction-time validation closes the render-time-crash gaps**:
+  `Scatter(marker=...)` is validated like Curve's (was a backend `KeyError` at
+  render); `Image` rejects non-2-D/RGB(A) data and a malformed `extent` at
+  construction (was a raw `IndexError`/unpack error at render); channel
+  length-mismatch errors now name the element
+  (`Scatter: channels resolved to mismatched lengths: ...`).
+
 ### Fixed
 
 - **`Palette.from_matplotlib` works again**: it used `matplotlib.cm.get_cmap`,

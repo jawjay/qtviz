@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..core._validate import check_alpha
+from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..errors import ValidationError
@@ -52,6 +52,7 @@ class Streamlines(Element):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Streamlines")
+        check_color(color, who="Streamlines")
         if not 0.0 < float(density) <= 5.0:
             raise ValidationError(
                 f"Streamlines density must be in (0, 5], got {density!r}")

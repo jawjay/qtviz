@@ -46,7 +46,7 @@ class LazyStubRef(TabularRef):
     def native(self):
         return self._cols
 
-    def resolve_channels(self, channels):
+    def resolve_channels(self, channels, *, who=None):
         if self._gate is not None:
             self._gate.wait()
         self.calls += 1
@@ -91,7 +91,7 @@ def test_lazy_renders_off_thread(make_view, qtbot):
 
 def test_resolve_error_is_surfaced(make_view, qtbot):
     class BadRef(LazyStubRef):
-        def resolve_channels(self, channels):
+        def resolve_channels(self, channels, *, who=None):
             raise RuntimeError("boom")
 
     view = make_view(_scatter(BadRef({"a": [1.0, 2.0], "b": [1.0, 2.0]})))

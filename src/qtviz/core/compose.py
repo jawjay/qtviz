@@ -11,7 +11,12 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from typing import Literal, Union
 
-from ..errors import IncompatibleOverlayError, NoBackendForError, UnsupportedElementError
+from ..errors import (
+    IncompatibleOverlayError,
+    NoBackendForError,
+    UnsupportedElementError,
+    ValidationError,
+)
 from ._immutable import Immutable
 from .element import Element
 from .options import UNSET, AxisSpec, LayoutOptions, OverlayOptions
@@ -71,7 +76,7 @@ class Overlay(Immutable):
         self.options = options or OverlayOptions()
         self.backend_hint = backend_hint
         if not self.children:
-            raise ValueError("Overlay requires at least one child")
+            raise ValidationError("Overlay requires at least one child")
         self._freeze()
 
     def __mul__(self, other: Node) -> Overlay:
@@ -135,9 +140,9 @@ class Layout(Immutable):
             tuple((int(r), int(c), int(rs), int(cs)) for r, c, rs, cs in cells)
             if cells else None)
         if not self.children:
-            raise ValueError("Layout requires at least one child")
+            raise ValidationError("Layout requires at least one child")
         if self.cells is not None and len(self.cells) != len(self.children):
-            raise ValueError(
+            raise ValidationError(
                 f"cells ({len(self.cells)}) must match children ({len(self.children)})")
         self._freeze()
 

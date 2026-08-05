@@ -7,6 +7,7 @@ from typing import Literal
 from ..core.element import Element, require_gridded
 from ..core.encoding import Norm
 from ..data import DataLike, as_data_ref
+from ..errors import ValidationError
 from ._norm import NormedRaster, check_norm_clim
 
 
@@ -42,10 +43,21 @@ class Image(NormedRaster, Element):
         self.norm, self.clim = check_norm_clim(norm, clim, who="Image")
         self.alpha = float(alpha)
         self.data = as_data_ref(data)
+        if len(tuple(extent)) != 4:
+            raise ValidationError(
+                f"Image extent must be (xmin, xmax, ymin, ymax), got {extent!r}"
+            )
         self.extent = tuple(float(b) for b in extent)
         self.colormap = colormap
         self.interpolation = interpolation
         require_gridded(self.data, who="Image")
+        shape = self.data.schema().shape
+        if shape is not None and not (
+            len(shape) == 2 or (len(shape) == 3 and shape[-1] in (3, 4))
+        ):
+            raise ValidationError(
+                f"Image data must be a 2-D array (or H×W×3/4 RGB(A)), got shape {shape}"
+            )
         self._freeze()
 
     def resolved_grid(self):

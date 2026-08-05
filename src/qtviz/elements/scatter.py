@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core._validate import check_agg, check_alpha, check_exclusive
+from ..core._validate import check_agg, check_alpha, check_choice, check_color, check_exclusive
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -45,11 +45,13 @@ class Scatter(Element):
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
+        from .curve import _MARKERS, check_axis  # noqa: PLC0415 — shared [D88] guard + marker set
 
         check_exclusive(color, color_by, names=("color", "color_by"), who="Scatter")
         check_exclusive(size, size_by, names=("size", "size_by"), who="Scatter")
+        check_color(color, who="Scatter")
         check_alpha(alpha, who="Scatter")
+        check_choice(marker, _MARKERS, who="Scatter", param="marker")
         check_agg(agg, color_by, raster, who="Scatter")
         check_axis(axis, raster, who="Scatter")
         if norm not in ("linear", "log"):

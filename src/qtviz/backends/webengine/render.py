@@ -267,7 +267,9 @@ def _make_host(kind: str, figure):
         from .ext.holoviews.backend import HoloViewsBackend  # noqa: PLC0415
 
         return HoloViewsBackend(figure)
-    raise ValueError(f"unknown RawFigure kind {kind!r}")
+    from ...errors import ValidationError  # noqa: PLC0415
+
+    raise ValidationError(f"unknown RawFigure kind {kind!r}")
 
 
 backend = WebEngineBackend()

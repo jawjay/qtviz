@@ -73,7 +73,7 @@ class LazyTrackingRef(TabularRef):
     def native(self):
         return self.ns
 
-    def resolve_channels(self, channels):
+    def resolve_channels(self, channels, *, who=None):
         return {r: resolve_accessor(a, columns=self.ns, native=self.ns)
                 for r, a in channels.items()}
 

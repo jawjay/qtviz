@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core._validate import check_alpha
+from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -43,6 +43,7 @@ class Stem(Element):
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Stem")
+        check_color(color, who="Stem")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.baseline = float(baseline)

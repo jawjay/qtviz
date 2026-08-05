@@ -118,8 +118,8 @@ class ZarrTabularRef(TabularRef):
         cols = {n: self.series(n) for n in self._names}
         return EagerTabularRef(self._group, cols)
 
-    def resolve_channels(self, channels):
-        return self.materialize().resolve_channels(channels)
+    def resolve_channels(self, channels, *, who=None):
+        return self.materialize().resolve_channels(channels, who=who)
 
 
 def _wrap_group(group) -> ZarrTabularRef:

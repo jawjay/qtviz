@@ -32,13 +32,10 @@ from ..ref import (
 )
 
 
-def _checked(out: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
-    lengths = {len(a) for a in out.values()}
-    if len(lengths) > 1:
-        raise ValueError(
-            f"channels resolved to mismatched lengths: { {r: len(a) for r, a in out.items()} }"
-        )
-    return out
+def _checked(out: dict[str, np.ndarray], *, who: str | None = None) -> dict[str, np.ndarray]:
+    from ..ref import check_channel_lengths  # noqa: PLC0415
+
+    return check_channel_lengths(out, who=who)
 
 
 class DaskTabularRef(TabularRef):
@@ -82,14 +79,14 @@ class DaskTabularRef(TabularRef):
             ddf = ddf[(ddf[name] >= lo) & (ddf[name] <= hi)]  # predicate pushdown
         return DaskTabularRef(ddf)
 
-    def resolve_channels(self, channels):
+    def resolve_channels(self, channels, *, who=None):
         import dask  # noqa: PLC0415
 
         exprs = {role: resolve_expr(a, columns=self._ddf, native=self._ddf)
                  for role, a in channels.items()}
         roles = list(exprs)
         computed = dask.compute(*(exprs[r] for r in roles))  # one pass: pushdown + shared graph
-        return _checked({r: np.asarray(v) for r, v in zip(roles, computed, strict=True)})
+        return _checked({r: np.asarray(v) for r, v in zip(roles, computed, strict=True)}, who=who)
 
     def materialize(self, limit: int | None = None) -> EagerTabularRef:
         ddf = self._ddf if limit is None else self._ddf.head(limit, compute=False)

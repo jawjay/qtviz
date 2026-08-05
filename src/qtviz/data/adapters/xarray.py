@@ -51,17 +51,14 @@ class XarrayTabularRef(TabularRef):
     def subscribe(self, cb):
         return NOOP
 
-    def resolve_channels(self, channels):
+    def resolve_channels(self, channels, *, who=None):
+        from ..ref import check_channel_lengths  # noqa: PLC0415
+
         out = {}
         for role, accessor in channels.items():
             expr = resolve_expr(accessor, columns=self._ds, native=self._ds)
             out[role] = np.asarray(getattr(expr, "values", expr))
-        lengths = {len(a) for a in out.values()}
-        if len(lengths) > 1:
-            raise ValueError(
-                f"channels resolved to mismatched lengths: { {r: len(a) for r, a in out.items()} }"
-            )
-        return out
+        return check_channel_lengths(out, who=who)
 
 
 class XarrayGriddedRef(GriddedRef):

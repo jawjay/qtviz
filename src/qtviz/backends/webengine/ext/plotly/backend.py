@@ -186,7 +186,12 @@ def _figure_to_payload(figure: Any) -> dict:
         import plotly.graph_objects as go
         from plotly.io import to_json
     except ImportError as e:
-        raise RuntimeError("plotly is required for PlotlyBackend") from e
+        from qtviz.errors import MissingDependencyError  # noqa: PLC0415
+
+        raise MissingDependencyError(
+            "the webengine backend needs plotly to host this figure — install: "
+            'pip install "qtviz[webengine]" (uv: uv add "qtviz[webengine]")'
+        ) from e
 
     fig = figure if isinstance(figure, go.Figure) else go.Figure(figure)  # base64 (W5.1a)
     raw = json.loads(to_json(fig, validate=False))

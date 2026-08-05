@@ -17,6 +17,28 @@ def check_alpha(alpha: float | None, *, who: str) -> None:
         raise ValidationError(f"{who}: alpha must be in [0, 1], got {alpha}")
 
 
+def check_choice(value, choices, *, who: str, param: str, none_ok: bool = False) -> None:
+    """Reject a value outside a fixed vocabulary — the shared check behind every
+    `Literal[...]` constructor parameter, so a typo fails at construction with
+    the allowed set in the message, never as a backend `KeyError` at render."""
+    if value is None and none_ok:
+        return
+    if value not in choices:
+        suffix = " or None" if none_ok else ""
+        raise ValidationError(
+            f"{who}: {param} must be one of {tuple(choices)}{suffix}, got {value!r}"
+        )
+
+
+def check_color(color, *, who: str) -> None:
+    """Validate a static `color=` eagerly at construction ([D143]): a bad name
+    or malformed tuple fails here, at the call the user wrote, not at render."""
+    if color is not None:
+        from .color import Color  # noqa: PLC0415 — avoid an import cycle at module load
+
+        Color(color)
+
+
 def check_exclusive(static, by, *, names: tuple[str, str], who: str) -> None:
     """Reject binding the same channel both statically and to a column —
     e.g. `color=` (static) and `color_by=` (column) at once."""

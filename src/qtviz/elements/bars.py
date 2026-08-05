@@ -46,10 +46,11 @@ class Bars(Element):
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
-        from ..core._validate import check_alpha  # noqa: PLC0415
+        from ..core._validate import check_alpha, check_color  # noqa: PLC0415
         from .curve import check_axis  # noqa: PLC0415 — shared [D88] guard
 
         check_alpha(alpha, who="Bars")
+        check_color(color, who="Bars")
         check_axis(axis, "native", who="Bars")
         if mode not in _MODES:
             raise ValidationError(f"Bars mode must be one of {_MODES}, got {mode!r}")

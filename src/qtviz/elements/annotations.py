@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core._validate import check_alpha
+from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..errors import ValidationError
@@ -67,6 +67,7 @@ class HLine(_Reference):
         from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
 
         check_alpha(alpha, who=type(self).__name__)
+        check_color(color, who=type(self).__name__)
         check_line_style(line_style, who=type(self).__name__)
         self.y = float(y)
         self.color = color
@@ -108,6 +109,7 @@ class VLine(_Reference):
         from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
 
         check_alpha(alpha, who=type(self).__name__)
+        check_color(color, who=type(self).__name__)
         check_line_style(line_style, who=type(self).__name__)
         self.x = float(x)
         self.color = color
@@ -152,6 +154,7 @@ class Span(_Reference):
         if not float(lo) < float(hi):
             raise ValidationError(f"Span requires lo < hi, got ({lo!r}, {hi!r})")
         check_alpha(alpha, who="Span")
+        check_color(color, who="Span")
         self.lo, self.hi = float(lo), float(hi)
         self.orient = orient
         self.color = color
@@ -194,6 +197,7 @@ class Text(_Reference):
         id=None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
+        check_color(color, who="Text")
         if anchor not in ("center", "left", "right"):
             raise ValidationError(f"Text anchor must be center|left|right, got {anchor!r}")
         if anchor_v not in ("center", "top", "bottom"):
@@ -249,6 +253,7 @@ class RefLine(_Reference):
         from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
 
         check_alpha(alpha, who="RefLine")
+        check_color(color, who="RefLine")
         check_line_style(line_style, who="RefLine")
         self.slope = float(slope)
         self.intercept = float(intercept)
@@ -302,6 +307,7 @@ class Arrow(_Reference):
         if head not in _HEADS:
             raise ValidationError(f"Arrow head must be one of {_HEADS}, got {head!r}")
         check_alpha(alpha, who="Arrow")
+        check_color(color, who="Arrow")
         self.x0, self.y0 = float(x0), float(y0)
         self.x1, self.y1 = float(x1), float(y1)
         self.head = head

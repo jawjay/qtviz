@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core._validate import check_alpha, check_exclusive
+from ..core._validate import check_alpha, check_color, check_exclusive
 from ..core.color import ColorSpec
 from ..core.element import Element
 from ..data import Accessor, DataLike, as_data_ref
@@ -49,6 +49,7 @@ class Area(Element):
             raise ValidationError(f"Area mode={mode!r} requires by= (it stacks the groups)")
         check_exclusive(color, by, names=("color", "by"), who="Area")
         check_alpha(alpha, who="Area")
+        check_color(color, who="Area")
         self.data = as_data_ref(data)
         self.x, self.y = x, y
         self.by = by

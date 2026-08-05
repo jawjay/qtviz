@@ -55,6 +55,15 @@ class AdapterError(QtvizError):
     """No registered data adapter handles the given input (§6.3)."""
 
 
+class MissingDependencyError(QtvizError, ImportError):
+    """An optional dependency is required for the requested feature but is not
+    installed. Carries the packaged install hint (``pip install "qtviz[X]"``).
+
+    Subclasses both `QtvizError` (so ``except QtvizError`` stays the one broad
+    handler) and the stdlib `ImportError` (the failure genuinely is a missing
+    import, and existing ``except ImportError`` guards keep working)."""
+
+
 class UnsupportedHoloViewsElement(QtvizError):
     """`from_holoviews` met an element it can neither translate natively nor host
     as a `RawFigure` (Phase 3, [D28]). Carries the offending type name + a hint."""
