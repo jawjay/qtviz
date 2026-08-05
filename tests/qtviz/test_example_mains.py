@@ -60,6 +60,27 @@ print("VIEW-FIRST-OK")
 """
 
 
+_IMPORT_IS_LAZY = """
+import sys
+import qtviz
+heavy = [m for m in ("pyqtgraph", "matplotlib", "plotly", "bokeh")
+         if m in sys.modules]
+assert not heavy, f"import qtviz eagerly imported {heavy}"
+print("LAZY-IMPORT-OK")
+"""
+
+
+@pytest.mark.tier2
+def test_import_qtviz_does_not_load_backend_engines():
+    """[D144]: backend entry points load on first registry use, not at import —
+    `import qtviz` must not drag in pyqtgraph/matplotlib/plotly/bokeh."""
+    result = subprocess.run(
+        [sys.executable, "-c", _IMPORT_IS_LAZY],
+        capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0 and "LAZY-IMPORT-OK" in result.stdout, (
+        f"stdout={result.stdout!r}\nstderr={result.stderr[-1500:]}")
+
+
 @pytest.mark.tier2
 def test_view_construction_without_app_cannot_abort():
     """[D141]: `qv.View(...)` in a bare script — the exact call that used to

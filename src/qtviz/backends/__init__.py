@@ -29,16 +29,44 @@ __all__ = [
 _REGISTRY: dict[str, Any] = {}
 _PRIORITY: list[str] = []
 _DEFAULT: str | None = None
+_PENDING: dict[str, Any] = {}  # entry points discovered but not yet loaded ([D144])
+
+
+def _materialize(name: str | None = None) -> None:
+    """[D144] load pending entry points on first registry use — `import qtviz`
+    stays cheap (no pyqtgraph/matplotlib/Qt pulled in until a render or an
+    explicit registry call needs them). Loading one name is the `get()` fast
+    path; `None` drains them all (listing/negotiation need the full picture).
+    Failure behavior matches the old eager loading exactly: ImportError logs
+    one INFO with the install hint, anything else logs a warning — either way
+    the entry point is consumed and never retried."""
+    import logging  # noqa: PLC0415
+
+    log = logging.getLogger("qtviz")
+    names = [name] if name is not None else list(_PENDING)
+    for n in names:
+        ep = _PENDING.pop(n, None)
+        if ep is None:
+            continue
+        try:
+            register(ep.load())
+        except ImportError:
+            log.info('%s backend unavailable; install with: pip install "qtviz[%s]" '
+                     '(uv: uv add "qtviz[%s]")', n, n, n)
+        except Exception as e:  # noqa: BLE001 — a broken backend must not kill the app
+            log.warning("%s backend failed to load: %s", n, e)
 
 
 def register(backend: Any) -> None:
     _REGISTRY[backend.name] = backend
+    _PENDING.pop(backend.name, None)
     if backend.name not in _PRIORITY:
         _PRIORITY.append(backend.name)
 
 
 def unregister(name: str) -> None:
     _REGISTRY.pop(name, None)
+    _PENDING.pop(name, None)
     _PRIORITY[:] = [n for n in _PRIORITY if n in _REGISTRY]
     global _DEFAULT
     if name == _DEFAULT:
@@ -46,19 +74,24 @@ def unregister(name: str) -> None:
 
 
 def get(name: str) -> Any:
+    if name not in _REGISTRY:
+        _materialize(name)
     try:
         return _REGISTRY[name]
     except KeyError:
+        _materialize()  # drain the rest so the error names every real option
         raise BackendNotAvailableError(
             f"backend {name!r} not available; registered: {list(_REGISTRY)}"
         ) from None
 
 
 def list_available() -> list[str]:
+    _materialize()
     return list(_REGISTRY)
 
 
 def registered() -> list[Any]:
+    _materialize()
     return list(_REGISTRY.values())
 
 
@@ -69,6 +102,9 @@ def set_default_backend(name: str) -> None:
     later, deep inside negotiation, far from this call.
     """
     if name not in _REGISTRY:
+        _materialize(name)
+    if name not in _REGISTRY:
+        _materialize()
         raise BackendNotAvailableError(
             f"cannot set default backend to {name!r}; registered: {list(_REGISTRY)}"
         )
@@ -88,6 +124,8 @@ def set_backend_priority(names) -> None:
 def global_default() -> str | None:
     if _DEFAULT:
         return _DEFAULT
+    if not _REGISTRY and _PENDING:
+        _materialize()  # first consult — bring the built-ins in
     if _PRIORITY:
         return _PRIORITY[0]
     return next(iter(_REGISTRY), None)
@@ -102,14 +140,14 @@ _BUILTIN_ORDER = ("pyqtgraph", "matplotlib", "webengine")
 
 
 def _autoregister() -> None:
-    """[D125] entry-point discovery (group `qtviz.backends`). An optional
-    backend whose import fails logs one INFO; anything else failing logs a
-    warning. Falls back to the built-in list when no entry points are visible
-    (a stale editable install) so a working checkout never loses backends."""
-    import logging
+    """[D125] entry-point discovery (group `qtviz.backends`), recorded — not
+    loaded — at import ([D144]): the actual `ep.load()` happens lazily in
+    `_materialize` on first registry use, so importing qtviz doesn't import
+    pyqtgraph/matplotlib/webengine. Falls back to the built-in list when no
+    entry points are visible (a stale editable install) so a working checkout
+    never loses backends."""
     from importlib.metadata import entry_points
 
-    log = logging.getLogger("qtviz")
     eps = list(entry_points(group="qtviz.backends"))
     if not eps:  # pragma: no cover — stale metadata; behave like the built-ins
         from importlib.metadata import EntryPoint  # noqa: PLC0415
@@ -123,13 +161,7 @@ def _autoregister() -> None:
         return (_BUILTIN_ORDER.index(ep.name) if ep.name in _BUILTIN_ORDER
                 else len(_BUILTIN_ORDER)), ep.name
     for ep in sorted(eps, key=_order):
-        try:
-            register(ep.load())
-        except ImportError:
-            log.info('%s backend unavailable; install with: pip install "qtviz[%s]" '
-                     '(uv: uv add "qtviz[%s]")', ep.name, ep.name, ep.name)
-        except Exception as e:
-            log.warning("%s backend failed to load: %s", ep.name, e)
+        _PENDING.setdefault(ep.name, ep)
 
 
 _autoregister()

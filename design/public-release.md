@@ -52,6 +52,12 @@ legitimately takes both (group into bars; color the bars by a value). No
 rename; the rule is documented in `docs/stability.md` and enforced by the
 [D129] vocabulary test.
 
+The wave-G vocabulary guard (`tests/qtviz/test_channel_vocabulary.py`) also
+records the one deliberate exemption: `ErrorBars(lo_limit=, hi_limit=)` are
+boolean beyond-the-limit masks (matplotlib's lolims/uplims), not the
+`lo`/`hi` interval-edge roles — renaming them would collide with Spread's
+meaning.
+
 **Status.** ✅ wave C/D (docs); test in wave G.
 
 ## [D140] Top-level surface amendment (70 → 71 names)

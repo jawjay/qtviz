@@ -61,6 +61,17 @@ All notable changes to qtviz are documented here. The format follows
   through the shared `map_colors` seam, so all three backends honor it
   identically and any non-linear norm keeps the honest endpoints-only legend
   key ([D48]). (`Contour` norm/clim is recorded as a follow-up — [D137].)
+- **`import qtviz` is ~3× faster and no longer imports the backend
+  engines** ([D144], ~480 ms → ~150 ms): backend entry points are recorded at
+  import and `ep.load()`ed on first registry use (a render, `backends.get()`,
+  listing, or negotiation), so pyqtgraph — and matplotlib, an *optional*
+  extra that was previously imported whenever installed — stay out of the
+  process until actually needed. Import-failure behavior (one INFO with the
+  install hint) is unchanged; a subprocess test pins the lazy path. A new
+  tier-1 guard (`test_channel_vocabulary.py`) also enforces the [D129]
+  10-role channel vocabulary across all 28 elements, with the one documented
+  exemption (`ErrorBars.lo_limit/hi_limit` — beyond-the-limit masks, not
+  interval edges).
 - **Element reprs are readable** — `repr(Scatter(...))` now shows the class
   plus only non-default fields, with the data ref summarized as its schema
   (`Scatter(data=<tabular x, y>, x='x', y='y')`) instead of dumping every
