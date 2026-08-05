@@ -6,7 +6,33 @@ All notable changes to qtviz are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Webengine closes the dynamic-datashading gap** (D21/4b — pyqtgraph and
+  matplotlib parity): datashaded rasters now **re-aggregate to the visible
+  viewport at the plot's pixel resolution** on pan/zoom instead of scaling
+  (and pixelating) the initial raster. The backend-agnostic
+  `RasterController` gains a `PlotlyRasterTarget`
+  (`backends/webengine/_raster.py`): the JS runtime reports axis ranges +
+  plot-area pixel size over the bridge (`plotly.view`) after every
+  relayout/resize/react, and re-aggregated rasters go back as a
+  `Plotly.restyle` of the image trace's PNG `source` (Qt-encoded, ~30×
+  lighter than a JSON'd `z` array). Hover over a raster now carries the
+  aggregated count/mean under the cursor ([D46]) on webengine too. A
+  double-click axis reset restores the full-data extent (matching
+  matplotlib's "home keeps working"); once the loop takes over, the axes
+  are pinned so the raster's own extent can't feed autorange (the P2 drift
+  family). Raster colorbars/keys on webengine remain undrawn — the one
+  remaining raster delta.
+
 ### Fixed
+
+- **Webengine placed datashaded and user-built RGBA `Image` rasters in
+  pixel-index space** (extent silently dropped, y axis flipped by Plotly's
+  image-trace default). Both now carry data-space placement
+  (`x0`/`dx`/`y0`/`dy`, row 0 = ymin like the native backends) and the
+  layout pins `yaxis.autorange: true` so plots stay y-up (an explicit
+  `AxisSpec(invert=True)` still wins).
 
 - **Running an example directly crashed** ("QWidget: Must construct a
   QApplication before a QWidget"): `qv.show(build(), …)` evaluated the

@@ -334,7 +334,9 @@ def test_webengine_raster_uses_theme_palette():
     scatter = qv.Scatter(data, x="x", y="y", color_by="cat", raster="datashader")
     image = pipeline.resolve_node(scatter)
 
-    z1 = _image_trace(image, Theme(palette=Palette.from_hex(["#ff0000", "#00ff00", "#0000ff"])), 0)
-    z2 = _image_trace(image, Theme(palette=Palette.from_hex(["#ffff00", "#00ffff", "#ff00ff"])), 0)
-    # the webengine raster shades with the View's Theme, like the native backends (C5)
-    assert np.any(np.asarray(z1[0]["z"]) != np.asarray(z2[0]["z"]))
+    t1 = _image_trace(image, Theme(palette=Palette.from_hex(["#ff0000", "#00ff00", "#0000ff"])), 0)
+    t2 = _image_trace(image, Theme(palette=Palette.from_hex(["#ffff00", "#00ffff", "#ff00ff"])), 0)
+    # the webengine raster shades with the View's Theme, like the native backends (C5);
+    # the trace carries the shaded raster as a PNG data URI (source-mode, 4b)
+    assert t1[0]["source"].startswith("data:image/png;base64,")
+    assert t1[0]["source"] != t2[0]["source"]

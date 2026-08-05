@@ -34,17 +34,33 @@ PLOTLY_JS = r"""
     return {points: pts, range: range};
   }
 
+  function sendView(div) {
+    // Axis ranges + plot-area pixel size — the dynamic-raster loop's viewport
+    // feed (4b). Sent on attach and after every relayout/resize/react.
+    const fl = div._fullLayout;
+    if (!fl || !fl.xaxis || !fl.yaxis) return;
+    qtwebplot.send("plotly.view", {
+      x: fl.xaxis.range ? fl.xaxis.range.slice() : null,
+      y: fl.yaxis.range ? fl.yaxis.range.slice() : null,
+      w: fl.xaxis._length || 0,
+      h: fl.yaxis._length || 0,
+    });
+  }
+
   function attach(div) {
     // JS -> Python event forwarding.
     div.on("plotly_hover",    function (d) { qtwebplot.send("plotly.hover",     sanitizeEvent(d)); });
     div.on("plotly_unhover",  function (d) { qtwebplot.send("plotly.unhover",   sanitizeEvent(d)); });
     div.on("plotly_click",    function (d) { qtwebplot.send("plotly.click",     sanitizeEvent(d)); });
     div.on("plotly_selected", function (d) { qtwebplot.send("plotly.selection", sanitizeEvent(d)); });
-    div.on("plotly_relayout", function (u) { qtwebplot.send("plotly.relayout",  {update: u}); });
+    div.on("plotly_relayout", function (u) {
+      qtwebplot.send("plotly.relayout", {update: u});
+      sendView(div);
+    });
 
     // Python -> JS command handlers.
     qtwebplot.on("plotly.react", function (p) {
-      Plotly.react(div, p.data || [], p.layout || {}, p.config || {});
+      Plotly.react(div, p.data || [], p.layout || {}, p.config || {}).then(function () { sendView(div); });
     });
     qtwebplot.on("plotly.restyle", function (p) {
       Plotly.restyle(div, p.update || {}, p.indices === null ? undefined : p.indices);
@@ -56,10 +72,12 @@ PLOTLY_JS = r"""
       Plotly.extendTraces(div, p.update || {}, p.indices || [], p.max_points || undefined);
     });
     qtwebplot.on("plotly.resize", function () {
-      Plotly.Plots.resize(div);
+      const r = Plotly.Plots.resize(div);  // async — report the settled size
+      if (r && r.then) { r.then(function () { sendView(div); }); } else { sendView(div); }
     });
 
     qtwebplot.send("plotly.attached", {ok: true});
+    sendView(div);
   }
 
   function waitForPlot() {

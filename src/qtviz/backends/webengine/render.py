@@ -62,6 +62,8 @@ class WebEngineRenderHandle(RenderHandle):
         self._theme = theme
         self._x_range: tuple[float, float] | None = None  # shadow state, DATA space (R1)
         self._y_range: tuple[float, float] | None = None
+        self._rasters: list = []  # dynamic-raster controllers (4b, `_raster`)
+        self._raster_holders: dict = {}  # element id → live RasterAggregate ([D46] hover)
         self._set_log_flags(fig)
         widget.received.connect(self._on_message)
 
@@ -86,7 +88,23 @@ class WebEngineRenderHandle(RenderHandle):
             name, payload, traces=self._traces, surface_id=self._surface_id
         )
         for ev in events:
-            self.event_bus.emit(ev)
+            self.event_bus.emit(self._with_raster_value(ev))
+
+    def _with_raster_value(self, ev):
+        """[D46]: a hover over a datashaded raster carries the aggregated value
+        under the cursor — looked up in the live `RasterAggregate` (refreshed by
+        the controller on every re-aggregation), matching pyqtgraph/matplotlib."""
+        from ...core.event import HoverEvent  # noqa: PLC0415
+
+        holder = self._raster_holders.get(getattr(ev, "source_id", None))
+        if holder is None or not isinstance(ev, HoverEvent) or ev.value is not None:
+            return ev
+        agg = getattr(holder, "aggregate", None)
+        if agg is None:
+            return ev
+        import dataclasses  # noqa: PLC0415
+
+        return dataclasses.replace(ev, value=agg.value_at(ev.x, ev.y))
 
     def _merge_range(self, x, y) -> None:
         """Merge a (possibly partial) range update into the shadow state and emit
@@ -130,10 +148,24 @@ class WebEngineRenderHandle(RenderHandle):
 
     @require_gui_thread
     def update(self, new_root) -> None:
+        from . import _raster  # noqa: PLC0415
+
+        _raster.dispose_rasters(self)  # trace indices are about to change
         fig, source_ids = _figure.build(new_root, self._theme)
         self._traces = source_ids
         self._set_log_flags(fig)  # the new root may change axis scales
         self._host.react(fig)
+        self._wire_rasters(new_root)
+
+    def _wire_rasters(self, node) -> None:
+        """Attach the dynamic re-aggregation loop (4b) for datashaded elements.
+        Log axes are skipped: `plotly.view` ranges arrive log10 and a raster on
+        a log axis is unsupported on every backend."""
+        if self._x_log or self._y_log:
+            return
+        from . import _raster  # noqa: PLC0415
+
+        _raster.wire_dynamic_rasters(self, node, self._theme)
 
     def export(self, fmt: str, path, *, dpi: float | None = None,
                transparent: bool = False) -> Path:
@@ -154,6 +186,9 @@ class WebEngineRenderHandle(RenderHandle):
         return self.widget.to_png(path)
 
     def dispose(self) -> None:
+        from . import _raster  # noqa: PLC0415
+
+        _raster.dispose_rasters(self)
         w = self.widget
         if w is not None:
             with contextlib.suppress(RuntimeError, TypeError):
@@ -203,8 +238,10 @@ class WebEngineBackend:
         host = PlotlyBackend(fig)
         view = PlotView(host, parent=parent)
         bus = EventBus()
-        return WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme,
-                                     fig=fig)
+        handle = WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme,
+                                       fig=fig)
+        handle._wire_rasters(node)
+        return handle
 
     def _render_raw(self, node: RawFigure, parent, theme) -> WebEngineRenderHandle:
         """Host an existing Plotly/Bokeh/HoloViews figure unchanged (D31). The

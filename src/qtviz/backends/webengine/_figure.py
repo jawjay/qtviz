@@ -343,6 +343,8 @@ def _histogram_trace(element: Histogram, theme, idx: int) -> list[dict]:
 
 
 def _image_trace(element: Image, theme, idx: int) -> list[dict]:
+    from ._raster import encode_raster_png, raster_placement  # noqa: PLC0415
+
     agg = (raster_aux(element) or _NO_AUX).agg
     if agg is not None:  # datashaded raster: shade with the View's Theme (C5, matches native)
         from ...core.palette import palettes  # noqa: PLC0415
@@ -350,7 +352,11 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
 
         rgba = shade_aggregate(agg, palette=theme.palette,
                                continuous_palette=palettes.get("viridis")).rgba
-        return [{"type": "image", "z": rgba, "name": element.id}]
+        # source (PNG data URI), not z: one representation for the static build
+        # and the dynamic loop's restyle updates (4b), placed in data space.
+        return [{"type": "image", "source": encode_raster_png(rgba),
+                 "hoverinfo": "x+y", "name": element.id,
+                 **raster_placement(rgba.shape, element.extent)}]
     values = np.asarray(element.resolved_grid().values)
     x0, y0, x1, y1 = element.extent
     if values.ndim == 2:
@@ -365,8 +371,10 @@ def _image_trace(element: Image, theme, idx: int) -> list[dict]:
         }
         _apply_norm(trace, element, values)
         return [trace]
-    return [{"type": "image", "z": values, "opacity": element.alpha,
-             "name": element.id}]  # RGBA raster (user-built)
+    # user-built RGBA raster: z row 0 lands at y0 — the qtviz row-0-is-ymin
+    # convention on a y-up axis
+    return [{"type": "image", "z": values, "opacity": element.alpha, "name": element.id,
+             **raster_placement(values.shape, element.extent)}]
 
 
 def _heatmap_trace(element: Heatmap, theme, idx: int) -> list[dict]:
@@ -849,6 +857,10 @@ def build(node, theme) -> tuple[dict, list[str]]:
             if "showscale" in tr:
                 tr["showscale"] = False
     layout = plotly_layout(theme, surf, x_scale, y_scale, y2=y2)
+    if any(tr.get("type") == "image" for tr in traces) and "range" not in layout["yaxis"]:
+        # An image trace reverses the y axis by default (raster convention);
+        # qtviz rasters are data plots — pin y-up unless the surface inverts.
+        layout["yaxis"].setdefault("autorange", True)
     if barmode is not None:
         layout["barmode"] = barmode
     if shapes:

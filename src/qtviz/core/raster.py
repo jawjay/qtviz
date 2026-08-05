@@ -61,6 +61,7 @@ class RasterController(QObject):
     """
 
     _done = Signal(int, object, object)  # build_id, RasterResult | None, exc | None
+    element_id: str | None = None  # set by backends — streaming refresh routes by id ([D77])
 
     def __init__(
         self,
