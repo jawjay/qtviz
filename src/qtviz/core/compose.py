@@ -27,16 +27,32 @@ Node = Union[Element, "Overlay", "Layout"]
 Cell = tuple[int, int, int, int]  # (row, col, rowspan, colspan)
 
 
-def parse_mosaic(spec: str) -> dict[str, Cell]:
-    """Parse a `subplot_mosaic`-style string ([D108]) into per-label
+MosaicSpec = str | Sequence[Sequence["str | None"]]
+
+
+def parse_mosaic(spec: MosaicSpec) -> dict[str, Cell]:
+    """Parse a `subplot_mosaic`-style plan ([D108]/[D145]) into per-label
     `(row, col, rowspan, colspan)` cells, ordered by first appearance.
 
-    Rows are newline- (or `;`-) separated; each character is one grid cell;
-    `.` (or a space) is a hole. Every label's cells must form one solid
-    rectangle — anything else is ambiguous and raises `ValidationError`."""
+    Two spellings, the `subplot_mosaic` precedents: a **string** — rows
+    newline- (or `;`-) separated, each character one grid cell, `.` (or a
+    space) a hole — or a **list of rows of labels**, where labels are
+    arbitrary strings and `None` (or `"."`) is a hole:
+
+        parse_mosaic("AAB;CCB")
+        parse_mosaic([["price", "book"], ["volume", "book"]])
+
+    Every label's cells must form one solid rectangle — anything else is
+    ambiguous and raises `ValidationError`."""
     from ..errors import ValidationError  # noqa: PLC0415
 
-    rows = [r for r in spec.replace(";", "\n").splitlines() if r.strip()]
+    if isinstance(spec, str):
+        lines = [r for r in spec.replace(";", "\n").splitlines() if r.strip()]
+        rows: list[list[str | None]] = [
+            [None if ch in ". " else ch for ch in line] for line in lines]
+    else:
+        rows = [[None if tok in (None, ".") else str(tok) for tok in line]
+                for line in spec]
     if not rows:
         raise ValidationError("mosaic spec is empty")
     width = len(rows[0])
@@ -46,14 +62,14 @@ def parse_mosaic(spec: str) -> dict[str, Cell]:
     boxes: dict[str, list[int]] = {}          # label → [r0, c0, r1, c1]
     order: list[str] = []
     for r, line in enumerate(rows):
-        for c, ch in enumerate(line):
-            if ch in ". ":
+        for c, label in enumerate(line):
+            if label is None:
                 continue
-            if ch not in boxes:
-                boxes[ch] = [r, c, r, c]
-                order.append(ch)
+            if label not in boxes:
+                boxes[label] = [r, c, r, c]
+                order.append(label)
             else:
-                b = boxes[ch]
+                b = boxes[label]
                 b[0], b[1] = min(b[0], r), min(b[1], c)
                 b[2], b[3] = max(b[2], r), max(b[3], c)
     for label in order:  # solid-rectangle check: every cell in the bbox is `label`
@@ -65,6 +81,26 @@ def parse_mosaic(spec: str) -> dict[str, Cell]:
                         f"mosaic label {label!r} does not form a solid rectangle")
     return {label: (b[0], b[1], b[2] - b[0] + 1, b[3] - b[1] + 1)
             for label, b in ((lb, boxes[lb]) for lb in order)}
+
+
+def _validate_cells(cells: Sequence[Cell], where: str) -> None:
+    """Explicit-`cells` validation ([D148]) — the same guarantees the mosaic
+    parser gives: positive spans, no overlapping panes."""
+    from ..errors import ValidationError  # noqa: PLC0415
+
+    occupied: dict[tuple[int, int], int] = {}
+    for i, (r, c, rs, cs) in enumerate(cells):
+        if r < 0 or c < 0 or rs < 1 or cs < 1:
+            raise ValidationError(
+                f"{where}: cell {i} {(r, c, rs, cs)!r} must have row/col >= 0 "
+                f"and spans >= 1")
+        for rr in range(r, r + rs):
+            for cc in range(c, c + cs):
+                if (rr, cc) in occupied:
+                    raise ValidationError(
+                        f"{where}: cells {occupied[(rr, cc)]} and {i} overlap "
+                        f"at (row {rr}, col {cc})")
+                occupied[(rr, cc)] = i
 
 
 class Overlay(Immutable):
@@ -133,13 +169,27 @@ class Layout(Immutable):
     """Side-by-side / grid / splitter / tabs / dock. Built by `+`. Children
     may use different backends. A grid built by `Layout.mosaic` additionally
     carries per-child `cells` — `(row, col, rowspan, colspan)` — so panes can
-    span."""
+    span.
 
-    def __init__(self, children: Sequence[Node], *,
+    Children may be **named** ([D145]): pass a mapping (`Layout.grid({"price":
+    p, "volume": v})`), a mosaic (labels retained), or explicit `labels=`.
+    Labels name the direct children — `layout["price"]` looks one up,
+    `layout.with_pane("price", node)` swaps one immutably — and become the
+    pane labels downstream (state capture/restore keys, `view.pane(...)`,
+    event scoping). Unlabeled panes get their flat index as a string."""
+
+    def __init__(self, children: Sequence[Node] | Mapping[str, Node], *,
                  kind: Literal["grid", "splitter", "tabs", "dock"] = "grid",
                  options: LayoutOptions | None = None,
                  backend_hint: str | None = None,
-                 cells: Sequence[Cell] | None = None) -> None:
+                 cells: Sequence[Cell] | None = None,
+                 labels: Sequence[str] | None = None) -> None:
+        if isinstance(children, Mapping):
+            if labels is not None:
+                raise ValidationError(
+                    "pass labels either as mapping keys or as labels=, not both")
+            labels = tuple(str(k) for k in children)
+            children = tuple(children.values())
         self.children = tuple(children)
         self.kind = kind
         self.options = options or LayoutOptions()
@@ -147,18 +197,85 @@ class Layout(Immutable):
         self.cells: tuple[Cell, ...] | None = (
             tuple((int(r), int(c), int(rs), int(cs)) for r, c, rs, cs in cells)
             if cells else None)
+        self.labels: tuple[str, ...] | None = (
+            tuple(str(lb) for lb in labels) if labels is not None else None)
         if not self.children:
             raise ValidationError("Layout requires at least one child")
         if self.cells is not None and len(self.cells) != len(self.children):
             raise ValidationError(
                 f"cells ({len(self.cells)}) must match children ({len(self.children)})")
+        if self.kind != "grid":  # [D146]: col/row sharing is grid geometry
+            for name in ("link_x", "link_y"):
+                if getattr(self.options, name) in ("col", "row"):
+                    raise ValidationError(
+                        f"{name}={getattr(self.options, name)!r} needs a grid "
+                        f"layout, got kind={self.kind!r} (True links all panes)")
+        if self.cells is not None:
+            _validate_cells(self.cells, where="Layout cells")
+        if self.labels is not None:
+            if len(self.labels) != len(self.children):
+                raise ValidationError(
+                    f"labels ({len(self.labels)}) must match children "
+                    f"({len(self.children)})")
+            if any(not lb for lb in self.labels):
+                raise ValidationError("pane labels must be non-empty strings")
+            dupes = sorted({lb for lb in self.labels if self.labels.count(lb) > 1})
+            if dupes:
+                raise ValidationError(f"pane labels must be unique; duplicated: {dupes}")
         self._freeze()
 
     def __add__(self, other: Node) -> Layout:
-        if self.cells is not None:  # a mosaic is a sealed shape — nest, don't append
+        if self.cells is not None or self.labels is not None:
+            # a mosaic / named layout is a sealed shape — nest, don't append
             return Layout((self, other))
         return Layout(self.children + (other,), kind=self.kind, options=self.options,
                       backend_hint=self.backend_hint)
+
+    def __getitem__(self, key: str | int) -> Node:
+        """A child by explicit label (searching nested `Layout`s too) or by
+        direct index. Only *given* labels resolve — default index labels are
+        positional, so address those with the int form."""
+        if isinstance(key, int):
+            return self.children[key]
+        found = self._find(key)
+        if found is None:
+            raise KeyError(f"no pane labeled {key!r} in this layout")
+        return found
+
+    def _find(self, label: str) -> Node | None:
+        if self.labels is not None:
+            for lb, child in zip(self.labels, self.children, strict=True):
+                if lb == label:
+                    return child
+        for child in self.children:
+            if isinstance(child, Layout):
+                inner = child._find(label)
+                if inner is not None:
+                    return inner
+        return None
+
+    def with_pane(self, label: str, node: Node) -> Layout:
+        """Copy-with: the layout with the pane named `label` replaced by
+        `node` ([D145]) — the declarative way to update one pane
+        (`view.set_root(root.with_pane("price", new_price))`). Searches nested
+        `Layout`s; raises `KeyError` if the label is absent."""
+        replaced = self._with_pane(label, node)
+        if replaced is None:
+            raise KeyError(f"no pane labeled {label!r} in this layout")
+        return replaced
+
+    def _with_pane(self, label: str, node: Node) -> Layout | None:
+        if self.labels is not None and label in self.labels:
+            children = tuple(node if lb == label else child
+                             for lb, child in zip(self.labels, self.children, strict=True))
+            return self.with_(children=children)
+        for i, child in enumerate(self.children):
+            if isinstance(child, Layout):
+                inner = child._with_pane(label, node)
+                if inner is not None:
+                    children = self.children[:i] + (inner,) + self.children[i + 1:]
+                    return self.with_(children=children)
+        return None
 
     def __mul__(self, other: Node) -> Overlay:
         return Overlay((self, other))
@@ -168,8 +285,8 @@ class Layout(Immutable):
              rows: int | None | _Unset = UNSET,
              cols: int | None | _Unset = UNSET,
              spacing: int | _Unset = UNSET,
-             link_x: bool | _Unset = UNSET,
-             link_y: bool | _Unset = UNSET,
+             link_x: bool | str | _Unset = UNSET,
+             link_y: bool | str | _Unset = UNSET,
              tab_labels: Sequence[str] | None | _Unset = UNSET,
              dock_areas: Mapping[int, str] | Sequence[tuple] | None | _Unset = UNSET,
              width_ratios: Sequence[float] | None | _Unset = UNSET,
@@ -192,7 +309,8 @@ class Layout(Immutable):
                            else height_ratios),
         )
         return Layout(self.children, kind=self.kind, options=merged,
-                      backend_hint=self.backend_hint, cells=self.cells)
+                      backend_hint=self.backend_hint, cells=self.cells,
+                      labels=self.labels)
 
     def __repr__(self) -> str:
         shown = {k: v for k, v in self.options._fields().items()
@@ -202,31 +320,63 @@ class Layout(Immutable):
                 + (f", {inner}" if inner else "") + ")")
 
     @classmethod
-    def grid(cls, children, **kw) -> Layout:
-        return cls(children, kind="grid", **kw)
+    def grid(cls, children: Sequence[Node] | Mapping[str, Node], *,
+             cells: Mapping[str, Cell] | Sequence[Cell] | None = None,
+             **kw) -> Layout:
+        """A grid — from a sequence, or a mapping whose keys become the pane
+        labels ([D145]). `cells=` places panes explicitly ([D148]) — the
+        programmatic answer to spans, symmetric with the mosaic's output:
+
+            Layout.grid({"ch0": a, "ch1": b, "summary": s},
+                        cells={"ch0": (0, 0, 1, 1), "ch1": (1, 0, 1, 1),
+                               "summary": (0, 1, 2, 1)})
+
+        A `cells` mapping is keyed by label (mapping children required) and
+        may reorder freely; a sequence aligns with the children. Overlap and
+        span validity are checked like the mosaic parser's."""
+        if isinstance(cells, Mapping):
+            if not isinstance(children, Mapping):
+                raise ValidationError(
+                    "a cells mapping needs mapping children (label → node)")
+            missing = [lb for lb in children if lb not in cells]
+            extra = [lb for lb in cells if lb not in children]
+            if missing or extra:
+                raise ValidationError(
+                    f"cells labels must match children labels exactly; "
+                    f"missing={missing}, unknown={extra}")
+            cells = [cells[lb] for lb in children]
+        return cls(children, kind="grid", cells=cells, **kw)
 
     @classmethod
-    def mosaic(cls, spec: str, *, options: LayoutOptions | None = None,
+    def mosaic(cls, spec: MosaicSpec, mapping: Mapping[str, Node] | None = None,
+               *, options: LayoutOptions | None = None,
                backend_hint: str | None = None, **panes: Node) -> Layout:
         """A grid from an ASCII plan (the `subplot_mosaic` precedent):
 
             Layout.mosaic("AAB\\nCCB", A=curve, B=sidebar, C=table)
+            Layout.mosaic([["price",  "book"],
+                           ["volume", "book"]], price=p, volume=v, book=ob)
 
-        Each distinct character is one pane (spanning its rectangle); `.` is a
-        hole. Every label in the spec must be passed as a keyword, and vice
-        versa."""
+        String form: each distinct character is one pane (spanning its
+        rectangle); `.` is a hole. List form ([D145]): arbitrary string
+        labels, `None` (or `"."`) a hole. Panes come as keywords or as a
+        `mapping` (for labels that aren't identifiers); every label in the
+        spec must be given, and vice versa. Labels are **retained** — they key
+        state capture/restore, `view.pane(...)`, and `layout[label]`."""
         from ..errors import ValidationError  # noqa: PLC0415
 
+        all_panes = {**(mapping or {}), **panes}
         cells_by_label = parse_mosaic(spec)
-        missing = [lb for lb in cells_by_label if lb not in panes]
-        extra = [k for k in panes if k not in cells_by_label]
+        missing = [lb for lb in cells_by_label if lb not in all_panes]
+        extra = [k for k in all_panes if k not in cells_by_label]
         if missing or extra:
             raise ValidationError(
                 f"mosaic panes must match the spec labels exactly; "
                 f"missing={missing}, unknown={extra}")
-        return cls([panes[lb] for lb in cells_by_label], kind="grid",
+        return cls([all_panes[lb] for lb in cells_by_label], kind="grid",
                    options=options, backend_hint=backend_hint,
-                   cells=list(cells_by_label.values()))
+                   cells=list(cells_by_label.values()),
+                   labels=list(cells_by_label))
 
     @classmethod
     def tabs(cls, children, **kw) -> Layout:
@@ -235,6 +385,78 @@ class Layout(Immutable):
     @classmethod
     def splitter(cls, children, **kw) -> Layout:
         return cls(children, kind="splitter", **kw)
+
+
+def link_groups(cells: Sequence[Cell], count: int, mode) -> list[list[int]]:
+    """Child-index groups to axis-link ([D146]), from the same `cells` that
+    decide grid shape. `False` → none; `True` → one group of all; `"col"` /
+    `"row"` → connected components of children sharing a column/row — a
+    spanning pane joins every column/row it covers (the `subplot_mosaic`
+    sharing rule), transitively merging groups. Only groups of 2+ return."""
+    if mode is False or count < 2:
+        return []
+    if mode is True:
+        return [list(range(count))]
+    parent = list(range(count))
+
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    seen: dict[int, int] = {}  # column (or row) index → first child covering it
+    for i, (r, c, rs, cs) in enumerate(cells[:count]):
+        span = range(c, c + cs) if mode == "col" else range(r, r + rs)
+        for k in span:
+            if k in seen:
+                union(i, seen[k])
+            else:
+                seen[k] = i
+    groups: dict[int, list[int]] = {}
+    for i in range(count):
+        groups.setdefault(find(i), []).append(i)
+    return [g for g in groups.values() if len(g) > 1]
+
+
+def flat_pane_labels(node: Node) -> tuple[str, ...]:
+    """The effective pane labels of a render, flattened depth-first in child
+    order ([D145]/[D150]) — the single source of pane identity shared by state
+    capture/restore, `view.pane(...)`, and event scoping. Each Element/Overlay
+    leaf is one pane: a *given* label if its parent `Layout` names it, else its
+    flat index as a string. A label on a `Layout` child names the subtree for
+    `layout[...]`/`with_pane`, not a pane. Labels must be unique across the
+    whole tree — collisions (incl. a given label shadowing another pane's
+    default index label) raise `ValidationError`."""
+    from ..errors import ValidationError  # noqa: PLC0415
+
+    given: list[str | None] = []
+
+    def walk(n: Node) -> None:
+        if isinstance(n, Layout):
+            labels = n.labels or (None,) * len(n.children)
+            for child, lb in zip(n.children, labels, strict=True):
+                if isinstance(child, Layout):
+                    walk(child)
+                else:
+                    given.append(lb)
+        else:
+            given.append(None)
+
+    walk(node)
+    out = [lb if lb is not None else str(i) for i, lb in enumerate(given)]
+    dupes = sorted({lb for lb in out if out.count(lb) > 1})
+    if dupes:
+        raise ValidationError(
+            f"pane labels must be unique across the layout tree; duplicated: "
+            f"{dupes} (a given label may also collide with an unlabeled pane's "
+            f"default index label)")
+    return tuple(out)
 
 
 def grid_geometry(layout: Layout) -> tuple[list[Cell], int, int]:

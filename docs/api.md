@@ -87,6 +87,22 @@ own annotations (`def render(el: qv.Element) -> None`). `Node` is the
 
 ::: qtviz.show
 
+### Panes — downstream use of each surface
+
+After render, each surface (grid cell, tab, splitter pane — or the whole plot
+of a single-surface render) is addressable as a **pane** ([D145]/[D147]):
+`view.pane("price")` returns a live `PaneHandle` — the "Axes of qtviz" —
+scoped to interaction-side verbs (`set_range`, `autorange`, `select`,
+`capture`/`restore`, `native`, `elements`). Describe-side configuration stays
+on the node (`.opts()`, `Layout.with_pane` + `set_root`). Whole-render state
+is a `LayoutState` — ordered `(label, ViewState)` pairs, matched by label
+across rebuilds and backend switches. These are returned types, importable
+from `qtviz.core.backend` ([D135] return-type convention).
+
+::: qtviz.core.backend.PaneHandle
+
+::: qtviz.core.backend.LayoutState
+
 ## Data binding
 
 ::: qtviz.col

@@ -18,11 +18,15 @@ ElementId = str
 
 @dataclass(frozen=True)
 class Event:
-    """Base of every typed interaction event. `source_id` names the element
-    that emitted it — subscribe with `view.on(EventType, cb)`, optionally
-    filtered by element via `source=`."""
+    """Base of every typed interaction event. `source_id` names the emitter —
+    the element for element events (pick/select/hover), the **pane label** for
+    surface events (range/tap). `pane` ([D149]) always carries the pane label
+    of the surface the event came from ([D145]; `"0"`, `"1"`, … when unlabeled)
+    — subscribe with `view.on(EventType, cb)`, filtered by element via
+    `source=` or by pane via `pane=`."""
 
     source_id: ElementId
+    pane: str | None = field(default=None, kw_only=True)
 
 
 @dataclass(frozen=True)
@@ -72,6 +76,28 @@ class TapEvent(Event):
 
     x: float
     y: float
+
+
+class PaneBus:
+    """A per-surface stamping proxy over the handle's one `EventBus` ([D149]):
+    `emit` stamps `pane=<label>` on events that don't carry one, so every
+    element-level emit site (pick/hover wiring, brush masks, raster hover,
+    lowered marks) inherits its pane identity with no signature changes.
+    Everything else delegates to the wrapped bus."""
+
+    def __init__(self, bus, label: str) -> None:
+        self._bus = bus
+        self._label = label
+
+    def emit(self, ev) -> None:
+        if getattr(ev, "pane", None) is None:
+            from dataclasses import replace  # noqa: PLC0415
+
+            ev = replace(ev, pane=self._label)
+        self._bus.emit(ev)
+
+    def __getattr__(self, name: str):
+        return getattr(self._bus, name)
 
 
 class _Throttle:

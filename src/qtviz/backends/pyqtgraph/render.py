@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import replace
 from pathlib import Path
 
@@ -10,7 +9,13 @@ import pyqtgraph as pg
 
 from ...core._degrade import FULL_SURFACE, check_layout, check_recommended, check_surface
 from ...core._scales import delog, log_lim, logify
-from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
+from ...core.backend import (
+    PaneHandle,
+    RenderContext,
+    RendererRegistry,
+    RenderHandle,
+    ViewState,
+)
 from ...core.capabilities import Capabilities
 from ...core.compose import (
     Layout,
@@ -20,7 +25,7 @@ from ...core.compose import (
     surface_of,
 )
 from ...core.element import Element
-from ...core.event import EventBus
+from ...core.event import EventBus, PaneBus
 from ...core.threading import require_gui_thread
 from ...data import resolve_node
 from ...errors import RendererMissingError
@@ -50,6 +55,104 @@ _CAPS = Capabilities(
 )
 
 
+class PgPane(PaneHandle):
+    """One `PlotItem` of a render ([D147]). Portable state is **data space**
+    (R1): under log the ViewBox lives in exponent space — the de-log/log
+    happens here at the pane boundary, per plot, so a `ViewState` round-trips
+    across rebuilds and backend switches unchanged."""
+
+    def __init__(self, label: str, plot) -> None:
+        super().__init__(label)
+        self._plot = plot
+
+    def capture(self) -> ViewState:
+        self._assert_alive()
+        vb = self._plot.getViewBox()
+        (x0, x1), (y0, y1) = vb.viewRange()
+        x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
+        y2_range = None
+        vb2 = getattr(self._plot, "_qtviz_vb2", None)
+        if vb2 is not None:  # twin axis ([D88])
+            (_, _), (b0, b1) = vb2.viewRange()
+            y2_log = getattr(vb2, "y_log", False)
+            y2_range = (delog(b0, y2_log), delog(b1, y2_log))
+        return ViewState(
+            x_range=(delog(x0, x_log), delog(x1, x_log)),
+            y_range=(delog(y0, y_log), delog(y1, y_log)),
+            y2_range=y2_range,
+        )
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        self._assert_alive()
+        vb = self._plot.getViewBox()
+        x_rng, y_rng = state.x_range, state.y_range
+        if x_rng and getattr(vb, "x_log", False):
+            x_rng = log_lim(x_rng, axis="x", backend="pyqtgraph")
+        if y_rng and getattr(vb, "y_log", False):
+            y_rng = log_lim(y_rng, axis="y", backend="pyqtgraph")
+        if x_rng:
+            vb.setXRange(*x_rng, padding=0)
+        if y_rng:
+            vb.setYRange(*y_rng, padding=0)
+        vb2 = getattr(self._plot, "_qtviz_vb2", None)
+        if vb2 is not None and state.y2_range is not None:
+            y2_rng = (log_lim(state.y2_range, axis="y2", backend="pyqtgraph")
+                      if getattr(vb2, "y_log", False) else state.y2_range)
+            if y2_rng:
+                vb2.setYRange(*y2_rng, padding=0)
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        self._assert_alive()
+        self._plot.getViewBox().autoRange()
+        vb2 = getattr(self._plot, "_qtviz_vb2", None)
+        if vb2 is not None:
+            vb2.autoRange()
+
+    @require_gui_thread
+    def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        self._assert_alive()
+        self._plot.getViewBox().select_bounds(x0, y0, x1, y1)
+
+    @property
+    def native(self):
+        return self._plot
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(getattr(self._plot, "_qtviz_element_ids", ()))
+
+    @require_gui_thread
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        """One pane as png — `ImageExporter` on the `PlotItem` subtree, so a
+        grid's shared scene exports a single cell (spiked; [D150])."""
+        self._assert_alive()
+        if fmt != "png":
+            raise NotImplementedError(
+                "pyqtgraph exports png only (vector export is the matplotlib "
+                "backend's role)")
+        if dpi is not None:  # honor-or-warn ([D72]): exports at widget pixel size
+            import warnings  # noqa: PLC0415
+
+            from ...errors import QtvizWarning  # noqa: PLC0415
+
+            warnings.warn("pyqtgraph: 'dpi' is not honored (raster exports at "
+                          "widget pixel size) and was ignored.",
+                          QtvizWarning, stacklevel=2)
+        from pyqtgraph.exporters import ImageExporter  # noqa: PLC0415
+
+        path = Path(path)
+        exporter = ImageExporter(self._plot)
+        if transparent:
+            from PySide6.QtGui import QColor  # noqa: PLC0415
+
+            exporter.parameters()["background"] = QColor(0, 0, 0, 0)
+        exporter.export(str(path))
+        return path
+
+
 class PgRenderHandle(RenderHandle):
     def __init__(self, widget, event_bus, plots, root, backend, natives) -> None:
         super().__init__(widget, event_bus, "pyqtgraph")
@@ -62,49 +165,13 @@ class PgRenderHandle(RenderHandle):
     def plots(self):
         return self._plots
 
-    def _vb(self):
-        return self._plots[0].getViewBox() if self._plots else None
+    def _panes(self) -> tuple[PgPane, ...]:
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
 
-    def capture_state(self) -> ViewState:
-        """Portable state is **data space** (R1): under log the ViewBox range is in
-        exponent space and is de-logged here, so a `ViewState` round-trips across
-        rebuilds and backend switches unchanged."""
-        vb = self._vb()
-        if vb is None:
-            return ViewState()
-        (x0, x1), (y0, y1) = vb.viewRange()
-        x_log, y_log = getattr(vb, "x_log", False), getattr(vb, "y_log", False)
-        y2_range = None
-        vb2 = getattr(self._plots[0], "_qtviz_vb2", None)
-        if vb2 is not None:  # twin axis ([D88])
-            (_, _), (b0, b1) = vb2.viewRange()
-            y2_log = getattr(vb2, "y_log", False)
-            y2_range = (delog(b0, y2_log), delog(b1, y2_log))
-        return ViewState(
-            x_range=(delog(x0, x_log), delog(x1, x_log)),
-            y_range=(delog(y0, y_log), delog(y1, y_log)),
-            y2_range=y2_range,
-        )
-
-    def restore_state(self, state: ViewState) -> None:
-        vb = self._vb()
-        if vb is None:
-            return
-        x_rng, y_rng = state.x_range, state.y_range
-        if x_rng and getattr(vb, "x_log", False):
-            x_rng = log_lim(x_rng, axis="x", backend="pyqtgraph")
-        if y_rng and getattr(vb, "y_log", False):
-            y_rng = log_lim(y_rng, axis="y", backend="pyqtgraph")
-        if x_rng:
-            vb.setXRange(*x_rng, padding=0)
-        if y_rng:
-            vb.setYRange(*y_rng, padding=0)
-        vb2 = getattr(self._plots[0], "_qtviz_vb2", None) if self._plots else None
-        if vb2 is not None and state.y2_range is not None:
-            y2_rng = (log_lim(state.y2_range, axis="y2", backend="pyqtgraph")
-                      if getattr(vb2, "y_log", False) else state.y2_range)
-            if y2_rng:
-                vb2.setYRange(*y2_rng, padding=0)
+        labels = flat_pane_labels(self._root)  # [D145] given labels, else indices
+        if len(labels) != len(self._plots):  # defensive: identity never crashes
+            labels = tuple(str(i) for i in range(len(self._plots)))
+        return tuple(PgPane(lb, p) for lb, p in zip(labels, self._plots, strict=True))
 
     def _dispose_rasters(self) -> None:
         for plot in self._plots:
@@ -242,6 +309,9 @@ class PyQtGraphBackend:
                                 "width_ratios", "height_ratios"})
 
     def _render_into(self, node, widget, theme, bus, plots, natives) -> None:
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
+
+        labels = flat_pane_labels(node)  # [D145]/[D149]: pane identity at render
         if isinstance(node, Layout):
             from ...core.compose import grid_geometry  # noqa: PLC0415
 
@@ -254,28 +324,33 @@ class PyQtGraphBackend:
                                 color=theme.foreground.hex(),
                                 size=f"{theme.title_size}pt")
                 row0 = 1
-            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
+            for child, label, (r, c, rs, cs) in zip(node.children, labels, cells,
+                                                    strict=True):
                 self._render_cell(child, widget, theme, bus, plots, natives,
-                                  r + row0, c, rowspan=rs, colspan=cs)
+                                  r + row0, c, rowspan=rs, colspan=cs, label=label)
             grid = widget.ci.layout  # QGraphicsGridLayout: integer stretches
             for c, ratio in enumerate(opts.width_ratios or ()):
                 grid.setColumnStretchFactor(c, max(1, round(ratio * 100)))
             for r, ratio in enumerate(opts.height_ratios or ()):
                 grid.setRowStretchFactor(r + row0, max(1, round(ratio * 100)))
             if opts.link_x or opts.link_y:
-                link_axes(plots, link_x=opts.link_x, link_y=opts.link_y)
+                link_axes(plots, cells=cells, link_x=opts.link_x, link_y=opts.link_y)
         else:
-            self._render_cell(node, widget, theme, bus, plots, natives, 0, 0)
+            self._render_cell(node, widget, theme, bus, plots, natives, 0, 0,
+                              label=labels[0])
 
     # [D109]: everything except tick label rotation (no stable AxisItem API).
     SURFACE_HONORED = FULL_SURFACE - {"x.tick_rotation", "y.tick_rotation"}
 
     def _render_cell(self, node, widget, theme, bus, plots, natives, row, col,
-                     *, rowspan: int = 1, colspan: int = 1) -> None:
+                     *, rowspan: int = 1, colspan: int = 1, label: str = "0") -> None:
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=self.SURFACE_HONORED)
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
-        vb = QtvizViewBox(bus=bus, surface_id=uuid.uuid4().hex,
+        # [D149]: the pane label IS the surface id (RangeEvent/TapEvent
+        # source_id) and every emit through the stamping bus carries pane=label.
+        bus = PaneBus(bus, label)
+        vb = QtvizViewBox(bus=bus, surface_id=label,
                           x_log=(x_scale == "log"), y_log=(y_scale == "log"))
         plot = widget.addPlot(row=row, col=col, rowspan=rowspan, colspan=colspan,
                               viewBox=vb)
@@ -307,6 +382,9 @@ class PyQtGraphBackend:
                              parent_axes=y2_host if on_y2 else plot,
                              y_scale=y2_scale if on_y2 else y_scale)
             self._render_element(element, el_ctx, natives)
+        # pane → element map ([D147]): PgPane.elements reads this off the item
+        plot._qtviz_element_ids = tuple(
+            el.id for el in children if isinstance(el, Element))
         # Overlay legend aggregation ([D60]): each child contributes its
         # legend_entry(); merged into any color-mapping legend already drawn.
         if surf.legend_enabled:

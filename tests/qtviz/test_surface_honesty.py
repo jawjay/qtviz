@@ -84,8 +84,11 @@ def test_unhonored_layout_options_warn(backend, qtbot):
 
 @pytest.mark.tier2
 def test_host_layout_honesty(qtbot):
-    """The Qt host honors spacing/tabs; link_x doesn't cross mixed panes and
-    must warn there."""
+    """The Qt host honors spacing/tabs — and, since [D151], link_x/link_y
+    across host panes (the `_LinkController`): no honesty warning, and a zoom
+    in one pane propagates to the linked one."""
+    import warnings as _w
+
     from qtviz.core._host import LayoutHost
 
     node = qv.Layout(
@@ -94,10 +97,14 @@ def test_host_layout_honesty(qtbot):
         options=qv.LayoutOptions(tab_labels=("a", "b"), link_x=True),
     )
     _degrade.reset()
-    with pytest.warns(QtvizWarning, match="'link_x'"):
+    with _w.catch_warnings():
+        _w.simplefilter("error", QtvizWarning)  # honored ⇒ silent
         handle = LayoutHost.render(node, view_backend="pyqtgraph",
                                    theme=qv.Theme.light())
     qtbot.addWidget(handle.widget)
+    handle.pane("0").set_range(x=(2.0, 7.0))
+    handle.event_bus._drain()
+    assert handle.pane("1").capture().x_range == pytest.approx((2.0, 7.0), rel=1e-3)
     handle.dispose()
 
 

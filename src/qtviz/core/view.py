@@ -375,10 +375,22 @@ class View(QWidget):
 
     # ── events ──
     def on(self, event_type: type, cb: Callable, *, throttle_ms: int | None = None,
-           source=None) -> Disposable:
+           source=None, pane=None) -> Disposable:
         """Subscribe to a typed event. `source=` ([D134]) filters by the
         emitting element — pass an Element (or its id), or a sequence of
-        either; it replaces the `e.source_id == el.id` lambda idiom."""
+        either; it replaces the `e.source_id == el.id` lambda idiom.
+        `pane=` ([D149]) filters by the emitting surface — a pane label
+        ([D145]; `"0"`, `"1"`, … when unlabeled) or a sequence of labels:
+        `view.on(qv.RangeEvent, on_zoom, pane="price")`. Both filters
+        compose."""
+        if pane is not None:
+            wanted_panes = frozenset(
+                pane if isinstance(pane, (list, tuple, set)) else (pane,))
+            inner_p = cb
+
+            def cb(ev, _inner=inner_p, _wanted=wanted_panes):  # noqa: A001 — deliberate rebind
+                if getattr(ev, "pane", None) in _wanted:
+                    _inner(ev)
         if source is not None:
             items = source if isinstance(source, (list, tuple, set)) else (source,)
             wanted = frozenset(getattr(x, "id", x) for x in items)
@@ -408,6 +420,42 @@ class View(QWidget):
         """The live backend `RenderHandle` for the current render (or `None`
         while resolving) — the [D53] escape hatch to backend-native objects."""
         return self._handle
+
+    @property
+    def root(self) -> Any:
+        """The rendered node tree — pair with `Layout.with_pane` for the
+        declarative per-pane update:
+        `view.set_root(view.root.with_pane("price", new_node))`."""
+        return self._root
+
+    def pane(self, key: str | int | None = None):
+        """The current render's `PaneHandle` for one surface ([D147]) — by
+        label ([D145]), by flat index, or (`key=None`) the only pane. The
+        "Axes of qtviz": interaction-side verbs only —
+
+            view.pane("price").set_range(x=(0, 10))   # programmatic pan/zoom
+            view.pane("price").autorange()
+            view.pane("price").select(x0, y0, x1, y1) # programmatic brush
+            view.pane("price").capture()              # ViewState, data space
+            view.pane("price").native                 # PlotItem / Axes / host
+            view.pane("price").elements               # ids on this surface
+
+        Facades wrap the *current* render: fetch fresh rather than caching —
+        a pane kept across a rebuild goes dead (`pane.alive`) and raises
+        `DisposedError`. Describe-side config (title, scale, …) stays on the
+        node (`.opts()` / `set_root`). Raises while a lazy render is still
+        resolving (`View.loading`)."""
+        if self._handle is None:
+            raise RuntimeError(
+                "no live render yet (data still resolving) — wait for the "
+                "current build (View.loading) before addressing panes")
+        return self._handle.pane(key)
+
+    @property
+    def panes(self) -> tuple:
+        """Every pane of the current render, flattened in layout order
+        (empty while a lazy render is resolving)."""
+        return self._handle.panes() if self._handle is not None else ()
 
     def native(self, element_id: str) -> Any:
         """The live backend primitive for an element (`handle.native`, [D53]) — the

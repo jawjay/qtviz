@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import uuid
 from dataclasses import replace
 from pathlib import Path
 
@@ -13,7 +12,13 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 from ...core._degrade import FULL_SURFACE, check_layout, check_recommended, check_surface
-from ...core.backend import RenderContext, RendererRegistry, RenderHandle, ViewState
+from ...core.backend import (
+    PaneHandle,
+    RenderContext,
+    RendererRegistry,
+    RenderHandle,
+    ViewState,
+)
 from ...core.capabilities import Capabilities
 from ...core.compose import (
     Layout,
@@ -23,7 +28,7 @@ from ...core.compose import (
     surface_of,
 )
 from ...core.element import Element
-from ...core.event import EventBus
+from ...core.event import EventBus, PaneBus
 from ...core.threading import require_gui_thread
 from ...data import resolve_node
 from ...errors import RendererMissingError
@@ -49,11 +54,80 @@ _CAPS = Capabilities(
 )
 
 
+class MplPane(PaneHandle):
+    """One `Axes` of the figure ([D147]). matplotlib keeps `get_xlim()` in data
+    space under any scale, so capture/restore need no R1 normalization."""
+
+    def __init__(self, label: str, fig, surf: dict, bus) -> None:
+        super().__init__(label)
+        self._fig = fig
+        self._surf = surf
+        self._bus = bus
+
+    def capture(self) -> ViewState:
+        self._assert_alive()
+        ax, ax2 = self._surf["ax"], self._surf.get("y2_ax")
+        return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()),
+                         y2_range=tuple(ax2.get_ylim()) if ax2 is not None else None)
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        self._assert_alive()
+        ax = self._surf["ax"]
+        if state.x_range:
+            ax.set_xlim(*state.x_range)
+        if state.y_range:
+            ax.set_ylim(*state.y_range)
+        if state.y2_range and self._surf.get("y2_ax") is not None:
+            self._surf["y2_ax"].set_ylim(*state.y2_range)
+        self._fig.canvas.draw_idle()
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        self._assert_alive()
+        for a in (self._surf["ax"], self._surf.get("y2_ax")):
+            if a is not None:
+                a.relim()
+                a.autoscale()
+        self._fig.canvas.draw_idle()
+
+    @require_gui_thread
+    def select(self, x0: float, y0: float, x1: float, y1: float) -> None:
+        self._assert_alive()
+        _events.emit_bounds_select(self._surf["selectables"], self._bus, x0, y0, x1, y1)
+
+    @property
+    def native(self):
+        return self._surf["ax"]
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(self._surf.get("element_ids", ()))
+
+    @require_gui_thread
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        """One pane in any mpl format — the figure cropped to this axes' tight
+        bbox (spiked; [D150]). The crop is geometric: an artist overhanging
+        the axes region (a neighbor's wide legend) can intrude at the margin."""
+        self._assert_alive()
+        path = Path(path)
+        fig = self._fig
+        fig.canvas.draw()  # tightbbox needs a live renderer
+        bbox = (self._surf["ax"].get_tightbbox()
+                .transformed(fig.dpi_scale_trans.inverted()))
+        kw: dict = {"format": fmt, "transparent": transparent, "bbox_inches": bbox}
+        if dpi is not None:
+            kw["dpi"] = dpi
+        fig.savefig(str(path), **kw)
+        return path
+
+
 class MplRenderHandle(RenderHandle):
     def __init__(self, canvas, fig, bus, surfaces, root, backend, natives) -> None:
         super().__init__(canvas, bus, "matplotlib")
         self._fig = fig
-        self._surfaces = surfaces  # [{"ax", "surface_id", "selectables"}]
+        self._surfaces = surfaces  # [{"ax", "surface_id", "selectables", "y2_ax", "element_ids"}]
         self._root = root
         self._backend = backend
         self._natives = natives  # element id → mpl Artist ([D53])
@@ -62,33 +136,23 @@ class MplRenderHandle(RenderHandle):
     def axes(self):
         return [s["ax"] for s in self._surfaces]
 
-    def capture_state(self) -> ViewState:
-        if not self._surfaces:
-            return ViewState()
-        surf = self._surfaces[0]
-        ax, ax2 = surf["ax"], surf.get("y2_ax")
-        return ViewState(x_range=tuple(ax.get_xlim()), y_range=tuple(ax.get_ylim()),
-                         y2_range=tuple(ax2.get_ylim()) if ax2 is not None else None)
+    def _panes(self) -> tuple[MplPane, ...]:
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
 
-    def restore_state(self, state: ViewState) -> None:
-        if not self._surfaces:
-            return
-        surf = self._surfaces[0]
-        ax = surf["ax"]
-        if state.x_range:
-            ax.set_xlim(*state.x_range)
-        if state.y_range:
-            ax.set_ylim(*state.y_range)
-        if state.y2_range and surf.get("y2_ax") is not None:
-            surf["y2_ax"].set_ylim(*state.y2_range)
-        self._fig.canvas.draw_idle()
+        labels = flat_pane_labels(self._root)  # [D145] given labels, else indices
+        if len(labels) != len(self._surfaces):  # defensive: identity never crashes
+            labels = tuple(str(i) for i in range(len(self._surfaces)))
+        return tuple(MplPane(lb, self._fig, s, s.get("bus", self.event_bus))
+                     for lb, s in zip(labels, self._surfaces, strict=True))
 
     def select_bounds(self, ax_index: int, xmin, ymin, xmax, ymax) -> None:
         """Programmatic brush (approximate) — emits one SelectEvent per
         selectable element on the axes (element id + indices + bounds); the
         interactive rubber band ([D95]) drives the same helper."""
-        _events.emit_bounds_select(self._surfaces[ax_index]["selectables"],
-                                   self.event_bus, xmin, ymin, xmax, ymax)
+        surf = self._surfaces[ax_index]
+        _events.emit_bounds_select(surf["selectables"],
+                                   surf.get("bus", self.event_bus),
+                                   xmin, ymin, xmax, ymax)
 
     @require_gui_thread
     def set_element_data(self, element_id: str, arrays: dict) -> bool:
@@ -205,6 +269,9 @@ class MatplotlibBackend:
                                 "width_ratios", "height_ratios"})
 
     def _render_into(self, node, fig, theme, bus, surfaces, natives) -> None:
+        from ...core.compose import flat_pane_labels  # noqa: PLC0415
+
+        labels = flat_pane_labels(node)  # [D145]/[D149]: pane identity at render
         if isinstance(node, Layout):
             from ...core.compose import grid_geometry  # noqa: PLC0415
 
@@ -214,27 +281,42 @@ class MatplotlibBackend:
             gs = fig.add_gridspec(nrows, ncols,
                                   width_ratios=opts.width_ratios,
                                   height_ratios=opts.height_ratios)
-            for child, (r, c, rs, cs) in zip(node.children, cells, strict=True):
-                base = surfaces[0]["ax"] if surfaces else None
+            # [D146]: share within link groups — each member shares with its
+            # group's first pane (created earlier: the leader is the group min,
+            # and children render in index order).
+            from ...core.compose import link_groups  # noqa: PLC0415
+
+            n = len(node.children)
+            x_leader = {i: g[0] for g in link_groups(cells, n, opts.link_x)
+                        for i in g[1:]}
+            y_leader = {i: g[0] for g in link_groups(cells, n, opts.link_y)
+                        for i in g[1:]}
+            for i, (child, label, (r, c, rs, cs)) in enumerate(
+                    zip(node.children, labels, cells, strict=True)):
                 ax = fig.add_subplot(
                     gs[r:r + rs, c:c + cs],
-                    sharex=base if opts.link_x else None,
-                    sharey=base if opts.link_y else None,
+                    sharex=surfaces[x_leader[i]]["ax"] if i in x_leader else None,
+                    sharey=surfaces[y_leader[i]]["ax"] if i in y_leader else None,
                 )
-                self._render_cell(child, ax, theme, bus, surfaces, natives)
+                self._render_cell(child, ax, theme, bus, surfaces, natives, label)
             if opts.title:
                 fig.suptitle(opts.title, color=theme.foreground.mpl(),
                              fontsize=theme.title_size)
         else:
-            self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces, natives)
+            self._render_cell(node, fig.add_subplot(1, 1, 1), theme, bus, surfaces,
+                              natives, labels[0])
 
-    def _render_cell(self, node, ax, theme, bus, surfaces, natives) -> None:
+    def _render_cell(self, node, ax, theme, bus, surfaces, natives,
+                     label: str = "0") -> None:
         apply_theme_ax(ax, theme)
         surf = surface_of(node)
         check_surface(surf, consumer=self.name, honored=FULL_SURFACE)  # ([D109])
         x_scale, y_scale = effective_scales(node, surf, self.capabilities.scales, self.name)
         apply_surface(ax, surf, theme, x_scale, y_scale)
-        surface_id = uuid.uuid4().hex
+        # [D149]: the pane label IS the surface id (RangeEvent source_id) and
+        # every emit through the stamping bus carries pane=label.
+        bus = PaneBus(bus, label)
+        surface_id = label
         selectables: list = []
         children = node.children if isinstance(node, Overlay) else (node,)
         # twin axis ([D88]): created when any series child asks for y2
@@ -249,8 +331,12 @@ class MatplotlibBackend:
                                      axis="y2", backend=self.name)
             ax2 = ax.twinx()
             apply_y2(ax2, y2_spec, theme, y2_scale)
-        surfaces.append({"ax": ax, "surface_id": surface_id,
-                         "selectables": selectables, "y2_ax": ax2})
+        entry = {"ax": ax, "surface_id": surface_id,
+                 "selectables": selectables, "y2_ax": ax2, "bus": bus,
+                 # pane → element map ([D147]): MplPane.elements reads this
+                 "element_ids": tuple(el.id for el in children
+                                      if isinstance(el, Element))}
+        surfaces.append(entry)
         _events.connect_range(ax, surface_id, bus)
         indices = series_index_map(children)  # palette slots; annotations excluded
         ctx = RenderContext(theme=theme, parent=ax, event_bus=bus, backend=self,

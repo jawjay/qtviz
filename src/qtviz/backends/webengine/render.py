@@ -11,12 +11,11 @@ buffers anything sent before the page is `ready` (D25) — so the synchronous
 from __future__ import annotations
 
 import contextlib
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ...core._scales import delog, log_lim
-from ...core.backend import RendererRegistry, RenderHandle, ViewState
+from ...core.backend import PaneHandle, RendererRegistry, RenderHandle, ViewState
 from ...core.capabilities import Capabilities
 from ...core.event import EventBus, RangeEvent
 from ...core.threading import require_gui_thread
@@ -48,9 +47,64 @@ _CAPS = Capabilities(
 )
 
 
+class _WebPane(PaneHandle):
+    """The one surface of a webengine figure ([D147]). Ranges come from the
+    handle's shadow state — Python-held, data space — so `capture` is
+    synchronous even though the live ranges live in JS; restores go out over
+    the bridge (queued until it is ready), log axes normalized on the wire
+    (R1)."""
+
+    def __init__(self, label: str, handle: WebEngineRenderHandle) -> None:
+        super().__init__(label)
+        self._h = handle
+
+    def capture(self) -> ViewState:
+        return ViewState(x_range=self._h._x_range, y_range=self._h._y_range)
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        self._assert_alive()
+        h = self._h
+        update: dict = {}
+        if state.x_range:
+            h._x_range = state.x_range              # shadow state stays data space
+            sent = log_lim(state.x_range, axis="x", backend="webengine") \
+                if h._x_log else state.x_range      # …the wire wants log10 (R1)
+            if sent:
+                update["xaxis.range"] = list(sent)
+        if state.y_range:
+            h._y_range = state.y_range
+            sent = log_lim(state.y_range, axis="y", backend="webengine") \
+                if h._y_log else state.y_range
+            if sent:
+                update["yaxis.range"] = list(sent)
+        if update:
+            h._host.relayout(update)  # queued until the bridge is ready
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        self._assert_alive()
+        self._h._x_range = None  # unknown until the relayout reports back
+        self._h._y_range = None
+        self._h._host.relayout({"xaxis.autorange": True, "yaxis.autorange": True})
+
+    @property
+    def native(self):
+        return self._h._host
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(self._h._traces)
+
+    def export(self, fmt: str, path, *, dpi: float | None = None,
+               transparent: bool = False) -> Path:
+        self._assert_alive()  # one figure = one pane: the handle export IS it
+        return self._h.export(fmt, path, dpi=dpi, transparent=transparent)
+
+
 class WebEngineRenderHandle(RenderHandle):
     """Owns the `WebBridgeView`, the Plotly host, and the event bridge. Tracks
-    last-known axis ranges (shadow state) so `capture_state` is synchronous even
+    last-known axis ranges (shadow state) so state capture is synchronous even
     though the live ranges live in JS."""
 
     def __init__(self, widget: PlotView, event_bus, host, source_ids, surface_id, theme,
@@ -87,8 +141,13 @@ class WebEngineRenderHandle(RenderHandle):
         events = _translate.translate(
             name, payload, traces=self._traces, surface_id=self._surface_id
         )
+        from dataclasses import replace  # noqa: PLC0415
+
         for ev in events:
-            self.event_bus.emit(self._with_raster_value(ev))
+            ev = self._with_raster_value(ev)
+            if ev.pane is None:  # [D149]: one figure = one pane
+                ev = replace(ev, pane=self._surface_id)
+            self.event_bus.emit(ev)
 
     def _with_raster_value(self, ev):
         """[D46]: a hover over a datashaded raster carries the aggregated value
@@ -118,7 +177,8 @@ class WebEngineRenderHandle(RenderHandle):
         if y is not None:
             self._y_range = (delog(y[0], self._y_log), delog(y[1], self._y_log))
         if self._x_range is not None and self._y_range is not None:
-            self.event_bus.emit(RangeEvent(self._surface_id, self._x_range, self._y_range))
+            self.event_bus.emit(RangeEvent(self._surface_id, self._x_range,
+                                           self._y_range, pane=self._surface_id))
 
     def native(self, element_id: str):
         """The live Plotly host (verbs: react/relayout/…) for any element this
@@ -126,25 +186,9 @@ class WebEngineRenderHandle(RenderHandle):
         so the host is the reachable native object ([D53])."""
         return self._host if element_id in self._traces else None
 
-    def capture_state(self) -> ViewState:
-        return ViewState(x_range=self._x_range, y_range=self._y_range)
-
-    def restore_state(self, state: ViewState) -> None:
-        update: dict = {}
-        if state.x_range:
-            self._x_range = state.x_range           # shadow state stays data space
-            sent = log_lim(state.x_range, axis="x", backend="webengine") \
-                if self._x_log else state.x_range   # …the wire wants log10 (R1)
-            if sent:
-                update["xaxis.range"] = list(sent)
-        if state.y_range:
-            self._y_range = state.y_range
-            sent = log_lim(state.y_range, axis="y", backend="webengine") \
-                if self._y_log else state.y_range
-            if sent:
-                update["yaxis.range"] = list(sent)
-        if update:
-            self._host.relayout(update)  # queued until the bridge is ready
+    def _panes(self) -> tuple[PaneHandle, ...]:
+        # one figure = one surface; grids compose per-pane handles via the host
+        return (_WebPane("0", self),)
 
     @require_gui_thread
     def update(self, new_root) -> None:
@@ -238,7 +282,7 @@ class WebEngineBackend:
         host = PlotlyBackend(fig)
         view = PlotView(host, parent=parent)
         bus = EventBus()
-        handle = WebEngineRenderHandle(view, bus, host, source_ids, uuid.uuid4().hex, theme,
+        handle = WebEngineRenderHandle(view, bus, host, source_ids, "0", theme,
                                        fig=fig)
         handle._wire_rasters(node)
         return handle
@@ -252,7 +296,7 @@ class WebEngineBackend:
         host = _make_host(node.kind, node.figure)
         view = PlotView(host, parent=parent)
         bus = EventBus()
-        return WebEngineRenderHandle(view, bus, host, [node.id], uuid.uuid4().hex, theme)
+        return WebEngineRenderHandle(view, bus, host, [node.id], "0", theme)
 
 
 def _make_host(kind: str, figure):

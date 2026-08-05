@@ -8,6 +8,103 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Structured axis sharing ([D146]):** `link_x`/`link_y` widen from bools to
+  `bool | "col" | "row"` — `True` links all panes (unchanged), `"col"`/`"row"`
+  link within each grid column/row, with spanning panes merging groups
+  transitively (the `subplot_mosaic` sharing rule). Groups derive from the
+  same cells that decide grid shape, so mosaic spans compose. pyqtgraph links
+  natively per group (`setXLink` to the group leader), matplotlib shares axes
+  per group (`sharex`/`sharey`). `"col"`/`"row"` on a non-grid kind is a
+  construction-time `ValidationError`.
+
+- **Cross-backend linking ([D151]):** `link_x`/`link_y` now work across
+  host-composed layouts — mixed-backend grids, splitters, tabs, and grids
+  holding nested layouts — where they were previously warned-and-ignored. A
+  `_LinkController` on the composite handle propagates `RangeEvent`s within
+  each link group via `pane.set_range`, guarded against feedback two ways:
+  a reentrancy flag for synchronous echoes and a value guard (skip members
+  already at the target range) for asynchronous ones (webengine relayout
+  round-trips). Nested-`Layout` panes are excluded from cross-pane groups
+  with a warning (many surfaces — ambiguous); their internal linking stays
+  their own options' business.
+
+- **Per-pane export ([D150] S5):** `view.pane("price").export("png", path)`
+  writes just that pane. pyqtgraph exports the `PlotItem` subtree (png, one
+  cell of a shared-scene grid); matplotlib crops the figure to the axes'
+  tight bbox (png/svg/pdf, dpi/transparent honored — the crop is geometric,
+  so a neighbor's overhanging artist can intrude at the margin); a webengine
+  pane delegates to its per-figure export. This closes [D72]'s "per-pane
+  vector export via `handle.children[i]`" gap with a named, uniform verb.
+
+- **Pane identity on events ([D149], `design/pane-handles.md` S4):** every
+  event now carries `pane` — the label of the surface it came from (keyword-
+  only, `None`-defaulted, so existing constructors/tests are untouched) — and
+  `view.on(...)` grows the matching filter:
+  `view.on(qv.RangeEvent, on_zoom, pane="price")`, composable with
+  `source=`. Element events (pick/select/hover) keep the element id as
+  `source_id`; in a mixed-backend/tab/splitter layout the host maps each
+  child's local labels to the layout's flat ones on delivery, so third-party
+  single-surface backends get pane-correct events with zero changes.
+
+### Changed
+
+- **`RangeEvent`/`TapEvent.source_id` is now the pane label** (`"price"`, or
+  `"0"`, `"1"`, … when unlabeled) instead of a random per-render uuid. The
+  uuid was regenerated on every render and never exposed, so nothing could
+  meaningfully depend on it; the label is stable across rebuilds and backend
+  switches and answers "which pane did the user zoom?" directly.
+
+- **`view.pane(...)` / `view.panes` — the pane handle ([D147],
+  `design/pane-handles.md` S3):** every surface of a render (grid cell, tab,
+  splitter pane, or the whole plot) is addressable downstream by label or
+  index. A `PaneHandle` carries the interaction-side verbs — `set_range(x=,
+  y=, y2=)` (programmatic pan/zoom), `autorange()`, `select(x0, y0, x1, y1)`
+  (programmatic brush emitting the usual `SelectEvent`s), `capture()`/
+  `restore()` (per-surface `ViewState`, data space), `.native` (the pg
+  `PlotItem` / mpl `Axes` / webengine host, the [D53] escape valve per pane)
+  and `.elements` (ids on that surface). Facades wrap the *current* render:
+  one kept across a rebuild goes dead (`pane.alive`) and raises the new
+  `qtviz.errors.DisposedError` instead of touching freed widgets.
+  Describe-side config deliberately stays on the node — `view.root` +
+  `Layout.with_pane` + `set_root` is the declarative per-pane update.
+
+- **Named panes ([D145]/[D148], `design/pane-handles.md` S2):** `Layout`
+  children can be labeled — pass a mapping (`qv.Layout.grid({"price": p,
+  "volume": v})`, works on `tabs`/`splitter` too, where keys also caption the
+  tabs), a mosaic (labels are now **retained**), or explicit `labels=`.
+  `Layout.mosaic` additionally accepts the `subplot_mosaic` list form with
+  arbitrary string labels (`[["price", "book"], ["volume", "book"]]`, `None`
+  for holes) and a positional mapping for non-identifier labels.
+  `layout["price"]` looks a pane up (nested layouts included);
+  `layout.with_pane("price", node)` swaps one immutably — the declarative
+  per-pane update (`view.set_root(root.with_pane(...))`). `Layout.grid` also
+  takes explicit `cells=` — a label-keyed mapping or a sequence of
+  `(row, col, rowspan, colspan)` — validated for overlap like the mosaic
+  parser; the programmatic answer to GridSpec-style spans. Labels flow
+  downstream: they key `LayoutState` capture/restore (state now survives
+  root swaps that reorder panes) and the internal pane protocol.
+
+- **Whole-render view state ([D150], `design/pane-handles.md` S1):**
+  `handle.capture_state()` now returns a `LayoutState` — ordered
+  `(pane label, ViewState)` pairs covering **every** pane — and
+  `restore_state` matches panes **by label** (unknown labels drop silently).
+  Previously only the first pane's pan/zoom survived a rebuild, theme change,
+  or backend switch (and mixed-backend/tab/splitter/dock views preserved
+  nothing). `ViewState` is unchanged as the per-surface record;
+  single-surface reads keep working (`capture_state().x_range` reads the
+  first pane), and `restore_state(ViewState(...))` remains a first-pane
+  shorthand. Backends now implement a per-surface pane protocol
+  (`RenderHandle.panes()`, internal in this step) instead of handle-level
+  state methods.
+
+### Fixed
+
+- **Nested grids no longer crash.** A grid whose child is itself a `Layout`
+  (e.g. `Layout([Layout([a, b]), c])`) crashed inside the single-backend cell
+  renderer (`AttributeError: 'Layout' has no attribute 'lower'`); nested
+  grids now route through the Qt LayoutHost, composing per-pane renders —
+  with per-pane state included via the `LayoutState` work above.
+
 - **`py.typed` ships with the package** (PEP 561): downstream mypy/pyright now
   see qtviz's full annotations instead of treating the library as untyped. A
   hardening test asserts the marker is importable from the installed package.

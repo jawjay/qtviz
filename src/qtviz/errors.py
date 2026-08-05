@@ -55,6 +55,12 @@ class AdapterError(QtvizError):
     """No registered data adapter handles the given input (§6.3)."""
 
 
+class DisposedError(QtvizError, RuntimeError):
+    """A live facade (a `PaneHandle`, [D147]) was used after the render it
+    wraps was replaced or torn down. Fetch a fresh one from the current render
+    (`view.pane(...)`) instead of caching across rebuilds."""
+
+
 class MissingDependencyError(QtvizError, ImportError):
     """An optional dependency is required for the requested feature but is not
     installed. Carries the packaged install hint (``pip install "qtviz[X]"``).
