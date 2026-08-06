@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from ..core.element import Element, require_gridded
+from ..core.element import Element, ElementId, require_gridded
 from ..core.encoding import Norm
 from ..data import DataLike, as_data_ref
 from ..errors import ValidationError
@@ -34,7 +34,7 @@ class Image(NormedRaster, Element):
         clim: tuple[float | None, float | None] | None = None,
         alpha: float = 1.0,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         from ..core._validate import check_alpha  # noqa: PLC0415

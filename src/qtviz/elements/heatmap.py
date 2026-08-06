@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from ..core._stats import GRID_AGGS
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..core.encoding import Norm
 from ..data import Accessor, DataLike, as_data_ref
 from ..errors import ValidationError
@@ -45,7 +45,7 @@ class Heatmap(NormedRaster, Element):
         alpha: float = 1.0,
         annotate: bool | str = False,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         

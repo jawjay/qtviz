@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..core._validate import check_alpha
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..data import Accessor, DataLike, as_data_ref
 from ..errors import ValidationError
 
@@ -32,7 +32,7 @@ class Pie(Element):
         hole: float = 0.0,
         alpha: float = 1.0,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if not 0.0 <= float(hole) < 1.0:

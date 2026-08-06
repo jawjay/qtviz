@@ -6,7 +6,7 @@ import numpy as np
 
 from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..data import Accessor
 from ..errors import ValidationError
 
@@ -49,7 +49,7 @@ class Streamlines(Element):
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_alpha(alpha, who="Streamlines")

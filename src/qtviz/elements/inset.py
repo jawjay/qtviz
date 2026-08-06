@@ -17,7 +17,7 @@ draws the parent-side rectangle marking the child's declared x/y window
 
 from __future__ import annotations
 
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..errors import ValidationError
 
 
@@ -28,7 +28,7 @@ class Inset(Element):
 
     def __init__(self, child, *, rect: tuple[float, float, float, float],
                  label: str | None = None, indicate: bool = False,
-                 backend_hint: str | None = None, id: str | None = None) -> None:
+                 backend_hint: str | None = None, id: ElementId | None = None) -> None:
         from ..core.compose import Layout, Overlay  # noqa: PLC0415 — avoid a cycle
 
         super().__init__(backend_hint=backend_hint, id=id)

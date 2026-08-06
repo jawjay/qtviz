@@ -114,6 +114,15 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Fixed
 
+- **`id=` is annotated on every public constructor** (issue #3): all 30
+  element `__init__`s now declare `id: ElementId | None = None` instead of
+  degrading the base class's annotation to a bare `id=None` — for a
+  contract-first library the public constructors are exactly where the
+  annotation belongs. Runtime-invisible. The companion rename question
+  (`id` shadows the builtin) is closed as **won't-rename**: post-2.0 the
+  shadow is cosmetic and a rename would be a breaking change with no
+  behavioral payoff.
+
 - **Nested grids no longer crash.** A grid whose child is itself a `Layout`
   (e.g. `Layout([Layout([a, b]), c])`) crashed inside the single-backend cell
   renderer (`AttributeError: 'Layout' has no attribute 'lower'`); nested
