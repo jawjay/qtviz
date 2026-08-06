@@ -8,6 +8,19 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **`Bars(annotate=)` accessor arm ([D136], closing the 2.0 deferral):** the
+  union widens from `bool | fmt-str` to also accept a **non-str accessor** —
+  `annotate=col("name")`, a callable, or a raw array — labeling each bar
+  from the data instead of formatting its value. A bare `str` remains a
+  [D86] format spec (the one place the accessor union's plain-string form
+  is taken), so a column label is spelled `col(...)`. The label channel
+  resolves off the GUI thread like any other binding; numeric label columns
+  format through `%g`, everything else through `str`. All three native
+  renderers share one text rule (`bar_annotate_texts`). `annotate=<accessor>`
+  with `by=` is a construction-time `ValidationError` — grouped bars sum
+  rows, so a per-row label source would be ambiguous ([D51]: never a silent
+  drop).
+
 - **Inset axes ([D152]–[D154], `design/inset-axes.md`):** `qv.Inset(child,
   rect=(x0, y0, w, h), label=…, indicate=…)` — a child surface floating on a
   parent, composed like an annotation: `overview * qv.Inset(zoom,

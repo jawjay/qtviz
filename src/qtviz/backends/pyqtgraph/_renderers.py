@@ -232,16 +232,17 @@ def render_curve(element: Curve, ctx):
 
 
 def _bar_label_items(ctx, positions, values, tops, element, *, inside=False) -> None:
-    """Value labels beside/inside bars ([D98]) — formatted via [D86]."""
-    if element.annotate is None:
-        return
-    from ...core._ticks import format_tick  # noqa: PLC0415
+    """Value labels beside/inside bars ([D98]) — text via the shared
+    [D86]/[D136] rule (`bar_annotate_texts`)."""
+    from ...core.encoding import bar_annotate_texts  # noqa: PLC0415
 
-    spec = element.annotate if element.annotate != "auto" else "g"
+    texts = bar_annotate_texts(element, values)
+    if texts is None:
+        return
     horizontal = element.orient == "horizontal"
     fg = ctx.theme.foreground.qt()
-    for pos, val, top in zip(positions, values, tops, strict=True):
-        item = pg.TextItem(format_tick(float(val), spec), color=fg,
+    for pos, text, top in zip(positions, texts, tops, strict=True):
+        item = pg.TextItem(text, color=fg,
                            anchor=((0.5, 0.5) if inside
                                    else (0.0, 0.5) if horizontal
                                    else (0.5, 1.0)))
