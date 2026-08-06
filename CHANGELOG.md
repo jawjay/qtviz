@@ -8,6 +8,19 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Streaming through lowering ([D128], closing the 2.0 deferral):** lowered
+  elements now ride the [D77] incremental path on pyqtgraph. A `qv.stream`
+  feeding Ecdf, Spread, Stem, or Quiver updates the rendered mark items in
+  place (`setData` after a relower with the streamed rows — the Ecdf stays a
+  true CDF, stalks stay paired) instead of taking the rebuild fallback; brush
+  selectables refresh with the new rows. All-or-nothing: a mark-sequence
+  change (or a mark without an in-place updater) still degrades explicitly to
+  the rebuild path. matplotlib/webengine keep their existing fallbacks — the
+  streaming-rate backend is pyqtgraph, and the [D77] contract already
+  degrades the others honestly. A new benchmark budgets the
+  resolve + relower + `setData` frame at the same 25 ms interactive ceiling
+  as the native path.
+
 - **`Bars(annotate=)` accessor arm ([D136], closing the 2.0 deferral):** the
   union widens from `bool | fmt-str` to also accept a **non-str accessor** —
   `annotate=col("name")`, a callable, or a raw array — labeling each bar

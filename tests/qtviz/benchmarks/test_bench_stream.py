@@ -61,12 +61,38 @@ def test_refresh_cost_at_100k(qapp):
     assert per_ms < REFRESH_CEILING_MS
 
 
+def test_lowered_refresh_cost_at_100k(qapp):
+    """[D128]: the lowered fast path re-*lowers* per frame (Ecdf: an
+    O(n log n) sort) before the setData write — budget both under the same
+    interactive-rate ceiling as the native path."""
+    import qtviz.backends as B
+
+    try:
+        backend = B.get("pyqtgraph")
+    except Exception:
+        pytest.skip("pyqtgraph unavailable")
+    feed = qv.stream({"v": float}, window=100_000)
+    feed.append(v=np.random.default_rng(0).normal(size=100_000))
+    el = qv.Ecdf(feed, value="v")
+    handle = backend.render(el, theme=qv.Theme.dark())
+    n = 20
+    t0 = time.perf_counter()
+    for _ in range(n):
+        arrays = feed.resolve_channels(el.channels())
+        assert handle.set_element_data(el.id, arrays)
+    per_ms = (time.perf_counter() - t0) / n * 1e3
+    handle.dispose()
+    print(f"lowered refresh (resolve + relower + setData, Ecdf @ 100k): {per_ms:.1f} ms")
+    assert per_ms < REFRESH_CEILING_MS
+
+
 def main() -> int:
     from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance() or QApplication([])
     test_append_cost()
     test_refresh_cost_at_100k(app)
+    test_lowered_refresh_cost_at_100k(app)
     return 0
 
 
