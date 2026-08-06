@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from ..core._validate import check_alpha, check_color, check_exclusive
 from ..core.color import ColorSpec
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..data import Accessor, DataLike, as_data_ref
 
 
@@ -34,7 +34,7 @@ class _Distribution(Element):
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_exclusive(color, by, names=("color", "by"), who=type(self).__name__)
@@ -77,7 +77,7 @@ class Violin(_Distribution):
         alpha: float = 0.6,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(data, value=value, by=by, color=color, alpha=alpha,
                          label=label, backend_hint=backend_hint, id=id)

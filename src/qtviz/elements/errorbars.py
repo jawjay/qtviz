@@ -7,7 +7,7 @@ from typing import Literal
 import numpy as np
 
 from ..core.color import ColorSpec
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..data import Accessor, DataLike, as_data_ref
 from ..errors import ValidationError
 
@@ -44,7 +44,7 @@ class ErrorBars(Element):
         lo_limit: Accessor | None = None,
         hi_limit: Accessor | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if direction == "both" and (lo_limit is not None or hi_limit is not None):

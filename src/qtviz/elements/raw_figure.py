@@ -11,7 +11,7 @@ The library is auto-detected from the figure's type; pass `kind=` to override.
 
 from __future__ import annotations
 
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..errors import ValidationError
 
 _KINDS = ("plotly", "bokeh", "holoviews")
@@ -39,7 +39,8 @@ class RawFigure(Element):
 
     DATA_KIND = "none"  # [D124]: the foreign figure is opaque, not a DataRef
 
-    def __init__(self, figure, *, kind: str | None = None, backend_hint=None, id=None) -> None:
+    def __init__(self, figure, *, kind: str | None = None, backend_hint: str | None = None,
+                 id: ElementId | None = None) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         self.figure = figure
         self.kind = kind or _detect_kind(figure)

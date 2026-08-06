@@ -13,6 +13,7 @@ from collections.abc import Sequence
 
 from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
+from ..core.element import ElementId
 from ..errors import ValidationError
 from .annotations import _Reference
 
@@ -70,7 +71,7 @@ class Rect(_Shape):
         fill: bool = False,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if not (float(x0) < float(x1) and float(y0) < float(y1)):
@@ -108,7 +109,7 @@ class Ellipse(_Shape):
         fill: bool = False,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if not (float(rx) > 0 and float(ry) > 0):
@@ -140,7 +141,7 @@ class Polygon(_Shape):
         fill: bool = False,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         pts = tuple((float(x), float(y)) for x, y in points)

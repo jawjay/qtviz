@@ -16,7 +16,7 @@ from typing import Literal
 
 from ..core._validate import check_alpha, check_color
 from ..core.color import ColorSpec
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..errors import ValidationError
 
 
@@ -61,7 +61,7 @@ class HLine(_Reference):
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
@@ -103,7 +103,7 @@ class VLine(_Reference):
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
@@ -147,7 +147,7 @@ class Span(_Reference):
         alpha: float = 0.25,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if orient not in ("horizontal", "vertical"):
@@ -197,7 +197,7 @@ class Text(_Reference):
         rotation: float = 0.0,
         frame: bool = False,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         check_color(color, who="Text")
@@ -250,7 +250,7 @@ class RefLine(_Reference):
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         from .curve import check_line_style  # noqa: PLC0415 — shared [D99] guard
@@ -304,7 +304,7 @@ class Arrow(_Reference):
         alpha: float = 1.0,
         label: str | None = None,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if head not in _HEADS:

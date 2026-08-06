@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from ..core.element import Element, require_gridded
+from ..core.element import Element, ElementId, require_gridded
 from ..data import DataLike, as_data_ref
 from ..errors import ValidationError
 
@@ -45,7 +45,7 @@ class Contour(Element):
         label: str | None = None,
         annotate: bool | str = False,
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         if isinstance(annotate, str):

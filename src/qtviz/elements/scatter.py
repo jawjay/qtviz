@@ -6,7 +6,7 @@ from typing import Literal
 
 from ..core._validate import check_agg, check_alpha, check_choice, check_color, check_exclusive
 from ..core.color import ColorSpec
-from ..core.element import Element
+from ..core.element import Element, ElementId
 from ..core.encoding import Norm
 from ..data import Accessor, DataLike, as_data_ref
 from ..errors import ValidationError
@@ -47,7 +47,7 @@ class Scatter(NormedRaster, Element):
         raster: Literal["native", "auto", "datashader"] = "native",
         agg: Literal["auto", "count", "sum", "mean", "max", "min", "std", "any", "by"] = "auto",
         backend_hint: str | None = None,
-        id=None,
+        id: ElementId | None = None,
     ) -> None:
         super().__init__(backend_hint=backend_hint, id=id)
         from .curve import _MARKERS, check_axis  # noqa: PLC0415 — shared [D88] guard + marker set
