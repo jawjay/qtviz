@@ -337,6 +337,19 @@ learns `xaxis2.range` relayout parsing (R1 log map per axis pair);
 `_WebPane` grows one pane per inset (shadow ranges per axis pair). Replaces
 the warn-skip. Own spike + go/no-go; nothing in I1–I4 depends on it.
 
+> **I5 shipped 2026-08-06** — exactly the sketched shape; the spike folded
+> into the build since the JS runtime needed zero changes (relayout updates
+> forward verbatim both ways). `_add_insets` recurses `build` on the child
+> (whole surface vocabulary rides along), remaps traces/shapes/annotations
+> to the pair, numbers pairs from 3 when a parent y2 twin holds `yaxis2`,
+> and records a `layout.meta.qtviz_insets` table (label, axnum, log flags,
+> child ids, indicator shape index) the handle reads for panes, per-pair
+> relayout parsing, pane-stamped events, and [D154] live shape tracking.
+> Known deltas (all explicit): no opaque inset panel (Plotly-idiomatic),
+> per-inset-pane export raises (one parent figure), `indicate=True` keeps
+> the declared-lims gate (the autoranged window lives in JS), twin axis
+> inside an inset warns onto the primary y.
+
 ## Cross-cutting obligations
 
 - Freeze triple lands in I1 (the name), CHANGELOG entries per step.

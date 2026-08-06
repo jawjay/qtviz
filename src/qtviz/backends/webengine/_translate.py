@@ -188,3 +188,12 @@ def parse_relayout(update):
     if not isinstance(update, dict):
         return None, None
     return _axis_range(update, "xaxis"), _axis_range(update, "yaxis")
+
+
+def parse_axis_range(update, axis: str):
+    """One named axis's range from a relayout update, or `None` — the
+    per-axis-pair reader inset panes use (`xaxis2.range…`, I5). Key matching
+    is exact, so `xaxis` never swallows `xaxis2`."""
+    if not isinstance(update, dict):
+        return None
+    return _axis_range(update, axis)

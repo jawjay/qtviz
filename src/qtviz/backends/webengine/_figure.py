@@ -779,6 +779,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
     source_ids: list[str] = []
     shapes: list[dict] = []
     notes: list[dict] = []
+    insets: list = []  # I5: rendered as domain axis pairs after the loop
     reflines: list = []  # need the data span — built after the trace loop ([D99])
     idx = 0  # data-series palette slot; annotations excluded
     barmode: str | None = None  # set by a grouped/stacked Bars ([D68])
@@ -789,17 +790,7 @@ def build(node, theme) -> tuple[dict, list[str]]:
                 "RawFigure is a whole figure and can't be overlaid; render it on its own"
             )
         if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
-            # design/inset-axes.md I5: Plotly domain-axes support is its own
-            # step — until then the inset warns and is skipped, the parent
-            # renders normally (visible degradation, never silent, [D51]).
-            import warnings  # noqa: PLC0415
-
-            from ...errors import QtvizWarning  # noqa: PLC0415
-
-            warnings.warn(
-                f"webengine: inset axes are not supported yet; inset "
-                f"{getattr(element, 'label', None)!r} skipped (renders on "
-                f"pyqtgraph/matplotlib).", QtvizWarning, stacklevel=2)
+            insets.append(element)  # I5: becomes its own axis pair below
             continue
         check_recommended(
             element, backend_name="webengine", honored=honored_for(type(element)),
@@ -872,6 +863,9 @@ def build(node, theme) -> tuple[dict, list[str]]:
             if "showscale" in tr:
                 tr["showscale"] = False
     layout = plotly_layout(theme, surf, x_scale, y_scale, y2=y2)
+    if insets:  # I5: each inset is its own Plotly axis pair
+        _add_insets(layout, traces, source_ids, shapes, notes, insets, theme,
+                    y2_active, x_scale, y_scale)
     if any(tr.get("type") == "image" for tr in traces) and "range" not in layout["yaxis"]:
         # An image trace reverses the y axis by default (raster convention);
         # qtviz rasters are data plots — pin y-up unless the surface inverts.
@@ -888,6 +882,120 @@ def build(node, theme) -> tuple[dict, list[str]]:
 def build_figure(node, theme) -> dict:
     """Resolve `node` and build a Plotly figure spec."""
     return build(node, theme)[0]
+
+
+def _remap_refs(obj: dict, n: int) -> dict:
+    """A child layout shape/annotation re-anchored to the inset's axis pair:
+    `x`/`y` axis refs become `x{n}`/`y{n}`; `paper` refs pass through."""
+    for key, ax in (("xref", "x"), ("yref", "y")):
+        if obj.get(key, ax) == ax:
+            obj[key] = f"{ax}{n}"
+    return obj
+
+
+def _indicator_shape(inset, shapes, theme, x_scale, y_scale, warnings, warning):
+    """[D154] on webengine: the parent-side zoom rectangle as a layout shape
+    (parent-axes refs; log parents take log10 coords — the outgoing R1).
+    Returns the shape's index for the handle's live tracking, or `None`.
+    The autoranged window lives in JS, so — unlike pg/mpl — an undeclared
+    window can't seed the rectangle; that keeps the declared-lims gate."""
+    import math  # noqa: PLC0415
+
+    window = inset.indicator_window()
+    if window is None:
+        warnings.warn(
+            "webengine: Inset(indicate=True) needs declared x AND y lims on "
+            "the child's surface (the autoranged window lives in JS); "
+            "indicator skipped.", warning, stacklevel=4)
+        return None
+    (ix0, ix1), (iy0, iy1) = window
+    try:
+        if x_scale == "log":
+            ix0, ix1 = math.log10(ix0), math.log10(ix1)
+        if y_scale == "log":
+            iy0, iy1 = math.log10(iy0), math.log10(iy1)
+    except ValueError:
+        warnings.warn("webengine: the inset indicator window is non-positive "
+                      "under the parent's log scale; indicator skipped.",
+                      warning, stacklevel=4)
+        return None
+    shapes.append({"type": "rect", "xref": "x", "yref": "y",
+                   "x0": min(ix0, ix1), "x1": max(ix0, ix1),
+                   "y0": min(iy0, iy1), "y1": max(iy0, iy1),
+                   "line": {"color": theme.foreground.hex(), "width": 1.5},
+                   "opacity": 0.8})
+    return len(shapes) - 1
+
+
+def _add_insets(layout, traces, source_ids, shapes, notes, insets, theme,
+                y2_active: bool, x_scale: str = "linear",
+                y_scale: str = "linear") -> None:
+    """[D152] I5: each inset becomes its own Plotly **domain axis pair** —
+    `xaxisN`/`yaxisN` with `domain` from `rect` (axes-fraction, clamped to
+    the paper), the child's traces bound via `xaxis: "xN"`. The child builds
+    through the ordinary `build` recursion, so its whole surface vocabulary
+    (scales incl. the per-pair R1 log map, lims, shapes, annotations, title)
+    rides along. Pair numbering starts at 3 when the parent's y2 twin
+    occupies Plotly's `yaxis2`. Plotly draws later traces on top, so the
+    child overlays the parent; Plotly-idiomatic insets have no opaque panel
+    (unlike pg/mpl — a known cosmetic delta, not a data one).
+
+    `layout.meta.qtviz_insets` records `(label, axnum, log flags, element
+    ids)` per inset — the handle reads it to grow a pane and parse
+    `xaxisN.range` relayouts per pair; Plotly ignores `meta`."""
+    import warnings  # noqa: PLC0415
+
+    from ...errors import QtvizWarning  # noqa: PLC0415
+
+    n = 3 if y2_active else 2
+    meta: list[dict] = []
+    for inset in insets:
+        child_fig, child_ids = build(inset.child, theme)
+        cl = child_fig["layout"]
+        x0, y0, w, h = inset.rect
+        dom_x = [max(0.0, x0), min(1.0, x0 + w)]
+        dom_y = [max(0.0, y0), min(1.0, y0 + h)]
+        if dom_x[0] >= dom_x[1] or dom_y[0] >= dom_y[1]:
+            warnings.warn(
+                f"webengine: inset rect {inset.rect!r} lies outside the "
+                f"figure; inset {inset.label!r} skipped.",
+                QtvizWarning, stacklevel=3)
+            continue
+        layout[f"xaxis{n}"] = {**cl["xaxis"], "domain": dom_x, "anchor": f"y{n}"}
+        layout[f"yaxis{n}"] = {**cl["yaxis"], "domain": dom_y, "anchor": f"x{n}"}
+        for tr in child_fig["data"]:
+            if tr.get("yaxis") == "y2":
+                warnings.warn(
+                    "webengine: a twin axis inside an inset is not supported; "
+                    "the trace renders on the inset's primary y.",
+                    QtvizWarning, stacklevel=3)
+            tr["xaxis"], tr["yaxis"] = f"x{n}", f"y{n}"
+            traces.append(tr)
+        source_ids.extend(child_ids)
+        shapes.extend(_remap_refs(sh, n) for sh in cl.get("shapes", ()))
+        notes.extend(_remap_refs(an, n) for an in cl.get("annotations", ()))
+        title = (cl.get("title") or {}).get("text")
+        if title:  # Plotly has no per-axis-pair title — a pinned annotation is
+            notes.append({"text": title, "xref": "paper", "yref": "paper",
+                          "x": (dom_x[0] + dom_x[1]) / 2.0, "y": dom_y[1],
+                          "xanchor": "center", "yanchor": "bottom",
+                          "showarrow": False,
+                          "font": {"color": theme.foreground.hex()}})
+        entry = {"label": inset.label, "axnum": n,
+                 "x_log": cl["xaxis"].get("type") == "log",
+                 "y_log": cl["yaxis"].get("type") == "log",
+                 "elements": list(dict.fromkeys(child_ids))}
+        if inset.indicate:  # [D154]: the parent-side zoom rectangle
+            idx_shape = _indicator_shape(inset, shapes, theme, x_scale,
+                                         y_scale, warnings, QtvizWarning)
+            if idx_shape is not None:
+                entry["indicator_shape"] = idx_shape
+                entry["indicator_window"] = inset.indicator_window()
+        meta.append(entry)
+        n += 1
+    existing = layout.get("meta")
+    layout["meta"] = {**existing, "qtviz_insets": meta} \
+        if isinstance(existing, dict) else {"qtviz_insets": meta}
 
 
 # Axis scales the webengine (Plotly) path renders (axis-surface seam, [D59]).

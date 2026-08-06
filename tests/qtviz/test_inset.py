@@ -149,15 +149,108 @@ def test_inset_in_a_grid_pane(qtbot):
     assert [p.label for p in view.panes] == ["main", "zoom", "side"]
 
 
-@pytest.mark.tier2
-def test_webengine_figure_skips_inset_with_warning():
+# ── I5: webengine insets — the figure grows a domain axis pair ───────────────
+@pytest.mark.tier1
+def test_webengine_inset_becomes_a_domain_axis_pair():
+    """I5: the inset child renders as its own `xaxis2/yaxis2` pair with
+    `domain` from `rect`; child traces bind via `xaxis: "x2"` — no warning,
+    no skip."""
+    import warnings
+
     pytest.importorskip("plotly")
     from qtviz.backends.webengine._figure import build
 
     node = _s() * qv.Inset(_zoom(), rect=(0.5, 0.5, 0.4, 0.4), label="zoom")
-    with pytest.warns(qv.errors.QtvizWarning, match="inset axes are not supported"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", qv.errors.QtvizWarning)
         fig, source_ids = build(node, qv.Theme.light())
-    assert len(source_ids) == 1  # the parent scatter only; no inset traces
+    assert len(source_ids) == 2                    # parent scatter + inset curve
+    layout = fig["layout"]
+    assert layout["xaxis2"]["domain"] == [0.5, 0.9]
+    assert layout["yaxis2"]["domain"] == [0.5, 0.9]
+    assert layout["xaxis2"]["anchor"] == "y2"
+    assert layout["xaxis2"]["range"] == [2.0, 4.0]  # the child's declared lims
+    assert layout["yaxis2"]["range"] == [4.0, 16.0]
+    child = [tr for tr in fig["data"] if tr.get("xaxis") == "x2"]
+    assert len(child) == 1 and child[0]["yaxis"] == "y2"
+    meta = layout["meta"]["qtviz_insets"]
+    assert meta[0]["label"] == "zoom" and meta[0]["axnum"] == 2
+
+
+@pytest.mark.tier1
+def test_webengine_inset_axes_step_over_a_twin_axis():
+    """A parent y2 twin occupies Plotly's `yaxis2` — inset pairs start at 3."""
+    pytest.importorskip("plotly")
+    from qtviz.backends.webengine._figure import build
+
+    twin = qv.Curve(D, x="x", y="y", axis="y2")
+    node = qv.Overlay([_s(), twin,
+                       qv.Inset(_zoom(), rect=(0.1, 0.6, 0.3, 0.3),
+                                label="zoom")])
+    fig, _ids = build(node, qv.Theme.light())
+    layout = fig["layout"]
+    assert "xaxis3" in layout and "yaxis3" in layout
+    assert layout["meta"]["qtviz_insets"][0]["axnum"] == 3
+    child = [tr for tr in fig["data"] if tr.get("xaxis") == "x3"]
+    assert len(child) == 1
+
+
+@pytest.mark.tier1
+def test_webengine_inset_log_child_maps_ranges():
+    """The child's log scale rides its own axis pair — declared lims go out
+    log10 (the R1 outgoing map, per axis pair)."""
+    pytest.importorskip("plotly")
+    from qtviz.backends.webengine._figure import build
+
+    zoom = qv.Curve({"x": [1.0, 100.0], "y": [1.0, 100.0]}, x="x", y="y").opts(
+        x=qv.AxisSpec(scale="log", lim=(1.0, 100.0)))
+    node = _s() * qv.Inset(zoom, rect=(0.5, 0.5, 0.4, 0.4), label="zoom")
+    fig, _ids = build(node, qv.Theme.light())
+    ax = fig["layout"]["xaxis2"]
+    assert ax["type"] == "log"
+    assert ax["range"] == pytest.approx([0.0, 2.0])  # log10 of (1, 100)
+    assert fig["layout"]["meta"]["qtviz_insets"][0]["x_log"] is True
+
+
+@pytest.mark.tier1
+def test_webengine_indicate_draws_a_parent_shape():
+    """[D154] on webengine: the zoom rectangle is a parent-axes layout shape,
+    its index recorded for the handle's live tracking; undeclared lims warn
+    (the autoranged window lives in JS — webengine keeps the declared gate)."""
+    pytest.importorskip("plotly")
+    from qtviz.backends.webengine._figure import build
+
+    node = _s() * qv.Inset(_zoom(), rect=(0.5, 0.5, 0.4, 0.4), label="zoom",
+                           indicate=True)
+    fig, _ids = build(node, qv.Theme.light())
+    m = fig["layout"]["meta"]["qtviz_insets"][0]
+    shape = fig["layout"]["shapes"][m["indicator_shape"]]
+    assert shape["type"] == "rect" and shape["xref"] == "x"
+    assert (shape["x0"], shape["x1"]) == (2.0, 4.0)
+    assert (shape["y0"], shape["y1"]) == (4.0, 16.0)
+    assert m["indicator_window"] == ((2.0, 4.0), (4.0, 16.0))
+
+    undeclared = qv.Curve(D, x="x", y="y")
+    with pytest.warns(qv.errors.QtvizWarning, match="declared x AND y lims"):
+        fig2, _ = build(_s() * qv.Inset(undeclared, rect=(0.5, 0.5, 0.4, 0.4),
+                                        label="zoom", indicate=True),
+                        qv.Theme.light())
+    assert "indicator_shape" not in fig2["layout"]["meta"]["qtviz_insets"][0]
+
+
+@pytest.mark.tier1
+def test_webengine_parse_axis_range_per_pair():
+    """`_translate` reads `xaxisN.range` relayout keys per axis pair."""
+    pytest.importorskip("plotly")
+    from qtviz.backends.webengine._translate import parse_axis_range
+
+    upd = {"xaxis2.range[0]": 1.0, "xaxis2.range[1]": 3.0,
+           "yaxis2.range": [2.0, 5.0], "xaxis.range[0]": 0.0,
+           "xaxis.range[1]": 9.0}
+    assert parse_axis_range(upd, "xaxis2") == (1.0, 3.0)
+    assert parse_axis_range(upd, "yaxis2") == (2.0, 5.0)
+    assert parse_axis_range(upd, "xaxis") == (0.0, 9.0)   # main pair untouched
+    assert parse_axis_range(upd, "xaxis3") is None
 
 
 # ── I3: insets are panes ─────────────────────────────────────────────────────
