@@ -264,13 +264,14 @@ def _bars_trace(element: Bars, theme, idx: int) -> list[dict]:
 
 
 def _bar_text(trace: dict, values, element) -> None:
-    """Value labels on a bar trace ([D98]) — formatted via [D86]."""
-    if element.annotate is None:
-        return
-    from ...core._ticks import format_tick  # noqa: PLC0415
+    """Value labels on a bar trace ([D98]) — text via the shared
+    [D86]/[D136] rule (`bar_annotate_texts`)."""
+    from ...core.encoding import bar_annotate_texts  # noqa: PLC0415
 
-    spec = element.annotate if element.annotate != "auto" else "g"
-    trace["text"] = [format_tick(float(v), spec) for v in values]
+    texts = bar_annotate_texts(element, values)
+    if texts is None:
+        return
+    trace["text"] = texts
     trace["textposition"] = "inside" if element.mode == "stacked" else "outside"
 
 

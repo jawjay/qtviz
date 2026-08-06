@@ -288,15 +288,21 @@ def _bar_fns(ax, orient: str):
 
 def _label_bars(ax, container, element, theme, *, inside: bool = False) -> None:
     """Value labels on one bar container ([D98]) — formatted through the
-    [D86] tick vocabulary ("auto" → '%g')."""
+    [D86] tick vocabulary ("auto" → '%g'); the [D136] accessor arm passes
+    the resolved label column through instead."""
+    style = {"color": theme.foreground.mpl(), "padding": 2,
+             "label_type": "center" if inside else "edge", "fontsize": 8}
+    if element.annotate_by is not None:
+        from ...core.encoding import bar_annotate_texts  # noqa: PLC0415
+
+        ax.bar_label(container, labels=bar_annotate_texts(element, ()), **style)
+        return
     if element.annotate is None:
         return
     from ...core._ticks import format_tick  # noqa: PLC0415
 
     spec = element.annotate if element.annotate != "auto" else "g"
-    ax.bar_label(container, fmt=lambda v: format_tick(v, spec),
-                 color=theme.foreground.mpl(), padding=2,
-                 label_type="center" if inside else "edge", fontsize=8)
+    ax.bar_label(container, fmt=lambda v: format_tick(v, spec), **style)
 
 
 def render_bars(element: Bars, ctx):

@@ -25,9 +25,11 @@ ENCODINGS = {"color_by", "size_by"}  # [D139]: value→color/size encodings
 # Documented exemptions — bindings that are deliberately NOT roles. ErrorBars'
 # limit flags are boolean "the true value lies beyond" masks (matplotlib's
 # lolims/uplims semantic), not interval edges: renaming them to the `lo`/`hi`
-# roles would collide with Spread's edge meaning. Anything added here needs
-# the same kind of justification.
-EXEMPT = {"ErrorBars": {"lo_limit", "hi_limit"}}
+# roles would collide with Spread's edge meaning. Bars' `annotate` is the one
+# [D131] mark-annotation keyword; its [D136] accessor arm binds label text
+# through that same keyword rather than inventing an 11th role for it.
+# Anything added here needs the same kind of justification.
+EXEMPT = {"ErrorBars": {"lo_limit", "hi_limit"}, "Bars": {"annotate"}}
 
 ELEMENT_TYPES = sorted(
     (getattr(qv, name) for name in qv.__all__

@@ -297,6 +297,27 @@ def denormalize(t: float, lo: float, hi: float, norm: str = "linear",
     return float(lo + t * (hi - lo))
 
 
+# ── bar value labels ([D98]/[D136]) ──────────────────────────────────────────
+def bar_annotate_texts(element, values) -> list[str] | None:
+    """The one text-per-bar rule all three native renderers share. `None`
+    when `annotate=` is off. The fmt arm formats each bar's own `values`
+    entry via the [D86] vocabulary (`"auto"` → `%g`); the [D136] accessor
+    arm reads the resolved `annotate` channel instead — numeric labels go
+    through `%g`, everything else through `str`."""
+    from ._ticks import format_tick  # noqa: PLC0415 — avoid a cycle
+
+    if getattr(element, "annotate_by", None) is not None:
+        labels = element.data.series("annotate")
+        return [format_tick(float(v), "g")
+                if isinstance(v, (int, float, np.number)) and not isinstance(v, bool)
+                else str(v)
+                for v in np.asarray(labels)]
+    if element.annotate is None:
+        return None
+    spec = element.annotate if element.annotate != "auto" else "g"
+    return [format_tick(float(v), spec) for v in values]
+
+
 # ── heatmap cell labels ([D113]) ─────────────────────────────────────────────
 @dataclass(frozen=True)
 class CellLabel:
