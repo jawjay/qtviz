@@ -12,6 +12,8 @@ degrees ([D96]); pg's TextItem angle is CCW too, so no sign flip.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
@@ -243,19 +245,102 @@ def render_lowered(element, ctx):
     """The generic renderer for lowered elements: lower once, draw each mark,
     wire declared pickability/selection ([D124]). Surface-level legend
     aggregation (`legend_entry()` in `_render_cell`) is untouched — lowering
-    re-emits the same entry only for the honesty guard."""
-    lowered = element.lower(LowerContext(theme=ctx.theme,
-                                         series_index=ctx.series_index,
-                                         show_legend=ctx.show_legend))
+    re-emits the same entry only for the honesty guard. Data-carrying
+    elements also register a [D128] relower entry on the ViewBox so
+    `set_element_data` can stream them in place."""
+    lower_ctx = LowerContext(theme=ctx.theme,
+                             series_index=ctx.series_index,
+                             show_legend=ctx.show_legend)
+    lowered = element.lower(lower_ctx)
     vb = ctx.parent_axes.getViewBox()
     items = []
+    pairs = []  # (mark, single item | None) aligned to lowered.marks ([D128])
     for mark in lowered.marks:
         item = MARK_DRAWERS[type(mark)](mark, ctx)
+        pairs.append((mark, None if item is None or isinstance(item, list) else item))
         if item is None:
             continue
         if isinstance(mark, Markers) and mark.pickable and hasattr(item, "sigClicked"):
             wire_scatter(item, element.id, ctx.event_bus, vb)
         items.extend(item) if isinstance(item, list) else items.append(item)
+    if getattr(element, "data", None) is not None:  # [D128] streamable
+        x_log, y_log = _xy_log(ctx)
+        reg = getattr(vb, "_qtviz_lowered", None)
+        if reg is None:
+            reg = vb._qtviz_lowered = {}
+        reg[element.id] = _LoweredEntry(element, lower_ctx, pairs, x_log, y_log)
     if len(items) == 1:
         return items[0]
     return items or None
+
+
+# ── [D128] streaming through lowering ────────────────────────────────────────
+class _LoweredEntry:
+    """Per-element relower record on the ViewBox (`_qtviz_lowered`), the
+    raster-controller registry pattern: the resolved element, its
+    `LowerContext`, the (mark, item) pairs, and the surface's log flags —
+    everything `update_lowered` needs to relower and write in place."""
+
+    __slots__ = ("element", "lower_ctx", "marks", "items", "x_log", "y_log")
+
+    def __init__(self, element, lower_ctx, pairs, x_log, y_log) -> None:
+        self.element = element
+        self.lower_ctx = lower_ctx
+        self.marks = tuple(m for m, _ in pairs)
+        self.items = tuple(i for _, i in pairs)
+        self.x_log, self.y_log = x_log, y_log
+
+
+def _update_polyline(item, m: Polyline, x_log, y_log) -> None:
+    item.setData(x=logify(m.x, x_log), y=logify(m.y, y_log))
+
+
+def _update_markers(item, m: Markers, x_log, y_log) -> None:
+    item.setData(x=logify(m.x, x_log), y=logify(m.y, y_log))
+
+
+def _update_band(item, m: Band, x_log, y_log) -> None:
+    lo_curve, hi_curve = item.curves  # FillBetweenItem refills on curve change
+    if m.orient == "h":
+        y = logify(m.pos, y_log)
+        lo_curve.setData(logify(m.lo, x_log), y)
+        hi_curve.setData(logify(m.hi, x_log), y)
+    else:
+        x = logify(m.pos, x_log)
+        lo_curve.setData(x, logify(m.lo, y_log))
+        hi_curve.setData(x, logify(m.hi, y_log))
+
+
+MARK_UPDATERS: dict[type, Callable[[Any, Any, bool, bool], None]] = {
+    Polyline: _update_polyline, Markers: _update_markers, Band: _update_band}
+
+
+def update_lowered(entry: _LoweredEntry, arrays: dict, vb) -> bool:
+    """[D128]: relower with the streamed role-keyed `arrays` and write each
+    mark item's geometry in place. All-or-nothing — the mark sequence must
+    type-match the rendered one and every mark must have an updater and a
+    live single item, or nothing is touched and the caller's rebuild
+    fallback runs (explicit degradation, [D77])."""
+    from ...data import EagerTabularRef  # noqa: PLC0415
+
+    new_el = entry.element._replace_data(EagerTabularRef(arrays, arrays))
+    lowered = new_el.lower(entry.lower_ctx)
+    if tuple(type(m) for m in lowered.marks) != tuple(type(m) for m in entry.marks):
+        return False
+    if any(type(m) not in MARK_UPDATERS or item is None
+           for m, item in zip(lowered.marks, entry.items, strict=True)):
+        return False
+    for m, item in zip(lowered.marks, entry.items, strict=True):
+        MARK_UPDATERS[type(m)](item, m, entry.x_log, entry.y_log)
+    entry.element = new_el
+    entry.marks = lowered.marks
+    xy = new_el.select_xy()  # brush masks run in data space — keep truthful
+    selectables = getattr(vb, "_selectables", None)
+    if xy is not None and selectables is not None:
+        from ...core._time import as_float_seconds  # noqa: PLC0415
+
+        nx, ny = as_float_seconds(xy[0]), as_float_seconds(xy[1])
+        for i, sel in enumerate(selectables):
+            if sel[0] == new_el.id:
+                selectables[i] = (new_el.id, nx, ny)
+    return True

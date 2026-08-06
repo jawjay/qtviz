@@ -203,6 +203,13 @@ class PgRenderHandle(RenderHandle):
                 if getattr(controller, "element_id", None) == element_id:
                     controller.refresh()
                     return True
+        for plot in self._plots:  # lowered elements relower in place ([D128])
+            vb = plot.getViewBox()
+            entry = getattr(vb, "_qtviz_lowered", {}).get(element_id)
+            if entry is not None:
+                from ._marks import update_lowered  # noqa: PLC0415
+
+                return update_lowered(entry, arrays, vb)
         item = self._natives.get(element_id)
         if not isinstance(item, (pg.ScatterPlotItem, pg.PlotCurveItem, pg.PlotDataItem)):
             return False
