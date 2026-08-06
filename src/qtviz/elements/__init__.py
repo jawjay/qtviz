@@ -15,6 +15,7 @@ from .image import Image
 from .inset import Inset
 from .mesh import Mesh
 from .pie import Pie
+from .polar import PolarGrid, polar, wedge
 from .quiver import Quiver
 from .raw_figure import RawFigure
 from .scatter import Scatter
@@ -34,4 +35,5 @@ __all__ = [
     "Area", "Ecdf", "Pie", "Contour", "Mesh", "Quiver",
     "Stem", "Streamlines",
     "Inset",
+    "PolarGrid", "polar", "wedge",
 ]

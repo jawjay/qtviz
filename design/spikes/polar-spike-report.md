@@ -1,5 +1,11 @@
 # [D119] Polar decision spike — Option B report (2026-08-06)
 
+> **GATE RESOLVED — GO (owner, 2026-08-06); shipped same day.**
+> `qv.PolarGrid` + `qv.polar()` + `qv.wedge()` (three frozen names),
+> `Expr` gains `cos`/`sin`, gallery `examples/39_polar.py`. Exactly the
+> §"What shipping it takes" list; the `frame=False` surface option and
+> θ/r event denormalization remain future options, not commitments.
+
 > **Recommendation: GO on Option B** — polar as a core transform +
 > `PolarGrid` chrome. The spike rendered all three deliverables
 > (`polar_demo`, `polar_bar`, radar) on **all three backends** using the

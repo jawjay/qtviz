@@ -98,6 +98,15 @@ state that survives backend switches) —
 
 [![Inset axes: a zoom window floating on its parent, with the region marked](images/examples/38_inset_zoom.png)](images/examples/38_inset_zoom.png)
 
+**Polar plots ([D119])** — polar as a *transform*: `qv.polar(element)`
+reinterprets x/y as (θ, r), `qv.PolarGrid` draws the circular chrome
+(degree or custom spoke labels — the radar case), `qv.wedge()` builds
+polar bars; the surface stays rectilinear, so pan/zoom/state/backends
+all keep working —
+[`39_polar.py`](https://github.com/jawjay/qtviz/blob/main/examples/39_polar.py)
+
+[![Polar: spiral via qv.polar, wedge bars, radar with custom labels](images/examples/39_polar.png)](images/examples/39_polar.png)
+
 ## Getting started
 
 <div class="grid cards" markdown>
