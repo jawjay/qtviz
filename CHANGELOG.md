@@ -56,9 +56,22 @@ All notable changes to qtviz are documented here. The format follows
   switches via `LayoutState`, `view.pane("zoom").set_range(…)` drives it,
   events from inside it carry `pane="zoom"`, and `pane.export(…)` writes
   just the inset. `indicate=True` draws the parent-side rectangle marking
-  the child's declared x/y window. Rendered natively on pyqtgraph and
-  matplotlib; the webengine backend warns and skips insets for now (the
-  parent renders normally).
+  the child's declared x/y window. Rendered natively on **all three**
+  backends: pyqtgraph and matplotlib draw a child surface; webengine (I5)
+  gives each inset its own Plotly **domain axis pair** (`xaxisN/yaxisN`
+  with `domain` from `rect`, numbering stepping over a y2 twin), the
+  child's full surface vocabulary riding the recursion — scales with the
+  per-pair R1 log map, lims, shapes/annotations re-anchored, title as a
+  pinned annotation. The inset pane's capture/restore/`set_range`/
+  autorange relayout `xaxisN.range` over the bridge; `xaxisN.range`
+  relayouts parse back into pane-stamped `RangeEvent`s, and pick/hover/
+  select from child traces carry the inset's pane label. Webengine deltas,
+  both cosmetic-or-explicit: Plotly-idiomatic insets have no opaque panel
+  (parent traces show through the inset region), per-inset-pane `export`
+  raises (the inset lives inside its parent's one figure), and
+  `indicate=True` keeps the declared-lims gate (the autoranged window
+  lives in JS) — the rectangle is a parent-axes layout shape moved live by
+  `shapes[k]` relayouts.
 
 - **Structured axis sharing ([D146]):** `link_x`/`link_y` widen from bools to
   `bool | "col" | "row"` — `True` links all panes (unchanged), `"col"`/`"row"`

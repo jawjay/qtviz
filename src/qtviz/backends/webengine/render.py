@@ -94,12 +94,66 @@ class _WebPane(PaneHandle):
 
     @property
     def elements(self) -> tuple[str, ...]:
-        return tuple(self._h._traces)
+        # the surface's own elements — inset children list on their pane (I5)
+        return tuple(dict.fromkeys(
+            t for t in self._h._traces if t not in self._h._el_pane))
 
     def export(self, fmt: str, path, *, dpi: float | None = None,
                transparent: bool = False) -> Path:
         self._assert_alive()  # one figure = one pane: the handle export IS it
         return self._h.export(fmt, path, dpi=dpi, transparent=transparent)
+
+
+class _WebInsetPane(PaneHandle):
+    """An inset's axis pair on the one webengine figure ([D152] I5). Ranges
+    ride the pair's own shadow state on the handle (`meta` dict, data
+    space); restores relayout `xaxisN.range` with the per-pair R1 log map.
+    No per-pane export — the inset lives inside its parent's figure, so the
+    honest base `NotImplementedError` stands."""
+
+    def __init__(self, meta: dict, handle: WebEngineRenderHandle) -> None:
+        super().__init__(meta["label"])
+        self._m = meta
+        self._h = handle
+
+    def capture(self) -> ViewState:
+        return ViewState(x_range=self._m["x_range"], y_range=self._m["y_range"])
+
+    @require_gui_thread
+    def restore(self, state: ViewState) -> None:
+        self._assert_alive()
+        n, update = self._m["axnum"], {}
+        if state.x_range:
+            self._m["x_range"] = state.x_range
+            sent = log_lim(state.x_range, axis="x", backend="webengine") \
+                if self._m["x_log"] else state.x_range
+            if sent:
+                update[f"xaxis{n}.range"] = list(sent)
+        if state.y_range:
+            self._m["y_range"] = state.y_range
+            sent = log_lim(state.y_range, axis="y", backend="webengine") \
+                if self._m["y_log"] else state.y_range
+            if sent:
+                update[f"yaxis{n}.range"] = list(sent)
+        if update:
+            self._h._host.relayout(update)
+
+    @require_gui_thread
+    def autorange(self) -> None:
+        self._assert_alive()
+        n = self._m["axnum"]
+        self._m["x_range"] = None  # unknown until the relayout reports back
+        self._m["y_range"] = None
+        self._h._host.relayout({f"xaxis{n}.autorange": True,
+                                f"yaxis{n}.autorange": True})
+
+    @property
+    def native(self):
+        return self._h._host
+
+    @property
+    def elements(self) -> tuple[str, ...]:
+        return tuple(self._m["elements"])
 
 
 class WebEngineRenderHandle(RenderHandle):
@@ -119,7 +173,52 @@ class WebEngineRenderHandle(RenderHandle):
         self._rasters: list = []  # dynamic-raster controllers (4b, `_raster`)
         self._raster_holders: dict = {}  # element id → live RasterAggregate ([D46] hover)
         self._set_log_flags(fig)
+        self._set_insets(fig)  # [D152] I5: per-pair shadow state + pane map
         widget.received.connect(self._on_message)
+
+    def _set_insets(self, fig: dict | None) -> None:
+        """Read the I5 inset table off the built figure (`layout.meta`,
+        written by `_figure._add_insets`): per inset, the axis-pair number,
+        log flags, child element ids, and — resolved here — the pane label
+        (given, else the flat pane index: the surface is pane 0, insets
+        follow in child order, matching `flat_pane_labels`)."""
+        meta = (fig or {}).get("layout", {}).get("meta", {})
+        for ind in getattr(self, "_indicators", ()):  # re-render: old subs die
+            ind.dispose()
+        self._indicators: list = []
+        self._insets = [dict(m) for m in meta.get("qtviz_insets", ())]
+        for i, m in enumerate(self._insets):
+            if m.get("label") is None:
+                m["label"] = str(i + 1)
+            m["x_range"] = None
+            m["y_range"] = None
+            if "indicator_shape" in m:  # [D154] I4b: live shape tracking
+                self._indicators.append(self._make_indicator(m))
+        self._el_pane = {eid: m["label"]
+                         for m in self._insets for eid in m["elements"]}
+
+    def _make_indicator(self, m: dict):
+        """An `InsetIndicator` moving the parent-side rect shape by relayout
+        (`shapes[k].x0…`) — parent-log coords go out log10 (R1)."""
+        import math  # noqa: PLC0415
+
+        from ...core._indicator import InsetIndicator  # noqa: PLC0415
+
+        k = m["indicator_shape"]
+
+        def _move(x0, y0, x1, y1, _k=k) -> None:
+            try:
+                if self._x_log:
+                    x0, x1 = math.log10(x0), math.log10(x1)
+                if self._y_log:
+                    y0, y1 = math.log10(y0), math.log10(y1)
+            except ValueError:
+                return  # non-positive under log — keep the last position
+            self._host.relayout({f"shapes[{_k}].x0": x0, f"shapes[{_k}].x1": x1,
+                                 f"shapes[{_k}].y0": y0, f"shapes[{_k}].y1": y1})
+
+        return InsetIndicator(self.event_bus, m["label"],
+                              m["indicator_window"], _move)
 
     def _set_log_flags(self, fig: dict | None) -> None:
         """Whether each axis is log — read off the built figure spec (its layout is
@@ -134,6 +233,11 @@ class WebEngineRenderHandle(RenderHandle):
         if name == "plotly.relayout":
             update = payload.get("update", {}) if isinstance(payload, dict) else {}
             self._merge_range(*_translate.parse_relayout(update))
+            for m in self._insets:  # per axis pair ([D152] I5)
+                n = m["axnum"]
+                self._merge_inset_range(
+                    m, _translate.parse_axis_range(update, f"xaxis{n}"),
+                    _translate.parse_axis_range(update, f"yaxis{n}"))
             return
         if name == "bokeh.ranges_update":
             self._merge_range(*_translate.parse_bokeh_ranges(payload))
@@ -145,8 +249,10 @@ class WebEngineRenderHandle(RenderHandle):
 
         for ev in events:
             ev = self._with_raster_value(ev)
-            if ev.pane is None:  # [D149]: one figure = one pane
-                ev = replace(ev, pane=self._surface_id)
+            if ev.pane is None:  # [D149]: the surface, or the inset the
+                pane = self._el_pane.get(  # source element renders on (I5)
+                    getattr(ev, "source_id", None), self._surface_id)
+                ev = replace(ev, pane=pane)
             self.event_bus.emit(ev)
 
     def _with_raster_value(self, ev):
@@ -180,6 +286,20 @@ class WebEngineRenderHandle(RenderHandle):
             self.event_bus.emit(RangeEvent(self._surface_id, self._x_range,
                                            self._y_range, pane=self._surface_id))
 
+    def _merge_inset_range(self, m: dict, x, y) -> None:
+        """The `_merge_range` twin for one inset's axis pair ([D152] I5):
+        delog with the *pair's* flags, hold shadow state on the meta dict,
+        emit `RangeEvent(pane=<inset label>)` once both axes are known."""
+        if x is None and y is None:
+            return
+        if x is not None:
+            m["x_range"] = (delog(x[0], m["x_log"]), delog(x[1], m["x_log"]))
+        if y is not None:
+            m["y_range"] = (delog(y[0], m["y_log"]), delog(y[1], m["y_log"]))
+        if m["x_range"] is not None and m["y_range"] is not None:
+            self.event_bus.emit(RangeEvent(m["label"], m["x_range"],
+                                           m["y_range"], pane=m["label"]))
+
     def native(self, element_id: str):
         """The live Plotly host (verbs: react/relayout/…) for any element this
         figure drew — webengine has no per-element primitive (it's one JS figure),
@@ -187,8 +307,10 @@ class WebEngineRenderHandle(RenderHandle):
         return self._host if element_id in self._traces else None
 
     def _panes(self) -> tuple[PaneHandle, ...]:
-        # one figure = one surface; grids compose per-pane handles via the host
-        return (_WebPane("0", self),)
+        # one figure = one surface + one pane per inset axis pair (I5);
+        # grids compose per-pane handles via the host
+        return (_WebPane("0", self),
+                *(_WebInsetPane(m, self) for m in self._insets))
 
     @require_gui_thread
     def update(self, new_root) -> None:
@@ -198,6 +320,7 @@ class WebEngineRenderHandle(RenderHandle):
         fig, source_ids = _figure.build(new_root, self._theme)
         self._traces = source_ids
         self._set_log_flags(fig)  # the new root may change axis scales
+        self._set_insets(fig)  # …and its insets (I5)
         self._host.react(fig)
         self._wire_rasters(new_root)
 
@@ -233,6 +356,9 @@ class WebEngineRenderHandle(RenderHandle):
         from . import _raster  # noqa: PLC0415
 
         _raster.dispose_rasters(self)
+        for ind in getattr(self, "_indicators", ()):  # I4b live indicators
+            ind.dispose()
+        self._indicators = []
         w = self.widget
         if w is not None:
             with contextlib.suppress(RuntimeError, TypeError):
@@ -260,8 +386,7 @@ class WebEngineBackend:
 
         if (issubclass(element_type, Element)
                 and getattr(element_type, "STRUCTURAL_CHILD", None)):
-            # Inset ([D152]): accepted so negotiation proceeds; the figure
-            # builder warns-and-skips it until I5 (design/inset-axes.md).
+            # Inset ([D152]): renders as its own Plotly domain axis pair (I5)
             return True
         return (issubclass(element_type, Element)
                 and element_type.lower is not Element.lower)
