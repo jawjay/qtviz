@@ -226,6 +226,7 @@ _LOWERED_CTORS = {
     "Ellipse": lambda **kw: qv.Ellipse(0.0, 0.0, 1.0, 0.5, **kw),
     "Polygon": lambda **kw: qv.Polygon([(0, 0), (1, 0), (1, 1)], **kw),
     "RefLine": lambda **kw: qv.RefLine(0.5, 1.0, **kw),
+    "PolarGrid": lambda **kw: qv.PolarGrid(2.0, **kw),  # [D119]
 }
 
 _GUARD_NON_DEFAULT = {
@@ -233,6 +234,7 @@ _GUARD_NON_DEFAULT = {
     "line_style": "dashed", "size": 14.0, "halign": "left", "valign": "top",
     "rotation": 30.0, "frame": True, "head": "both", "fill": True,
     "baseline": 0.5, "marker": "square", "density": 2.0,
+    "rings": 3, "spokes": 5, "theta_labels": False, "r_labels": False,  # [D119]
 }
 
 _GUARD_CASES = [

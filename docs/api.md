@@ -51,6 +51,14 @@ one-liner; `qv.View` is the plain QWidget for applications.
 
 ::: qtviz.RawFigure
 
+### Polar ([D119])
+
+::: qtviz.PolarGrid
+
+::: qtviz.polar
+
+::: qtviz.wedge
+
 ## Annotation & reference elements
 
 ::: qtviz.HLine

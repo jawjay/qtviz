@@ -61,6 +61,7 @@ from .elements import (
     Inset,
     Mesh,
     Pie,
+    PolarGrid,
     Polygon,
     Quiver,
     RawFigure,
@@ -74,6 +75,8 @@ from .elements import (
     Text,
     Violin,
     VLine,
+    polar,
+    wedge,
 )
 from .errors import QtvizError
 from .reactive import Signal, batch, derived, effect, signal
@@ -92,6 +95,7 @@ __all__ = [
     # waves 1.4/1.5 ([D115]/[D118])
     "Stem", "Streamlines",
     "Inset",  # [D152] inset axes
+    "PolarGrid", "polar", "wedge",  # [D119] polar wave
     # the element base + node union — the downstream annotation vocabulary ([D140])
     "Element", "Node",
     # composition + view + the [D134] script one-liner

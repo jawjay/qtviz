@@ -33,6 +33,8 @@ _FUNCS = {
     "sqrt": np.sqrt,
     "exp": np.exp,
     "negative": np.negative,
+    "cos": np.cos,  # [D119]: the polar transform composes as an Expression
+    "sin": np.sin,
 }
 
 
@@ -77,6 +79,8 @@ class Expr:
     def abs(self): return Func("abs", self)
     def sqrt(self): return Func("sqrt", self)
     def exp(self): return Func("exp", self)
+    def cos(self): return Func("cos", self)
+    def sin(self): return Func("sin", self)
 
     def clip(self, lo=None, hi=None): return Clip(self, lo, hi)
 

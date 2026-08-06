@@ -8,6 +8,24 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Polar plotting ([D119], Option B per `design/spikes/polar-spike-report.md`):**
+  polar as a **transform, not a projection**. `qv.polar(element, theta=…,
+  r=…)` reinterprets a per-row x/y element's position channels as (θ, r) —
+  radians, CCW from +x — and plots `(r·cosθ, r·sinθ)`; column-name/`col()`
+  bindings compose into a serializable `Expression` (the AST gains
+  `cos`/`sin`, lazy-capable on dask/polars), callables/arrays fall back to
+  callable accessors. `qv.PolarGrid(r_max, rings=, spokes=, theta_labels=,
+  r_labels=)` draws the circular chrome from marks (one `lower()` — renders
+  on every backend with zero backend edits; `theta_labels=` takes custom
+  per-spoke strings, the radar case). `qv.wedge(θ0, θ1, r0, r1)` builds
+  annulus-sector points for `Polygon` polar bars. The surface stays
+  rectilinear (pair with `.opts(aspect=1, grid=False)` +
+  `AxisSpec(ticks=())`), so R1, events, brushes, `ViewState`, and backend
+  switching are untouched. Recorded trade-offs (spike report): hover reads
+  x/y not θ/r; zoom is rectangular, no r-axis semantics. Gallery:
+  `examples/39_polar.py`. Three new frozen names: `PolarGrid`, `polar`,
+  `wedge`.
+
 - **Live inset zoom indicator ([D154] I4b):** the parent-side rectangle now
   *tracks* the inset's visible window — pan or zoom inside the inset (or
   drive it with `view.pane(...).set_range(...)`) and the rectangle follows,
