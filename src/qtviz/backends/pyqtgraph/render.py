@@ -176,10 +176,11 @@ class PgRenderHandle(RenderHandle):
     def _dispose_rasters(self) -> None:
         for plot in self._plots:
             vb = plot.getViewBox()
-            for controller in getattr(vb, "_qtviz_rasters", ()):
-                controller.dispose()
-            if hasattr(vb, "_qtviz_rasters"):
-                vb._qtviz_rasters = []
+            for attr in ("_qtviz_rasters", "_qtviz_indicators"):  # + I4b
+                for controller in getattr(vb, attr, ()):
+                    controller.dispose()
+                if hasattr(vb, attr):
+                    setattr(vb, attr, [])
 
     def dispose(self) -> None:
         self._dispose_rasters()
@@ -408,12 +409,11 @@ class PyQtGraphBackend:
                             legend_position=surf.legend_position)
         for element, si in zip(children, indices, strict=True):
             if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
-                self._render_inset(element, plot, theme, raw_bus, plots,
-                                   natives, labels)
-                marker = element.indicator()  # [D154] static zoom rectangle
-                if marker is not None:
-                    self._render_element(marker, replace(ctx, series_index=0),
-                                         natives)
+                ilabel, ivb = self._render_inset(element, plot, theme, raw_bus,
+                                                 plots, natives, labels)
+                if element.indicate:  # [D154] + I4b live tracking
+                    self._attach_indicator(element, ilabel, ivb, plot, vb, ctx,
+                                           raw_bus, natives)
                 continue
             on_y2 = getattr(element, "axis", "y") == "y2"
             el_ctx = replace(ctx, series_index=si,
@@ -437,7 +437,7 @@ class PyQtGraphBackend:
                 append_legend_entries(plot, entries, theme, surf.legend_position)
 
     def _render_inset(self, inset, parent_plot, theme, raw_bus, plots, natives,
-                      labels) -> None:
+                      labels):
         """A child `PlotItem` floating on the parent ([D152], spiked): geometry
         is `rect` (axes-fraction, y from the BOTTOM — mpl semantics; Qt item
         coords run y-down, hence the flip) of the parent ViewBox's rect,
@@ -474,6 +474,44 @@ class PyQtGraphBackend:
         natives[inset.id] = iplot  # [D53]: the inset's live PlotItem
         self._populate_plot(inset.child, iplot, vb, surf, x_scale, y_scale,
                             pane_bus, theme, raw_bus, plots, natives, labels)
+        return label, vb
+
+    def _attach_indicator(self, inset, ilabel, ivb, plot, parent_vb, ctx,
+                          raw_bus, natives) -> None:
+        """[D154] + I4b: draw the parent-side zoom rectangle (declared lims,
+        or seeded from the inset's rendered window) and keep it live — an
+        `InsetIndicator` on the parent ViewBox moves the path natively on
+        every `RangeEvent(pane=<inset>)`."""
+        import numpy as np  # noqa: PLC0415
+
+        from ...core._geometry import rect_points  # noqa: PLC0415
+        from ...core._indicator import InsetIndicator  # noqa: PLC0415
+
+        window = inset.indicator_window()
+        if window is None:  # I4b: the rendered (autoranged) window seeds it
+            (vx0, vx1), (vy0, vy1) = ivb.viewRange()
+            if getattr(ivb, "x_log", False):
+                vx0, vx1 = 10.0 ** vx0, 10.0 ** vx1
+            if getattr(ivb, "y_log", False):
+                vy0, vy1 = 10.0 ** vy0, 10.0 ** vy1
+            window = ((vx0, vx1), (vy0, vy1))
+        marker = inset.indicator_rect(window)
+        self._render_element(marker, replace(ctx, series_index=0), natives)
+        item = natives.get(marker.id)
+        if item is None:  # non-finite under the parent's log — nothing to track
+            return
+        x_log, y_log = ctx.x_scale == "log", ctx.y_scale == "log"
+
+        def _move(x0, y0, x1, y1, _item=item, _xl=x_log, _yl=y_log) -> None:
+            pts = np.asarray(rect_points(x0, y0, x1, y1), dtype="float64")
+            xs, ys = logify(pts[:, 0], _xl), logify(pts[:, 1], _yl)
+            if np.isfinite(xs).all() and np.isfinite(ys).all():
+                _item.setPath(pg.arrayToQPath(xs, ys))
+
+        controllers = getattr(parent_vb, "_qtviz_indicators", None)
+        if controllers is None:
+            controllers = parent_vb._qtviz_indicators = []
+        controllers.append(InsetIndicator(raw_bus, ilabel, window, _move))
 
     def _render_element(self, element: Element, ctx, natives) -> None:
         fn = self.renderers.get(type(element))  # native fast path wins ([D122])

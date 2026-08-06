@@ -8,6 +8,17 @@ All notable changes to qtviz are documented here. The format follows
 
 ### Added
 
+- **Live inset zoom indicator ([D154] I4b):** the parent-side rectangle now
+  *tracks* the inset's visible window — pan or zoom inside the inset (or
+  drive it with `view.pane(...).set_range(...)`) and the rectangle follows,
+  natively per backend (pg: path rewrite; mpl: `Polygon.set_xy` +
+  `draw_idle`), via an `InsetIndicator` controller subscribed to
+  `RangeEvent(pane=<inset>)` (the `_LinkController` pattern, per handle).
+  This also lifts the static gate: `indicate=True` **no longer requires
+  declared x/y lims** — an undeclared window seeds from the inset's rendered
+  (autoranged) range instead of warning and skipping. The former
+  "needs declared x AND y lims" `QtvizWarning` is gone.
+
 - **Streaming through lowering ([D128], closing the 2.0 deferral):** lowered
   elements now ride the [D77] incremental path on pyqtgraph. A `qv.stream`
   feeding Ecdf, Spread, Stem, or Quiver updates the rendered mark items in

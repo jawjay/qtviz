@@ -321,6 +321,14 @@ the rect natively (`_LinkController` file pattern in `core/_host.py`…
 except this one is per-backend-handle; place with the raster controllers).
 Not scheduled until the static version proves demand.
 
+> **I4b shipped 2026-08-06:** `core/_indicator.py` `InsetIndicator`, one
+> per indicating inset, subscribed on the handle bus and filtered by pane
+> label; pg rewrites the QGraphicsPathItem path (parent-log-aware), mpl
+> `set_xy`s the Polygon patch. The static lims gate is lifted — an
+> undeclared window seeds from the inset's rendered range (pg `viewRange`
+> delogified / mpl `get_xlim`), so the warn-skip is gone. Controllers ride
+> the raster-controller dispose slots (`_qtviz_indicators`).
+
 ## I5 — webengine catch-up (independent; the risky one)
 
 `_figure.build` learns a second axis pair per inset: `xaxis2/yaxis2` with

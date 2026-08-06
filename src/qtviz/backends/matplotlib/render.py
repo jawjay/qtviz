@@ -187,6 +187,8 @@ class MplRenderHandle(RenderHandle):
         for s in self._surfaces:
             for controller in getattr(s["ax"], "_qtviz_rasters", ()):
                 controller.dispose()
+            for controller in getattr(s["ax"], "_qtviz_indicators", ()):  # I4b
+                controller.dispose()
             brush = getattr(s["ax"], "_qtviz_brush", None)
             if brush is not None:  # detach before the canvas dies ([D95]) — a
                 brush.set_active(False)  # live selector on a deleted canvas
@@ -322,7 +324,7 @@ class MatplotlibBackend:
                               natives, labels)
 
     def _render_cell(self, node, ax, theme, bus, surfaces, natives,
-                     labels=None) -> None:
+                     labels=None) -> str:
         label = labels.popleft() if labels else "0"
         apply_theme_ax(ax, theme)
         surf = surface_of(node)
@@ -366,12 +368,11 @@ class MatplotlibBackend:
             if getattr(element, "STRUCTURAL_CHILD", None):  # an Inset ([D152])
                 iax = ax.inset_axes(list(element.rect))  # native, mpl semantics
                 natives[element.id] = iax  # [D53]: the inset's live Axes
-                self._render_cell(element.child, iax, theme, bus, surfaces,
-                                  natives, labels)
-                marker = element.indicator()  # [D154] static zoom rectangle
-                if marker is not None:
-                    self._render_element(marker, replace(ctx, series_index=0),
-                                         selectables, natives)
+                ilabel = self._render_cell(element.child, iax, theme, bus,
+                                           surfaces, natives, labels)
+                if element.indicate:  # [D154] + I4b live tracking
+                    self._attach_indicator(element, ilabel, iax, ax, ctx, bus,
+                                           selectables, natives)
                 continue
             on_y2 = getattr(element, "axis", "y") == "y2"
             el_ctx = replace(ctx, series_index=si,
@@ -389,6 +390,37 @@ class MatplotlibBackend:
                 from ._renderers import append_legend_entries  # noqa: PLC0415
 
                 append_legend_entries(ax, entries, theme, surf.legend_position)
+        return label
+
+    def _attach_indicator(self, inset, ilabel, iax, ax, ctx, bus, selectables,
+                          natives) -> None:
+        """[D154] + I4b — the mpl twin of the pyqtgraph version: draw the
+        parent-side rectangle (declared lims, or the inset Axes' rendered
+        window) and keep it live via an `InsetIndicator` on the parent Axes."""
+        import numpy as np  # noqa: PLC0415
+
+        from ...core._geometry import rect_points  # noqa: PLC0415
+        from ...core._indicator import InsetIndicator  # noqa: PLC0415
+
+        window = inset.indicator_window()
+        if window is None:  # I4b: mpl lims are data space on every scale
+            window = (tuple(iax.get_xlim()), tuple(iax.get_ylim()))
+        marker = inset.indicator_rect(window)
+        self._render_element(marker, replace(ctx, series_index=0),
+                             selectables, natives)
+        patch = natives.get(marker.id)
+        if patch is None:
+            return
+
+        def _move(x0, y0, x1, y1, _patch=patch, _ax=ax) -> None:
+            pts = np.asarray(rect_points(x0, y0, x1, y1), dtype="float64")
+            _patch.set_xy(pts)
+            _ax.figure.canvas.draw_idle()
+
+        controllers = getattr(ax, "_qtviz_indicators", None)
+        if controllers is None:
+            controllers = ax._qtviz_indicators = []
+        controllers.append(InsetIndicator(bus, ilabel, window, _move))
 
     def _render_element(self, element: Element, ctx, selectables, natives) -> None:
         fn = self.renderers.get(type(element))  # native fast path wins ([D122])
