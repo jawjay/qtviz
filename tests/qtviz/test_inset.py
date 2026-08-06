@@ -238,11 +238,59 @@ def test_indicator_draws_a_parent_side_rect(name, qtbot):
     assert marked > plain  # the synthesized Rect landed on the PARENT surface
 
 
+# ── I4b: the live zoom indicator ─────────────────────────────────────────────
+def _indicator_bounds(view, backend):
+    """(x0, y0, x1, y1) of the parent-side rectangle, in data space."""
+    if backend == "pyqtgraph":
+        from PySide6.QtWidgets import QGraphicsPathItem
+
+        paths = [i for i in view.pane("0").native.items
+                 if isinstance(i, QGraphicsPathItem)]
+        r = paths[-1].path().boundingRect()
+        return (r.left(), r.top(), r.right(), r.bottom())
+    from matplotlib import patches as mpatches
+
+    ax = view.pane("0").native
+    polys = [p for p in ax.patches if isinstance(p, mpatches.Polygon)]
+    xy = np.asarray(polys[-1].get_xy())
+    return (xy[:, 0].min(), xy[:, 1].min(), xy[:, 0].max(), xy[:, 1].max())
+
+
+def _agrees(view, backend, tol=1e-6):
+    st = view.pane("zoom").capture()
+    x0, y0, x1, y1 = _indicator_bounds(view, backend)
+    return (abs(x0 - st.x_range[0]) < tol and abs(x1 - st.x_range[1]) < tol
+            and abs(y0 - st.y_range[0]) < tol and abs(y1 - st.y_range[1]) < tol)
+
+
 @pytest.mark.tier2
-def test_indicator_without_lims_warns_and_skips(qtbot):
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_indicator_follows_the_inset_window(name, qtbot):
+    """I4b: pan/zoom inside the inset moves the parent-side rectangle — a
+    `RangeEvent(pane="zoom")` drives the `InsetIndicator` controller."""
+    view = qv.View(_s() * qv.Inset(_zoom(), rect=(0.55, 0.55, 0.4, 0.4),
+                                   label="zoom", indicate=True),
+                   backend=name)
+    qtbot.addWidget(view)
+    view.pane("zoom").set_range(x=(5.0, 7.0), y=(25.0, 49.0))
+    qtbot.waitUntil(lambda: _agrees(view, name, tol=1e-3), timeout=2000)
+
+
+@pytest.mark.tier2
+@pytest.mark.parametrize("name", ["pyqtgraph", "matplotlib"])
+def test_indicator_without_lims_seeds_from_the_rendered_window(name, qtbot):
+    """I4b lifts the static gate: with no declared lims the rectangle seeds
+    from the inset's rendered (autoranged) window — no warning, and it still
+    tracks."""
+    import warnings
+
     undeclared = qv.Curve(D, x="x", y="y")  # no lims on the child surface
-    with pytest.warns(qv.errors.QtvizWarning, match="declared x AND y lims"):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", qv.errors.QtvizWarning)
         view = qv.View(_s() * qv.Inset(undeclared, rect=(0.5, 0.5, 0.4, 0.4),
                                        label="zoom", indicate=True),
-                       backend="pyqtgraph")
+                       backend=name)
     qtbot.addWidget(view)
+    assert _agrees(view, name, tol=1e-3)          # seeded from the live window
+    view.pane("zoom").set_range(x=(2.0, 4.0), y=(4.0, 16.0))
+    qtbot.waitUntil(lambda: _agrees(view, name, tol=1e-3), timeout=2000)
